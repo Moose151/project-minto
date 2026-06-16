@@ -1,0 +1,20 @@
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - .:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    environment:
+      SAVES_DIR: /saves
+      PORT: 3000
+    volumes:
+      - ./saves:/saves
+    restart: unless-stopped

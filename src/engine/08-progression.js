@@ -1,0 +1,564 @@
+'use strict';
+
+/* ---------- weekly progression ---------- */
+function advanceRound(){
+  if(G.phase==='regular'){
+    const round = G.fixtures[G.round];
+    for(const m of round) simMatch(m, false);
+    const myM = round.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);
+    recordTeamOfWeek(round);
+    weeklyRecoveryAndDev();
+    payCoachWeekly();
+    payClubWeekly(round);
+    aiUseFreeAgents();
+    auditContractPromises();
+    coachWeekly(myM);
+    generateWeeklyMedia(round, myM);
+    advanceScouting();
+    checkAchievements('round', {round, myM});
+    G.round++;
+    if(G.round >= G.fixtures.length){ startFinals(); }
+    return {type:'round', round, myM};
+  }
+  if(G.phase==='finals'){ return advanceFinals(); }
+  return null;
+}
+function achievementUnlocked(key){
+  return (G.achievements || []).some(a=>a.key===key);
+}
+function unlockAchievement(key){
+  if(!G || G.godMode || G.achievementsLocked) return false;
+  if(achievementUnlocked(key)) return false;
+  const def = ACHIEVEMENTS.find(a=>a.key===key);
+  if(!def) return false;
+  G.achievements = G.achievements || [];
+  G.achievements.unshift({key, year:G.year, season:G.season, round:G.round+1, at:Date.now()});
+  addNews(`Achievement unlocked: ${def.name}.`, {title:'Achievement Unlocked', type:'achievement', tone:'good', tag:'Achievement'});
+  if(typeof UI !== 'undefined' && UI.toast) UI.toast(`Achievement unlocked: ${def.name}`);
+  return true;
+}
+function checkAchievements(type, ctx){
+  if(!G || G.godMode || G.achievementsLocked) return;
+  const mt = myTeam && myTeam();
+  if(!mt) return;
+  if(mt.players.some(id=>{ const p=G.players[id]; return p && playerTier(p.ovr).key==='immortal'; })) unlockAchievement('immortal_player');
+  if(G.club && G.club.funds >= 5000000) unlockAchievement('debt_free');
+  if(type === 'round' && ctx && ctx.myM){
+    const m = ctx.myM;
+    const mineHome = m.h === G.coach.teamId;
+    const pf = mineHome ? m.hs : m.as;
+    const pa = mineHome ? m.as : m.hs;
+    const opp = G.teams[mineHome ? m.a : m.h];
+    if(pf > pa && pf-pa >= 50) unlockAchievement('whitewash');
+    if(pf >= 100) unlockAchievement('century');
+    if(pf > pa && pa === 0) unlockAchievement('shutout');
+    if(mineHome && m.det && m.det.crowd >= 40000) unlockAchievement('full_house');
+    if(pf > pa && opp && squadStrength(opp) - squadStrength(mt) >= 20) unlockAchievement('upset');
+    // Comeback: won from 20+ down at half-time
+    if(pf > pa && m.det && m.det.htScore){
+      const htMine = mineHome ? m.det.htScore.h : m.det.htScore.a;
+      const htOpp  = mineHome ? m.det.htScore.a : m.det.htScore.h;
+      if(htOpp - htMine >= 20) unlockAchievement('comeback');
+    }
+    // Scouting star: any of our scouted prospects has reached OVR 80+
+    if(!achievementUnlocked('scouting_star')){
+      const hasStar = mt.players.some(id=>{ const p=G.players[id]; return p && p.fromScouting && p.ovr>=80; });
+      if(hasStar) unlockAchievement('scouting_star');
+    }
+  }
+  if(type === 'season' && ctx){
+    const lad = ctx.lad || ladder();
+    const myPos = ctx.myPos || lad.findIndex(r=>r.id===G.coach.teamId)+1;
+    if(G.finals && G.finals.minor === G.coach.teamId) unlockAchievement('minor');
+    if(myPos === G.teams.length) unlockAchievement('wooden_spoon');
+    const myRow = lad.find(r=>r.id===G.coach.teamId);
+    if(myRow && myRow.l === 0) unlockAchievement('perfect_season');
+    if(G.finals && G.finals.premier === G.coach.teamId){
+      unlockAchievement('premiers');
+      const streak = premiershipStreak();
+      if(streak >= 2) unlockAchievement('repeat');
+      if(streak >= 3) unlockAchievement('dynasty');
+      const prev = G.history && G.history[1];
+      if(prev && prev.myPos && prev.myPos > G.teams.length - 4) unlockAchievement('bottom_to_top');
+    }
+    if(G.season === 1 && G.finals && G.finals.gf && (G.finals.gf.h===G.coach.teamId || G.finals.gf.a===G.coach.teamId)) unlockAchievement('grand_final_debut');
+    if(ctx.best && teamOf(ctx.best.id) === mt.nick) unlockAchievement('poty_winner');
+    if(ctx.rookie && teamOf(ctx.rookie.id) === mt.nick) unlockAchievement('rookie_winner');
+    if(G.season >= 10) unlockAchievement('10_seasons');
+  }
+}
+function premiershipStreak(){
+  let streak = (G.finals && G.finals.premier === G.coach.teamId) ? 1 : 0;
+  for(const h of G.history || []){
+    if(h.premier === G.coach.teamId) streak++;
+    else break;
+  }
+  return streak;
+}
+function coachBadgeList(c){
+  c = c || G.coach;
+  const out = [];
+  const add = (key, label, desc, tier) => out.push({key, label, desc, tier:tier||'bronze'});
+  const wins = c.careerW || 0, losses = c.careerL || 0, games = wins + losses;
+  if(c.rep >= 25) add('development', 'Development Badge', 'Built a recognised coaching reputation.', 'bronze');
+  if(c.rep >= 55) add('professional', 'Professional Badge', 'Respected first-grade coach.', 'silver');
+  if(c.rep >= 72) add('elite', 'Elite Badge', 'Elite-level coaching reputation.', 'gold');
+  if(c.rep >= 88) add('international', 'International Badge', 'International calibre coach.', 'gold');
+  if(wins >= 1) add('first_win', 'First Win', 'Recorded a first career win.', 'bronze');
+  if(wins >= 50) add('fifty', '50 Wins', 'Reached 50 career wins.', 'silver');
+  if(wins >= 100) add('century', '100 Wins', 'Reached 100 career wins.', 'gold');
+  if(games >= 30 && wins > losses) add('winning_record', 'Winning Record', 'Career record is above .500.', 'silver');
+  if((c.prems || 0) >= 1) add('premier_coach', 'Premiership Coach', 'Won a premiership.', 'gold');
+  if((c.prems || 0) >= 3) add('dynasty_coach', 'Dynasty Coach', 'Won three premierships.', 'gold');
+  if((c.seasonsAtClub || 0) >= 5) add('club_builder', 'Club Builder', 'Stayed at a club for five seasons.', 'silver');
+  if(c.attrs){
+    if(c.attrs.development >= 75) add('developer', 'Talent Developer', 'Development skill is 75+.', 'silver');
+    if(c.attrs.manMgmt >= 75) add('manager', 'Player Manager', 'Man management skill is 75+.', 'silver');
+    if(c.attrs.fitness >= 75) add('fitness', 'Conditioning Lead', 'Fitness skill is 75+.', 'silver');
+    if(c.attrs.tactics >= 75) add('tactician', 'Tactician', 'Tactics skill is 75+.', 'silver');
+  }
+  return out;
+}
+// Weeks of construction per facility type
+const FACILITY_BUILD_WEEKS = {stadium:8, training:5, gym:3, medical:3, academy:5};
+
+function ensureClubFacilities(){
+  if(!G.club) G.club = { funds: 1500000, seasonRevenue: 0, seasonWages: 0 };
+  G.club.facilities = Object.assign({stadium:2, training:1, gym:1, medical:1, academy:1}, G.club.facilities || {});
+  if(!G.club.construction) G.club.construction = {};
+  if(G.club.gateRevenue === undefined) G.club.gateRevenue = 0;
+  if(G.club.broadcastRevenue === undefined) G.club.broadcastRevenue = 0;
+  if(G.club.ticketPrice === undefined) G.club.ticketPrice = 28;
+  return G.club.facilities;
+}
+function facilityLevel(key){
+  const f = ensureClubFacilities();
+  return clamp(Math.round(f[key] || 1), 1, FACILITY_MAX);
+}
+function facilityUnderConstruction(key){
+  ensureClubFacilities();
+  return !!(G.club.construction && G.club.construction[key]);
+}
+function stadiumCapacity(){
+  const lvl = facilityLevel('stadium');
+  // During stadium construction, capacity drops by one tier (one grandstand closed)
+  if(facilityUnderConstruction('stadium')) return STADIUM_CAPACITY_BY_LEVEL[Math.max(0, lvl - 2)] || STADIUM_CAPACITY_BY_LEVEL[0];
+  return STADIUM_CAPACITY_BY_LEVEL[lvl - 1] || STADIUM_CAPACITY_BY_LEVEL[0];
+}
+function tickConstruction(){
+  ensureClubFacilities();
+  if(!G.club.construction) return;
+  for(const key of Object.keys(G.club.construction)){
+    const c = G.club.construction[key];
+    if(G.round >= c.completesRound){
+      G.club.facilities[key] = c.targetLevel;
+      delete G.club.construction[key];
+      addNews(`Construction complete: ${FACILITY_DEFS[key] ? FACILITY_DEFS[key].label : key} upgraded to level ${c.targetLevel}.`, {
+        title:'Facility Complete', type:'club', tone:'good', teamId:G.coach.teamId, tag:'Facilities'
+      });
+    }
+  }
+}
+function facilityUpgradeCost(key){
+  const def = FACILITY_DEFS[key]; if(!def) return 0;
+  const lvl = facilityLevel(key);
+  if(lvl >= FACILITY_MAX) return 0;
+  return Math.round(def.baseCost * Math.pow(1.72, lvl - 1) / 50000) * 50000;
+}
+function facilityPrestige(){
+  const f = ensureClubFacilities();
+  const avg = Object.keys(FACILITY_DEFS).reduce((s,k)=>s+facilityLevel(k),0) / Object.keys(FACILITY_DEFS).length;
+  if(avg >= 4.5) return {label:'World Class', cls:'good'};
+  if(avg >= 3.5) return {label:'Elite', cls:'good'};
+  if(avg >= 2.5) return {label:'Professional', cls:''};
+  if(avg >= 1.5) return {label:'Developing', cls:'warn'};
+  return {label:'Basic', cls:'bad'};
+}
+function clubPrestigeScore(t){
+  if(!t) return 45;
+  const strength = typeof squadStrength === 'function' ? squadStrength(t) : (t.rep || 55);
+  const coachRep = t.headCoach ? (t.headCoach.rep || 35) : 35;
+  const ladderRows = (G && G.fixtures && G.fixtures.length && typeof ladder === 'function') ? ladder() : [];
+  const pos = ladderRows.length ? ladderRows.findIndex(r=>r.id===t.id)+1 : 0;
+  const ladderScore = pos ? clamp(72 - (pos-1) * (38/Math.max(1,G.teams.length-1)), 30, 74) : 50;
+  const historyBonus = (G.history || []).slice(0,5).reduce((s,h,i)=>s + (h.premier===t.id ? 7-i : h.minor===t.id ? 3-i*.4 : 0), 0);
+  const facilityBonus = t.id === G.coach.teamId ? (Object.keys(FACILITY_DEFS).reduce((s,k)=>s+facilityLevel(k),0) - 5) * 1.4 : 4;
+  return Math.round(clamp(strength*.42 + coachRep*.18 + ladderScore*.22 + 18 + historyBonus + facilityBonus, 20, 99));
+}
+function clubPrestigeTier(t){
+  const score = clubPrestigeScore(t);
+  if(score >= 82) return {key:'dynasty', label:'Dynasty Club', icon:'C', score};
+  if(score >= 72) return {key:'elite', label:'Elite Club', icon:'S', score};
+  if(score >= 62) return {key:'strong', label:'Strong Club', icon:'G', score};
+  if(score >= 50) return {key:'solid', label:'Established Club', icon:'B', score};
+  if(score >= 38) return {key:'developing', label:'Developing Club', icon:'D', score};
+  return {key:'rebuild', label:'Rebuild Club', icon:'R', score};
+}
+function matchCrowd(homeTeam, isFinal){
+  if(isFinal) return ri(52000, 82000);
+  const isMine = homeTeam && homeTeam.id === G.coach.teamId;
+  const cap = isMine ? stadiumCapacity() : ri(22000, 52000);
+  const rep = homeTeam ? (homeTeam.rep || squadStrength(homeTeam)) : 55;
+  const formBoost = homeTeam ? Math.max(-1800, Math.min(3000, ((homeTeam.cohesion || 50) - 50) * 90)) : 0;
+  const price = isMine ? clamp(G.club.ticketPrice || 28, 10, 120) : 28;
+  const priceDrag = (price - 28) * 280;
+  const demand = Math.round(8500 + rep * 360 + formBoost - priceDrag + rf(-3500, 4500));
+  return clamp(demand, Math.min(9000, cap), cap);
+}
+function weeklyRecoveryAndDev(){
+  for(const t of G.teams){
+    const isMine = t.id === G.coach.teamId;
+    const fitnessBonus = (isMine && G.coach.attrs) ? G.coach.attrs.fitness / 300 : 0;
+    for(const id of t.players){
+      const p = G.players[id];
+      const facilityRecovery = isMine ? (facilityLevel('gym') - 1) * 1.4 : 0;
+      const recBase = (t.focus==='recovery' ? 24 : 17) + facilityRecovery;
+      p.cond = clamp(p.cond + recBase + p.attrs.stamina/20 + fitnessBonus*10, 0, 100);
+      if(p.injury){
+        p.injury.weeks--;
+        // Medical staff: chance to reduce recovery time by 1 extra week
+        if(isMine && p.injury.weeks > 0){
+          const medic = (G.staff||[]).find(s=>s.role==='medical');
+          const medFacilityBonus = (facilityLevel('medical') - 1) * .018;
+          if(medic && rnd() < medic.ability/220 + medFacilityBonus) p.injury.weeks = Math.max(0, p.injury.weeks-1);
+        }
+        if(p.injury.weeks<=0){ p.injury=null; p.playInjured=false; p.cond=Math.min(p.cond,80); }
+      }
+      if(p.suspended && p.suspended.weeks > 0){ p.suspended.weeks--; if(p.suspended.weeks<=0) p.suspended=null; }
+      developPlayer(p, t);
+    }
+    if(!isMine) autoPick(t);
+  }
+}
+function staffMultiplier(attrKey, playerPos){
+  if(!G.staff) return 1;
+  let mult = 1;
+  for(const s of G.staff){
+    const role = STAFF_ROLES.find(r=>r.key===s.role);
+    if(role && role.trainingKeys.includes(attrKey)){
+      mult = Math.max(mult, 1 + (s.ability / 90) * 0.35);
+    }
+    // Positional specialty gives a secondary key-skill boost for that position
+    if(playerPos && s.posSpecialty === playerPos && POS_PROFILE[playerPos]){
+      const posKeys = Object.entries(POS_PROFILE[playerPos]).filter(([,v])=>v[1]>=.07).map(([k])=>k);
+      if(posKeys.includes(attrKey)){
+        mult = Math.max(mult, 1 + (s.ability / 90) * 0.18);
+      }
+    }
+  }
+  return mult;
+}
+function positionalCoachMultiplier(pos){
+  if(!G.staff || !pos) return 1;
+  const coach = G.staff
+    .filter(s => s.posSpecialty === pos)
+    .sort((a,b) => b.ability - a.ability)[0];
+  return coach ? 1 + coach.ability / 170 : 1;
+}
+function developPlayer(p, t){
+  const isMine = t.id===G.coach.teamId;
+  handleIndividualTraining(p, t);
+  const teamFocusBoost = {
+    attack:['shortPass','longPass','kickAccuracy','kickPower','playmaking','ballRunning','finishing','ballSecurity'],
+    defence:['tackling','defRead','bigHit','lastDitch','markerDef','workRate'],
+    fitness:['stamina','speed','strength','acceleration','agility','injury'],
+    youth:[],
+    recovery:[],
+    balanced:[]
+  }[t.focus]||[];
+  const individualBoost = isMine ? {
+    attack:['shortPass','longPass','kickAccuracy','kickPower','playmaking','ballRunning','finishing','ballSecurity'],
+    defence:['tackling','defRead','bigHit','lastDitch','markerDef','workRate'],
+    physical:['stamina','speed','strength','acceleration','agility','injury','catching'],
+    mental:['composure','leadership','vision','decisionMaking','discipline','professionalism'],
+    balanced:[],
+    position:[],
+    specialist:[]
+  }[p.training || 'balanced'] || [] : [];
+  const focusBoost = individualBoost.length ? individualBoost : (isMine ? teamFocusBoost : []);
+  const facilityDev = isMine ? (0.92 + facilityLevel('training')*.035 + (p.age<=21 ? facilityLevel('academy')*.025 : 0)) : 1;
+  const devMod = ((isMine && G.coach.attrs) ? (0.7 + 0.6*(G.coach.attrs.development/100)) : 1) * facilityDev;
+  // dev squad players use a games proxy simulating reserve-grade activity
+  const gamesProxy = p.squad==='dev' ? Math.min(p.s.g + 8, 20) : p.s.g;
+  if(p.age <= 23 || p.ovr < p.pot){
+    let chance = p.age<=20 ? .30 : p.age<=23 ? .22 : p.age<=26 ? .10 : .04;
+    chance *= (0.6 + p.prof/200) * (0.7 + gamesProxy/26) * devMod;
+    if(t.focus==='youth' && p.age<=21 && isMine) chance *= 1.5;
+    if(rnd() < chance && p.ovr < p.pot){
+      const pool = focusBoost.length && rnd()<.5 ? focusBoost : ATTRS;
+      const a = pick(pool);
+      const staffBonus = isMine ? staffMultiplier(a, p.pos) : 1;
+      const gain = staffBonus > 1.15 && rnd() < (staffBonus - 1) ? 2 : 1;
+      p.attrs[a] = clamp(p.attrs[a]+gain, 20, 99);
+      const prevOvr = p.ovr;
+      p.ovr = calcOvr(p);
+      // Immortal cap: at most 3 active Immortal-tier players league-wide (OVR 92+)
+      if(p.ovr >= 92 && prevOvr < 92){
+        const immortalCount = Object.values(G.players).filter(x => x && x.id !== p.id && x.ovr >= 92).length;
+        if(immortalCount >= 3){
+          p.attrs[a] = clamp(p.attrs[a] - gain, 20, 99);
+          p.ovr = calcOvr(p);
+        } else {
+          const t2 = G.teams ? G.teams.find(tm => tm.players && tm.players.includes(p.id)) : null;
+          addNews(`${esc(p.name)} (${p.pos}, ${t2?esc(t2.nick):'Free Agent'}) has ascended to Immortal status — one of just ${immortalCount+1} players ever to reach this level.`,
+            {title:'Immortal Player', type:'development', tone:'good', playerId:p.id, teamId:t2?t2.id:null, tag:'Development'});
+        }
+      }
+      if(isMine && p.squad==='dev' && prevOvr < 60 && p.ovr >= 60){
+        addNews(`Development: ${p.name} (${p.pos}, ${p.age}yo) has reached OVR ${p.ovr} and may be ready for top-squad promotion.`, {
+          title: 'Pathway Player Ready',
+          type: 'development',
+          tone: 'good',
+          playerId: p.id,
+          tag: 'Development',
+        });
+      }
+    }
+  }
+  if(p.age>=31 && rnd() < (p.age-29)*.025){
+    const a = pick(['speed','acceleration','agility','stamina','strength','ballRunning']);
+    p.attrs[a] = clamp(p.attrs[a]-1, 20, 99);
+    p.ovr = calcOvr(p);
+  }
+}
+function handleIndividualTraining(p, t){
+  if(t.id !== G.coach.teamId || !p.training) return;
+  const devMod = G.coach.attrs ? (0.6 + G.coach.attrs.development/130) : 1;
+  if(p.training === 'position' && p.retrainPos && p.retrainPos !== p.pos && p.retrainPos !== p.pos2){
+    const chance = clamp((p.attrs.professionalism+p.attrs.decisionMaking+p.attrs.workRate)/360 * devMod * positionalCoachMultiplier(p.retrainPos), .04, .42);
+    if(rnd() < chance){
+      p.pos2 = p.retrainPos;
+      p.retrainPos = null;
+      addNews(`${p.name} has completed positional retraining and is now comfortable covering ${POS_NAME[p.pos2]}.`, {title:'Retraining Complete', type:'development', tone:'good', playerId:p.id, teamId:t.id, tag:'Training'});
+    }
+  }
+  if(p.training === 'specialist' && p.retrainSpec && p.retrainSpec !== p.spec){
+    const chance = clamp((p.attrs.professionalism+p.attrs.composure+p.attrs.workRate)/390 * devMod * positionalCoachMultiplier(p.pos), .05, .36);
+    if(rnd() < chance){
+      p.spec = p.retrainSpec;
+      p.side = ['leftWing','leftCentre','leftEdge'].includes(p.spec) ? 'left' : ['rightWing','rightCentre','rightEdge'].includes(p.spec) ? 'right' : 'either';
+      p.retrainSpec = null;
+      addNews(`${p.name} has adapted to a new ${specialistLabel(p).toLowerCase()} specialist role.`, {title:'Role Retraining Complete', type:'development', tone:'good', playerId:p.id, teamId:t.id, tag:'Training'});
+    }
+  }
+}
+function payCoachWeekly(){
+  if(!G.coach) return;
+  const weeks = Math.max(1, (G.fixtures ? G.fixtures.length : 24) + 3);
+  const pay = Math.round((G.coach.salary || 120000) / weeks);
+  G.coach.cash = Math.round((G.coach.cash || 0) + pay);
+  G.coach.weeklyPayEarned = (G.coach.weeklyPayEarned || 0) + pay;
+}
+function payClubWeekly(round){
+  ensureClubFacilities();
+  tickConstruction();
+  const t = myTeam();
+  const weeks = Math.max(1, (G.fixtures ? G.fixtures.length : 24) + 3);
+  // Revenue: gate (per-match crowd) + broadcast deal
+  const myM = round.find(m => m.h === G.coach.teamId || m.a === G.coach.teamId);
+  const mineHome = myM && myM.h === G.coach.teamId;
+  const crowd = myM && myM.det ? myM.det.crowd : 18000;
+  const ticketPrice = myM && myM.det && myM.det.ticketPrice ? myM.det.ticketPrice : (G.club.ticketPrice || 28);
+  const gateRevenue = mineHome ? Math.round(crowd * ticketPrice) : 0;
+  const broadcastRevenue = 75000;
+  const totalRevenue = gateRevenue + broadcastRevenue;
+  // Wages: player salaries + staff salaries (weekly portion of annual)
+  const playerWages = Math.round(teamSalary(t) / weeks);
+  const staffWages = (G.staff || []).reduce((s, x) => s + Math.round((x.salary || 0) / weeks), 0);
+  const totalWages = playerWages + staffWages;
+  G.club.funds = Math.round((G.club.funds || 0) + totalRevenue - totalWages);
+  G.club.seasonRevenue = (G.club.seasonRevenue || 0) + totalRevenue;
+  G.club.gateRevenue = (G.club.gateRevenue || 0) + gateRevenue;
+  G.club.broadcastRevenue = (G.club.broadcastRevenue || 0) + broadcastRevenue;
+  G.club.seasonWages = (G.club.seasonWages || 0) + totalWages;
+}
+function aiUseFreeAgents(){
+  if(!G.freeAgents || !G.freeAgents.length) return;
+  const market = () => (G.freeAgents || []).map(id=>G.players[id]).filter(p=>p && !G.teams.some(t=>t.players.includes(p.id)));
+  for(const t of G.teams){
+    if(t.id === G.coach.teamId) continue;
+    const top = t.players.map(id=>G.players[id]).filter(p=>p && (p.squad==='top' || !p.squad));
+    const fit = top.filter(p=>!p.injury);
+    const injuries = top.length - fit.length;
+    if(top.length >= 25 && injuries < 4 && rnd() > .08) continue;
+    const needPos = POS.slice().sort((a,b)=>fit.filter(p=>p.pos===a||p.pos2===a).length - fit.filter(p=>p.pos===b||p.pos2===b).length)[0];
+    const room = G.config.cap - teamSalary(t);
+    const cands = market().filter(p=>p.salary <= room && (p.pos===needPos || p.pos2===needPos || top.length<24)).sort((a,b)=>b.ovr-a.ovr);
+    if(!cands.length) continue;
+    const p = cands[Math.floor(rnd()*Math.min(3,cands.length))];
+    setPlayerContract(p, Math.min(p.salary || salaryFor(p), Math.max(65000, room)), 1, 'flat');
+    p.squad = 'top';
+    t.players.push(p.id);
+    G.freeAgents = G.freeAgents.filter(id=>id!==p.id);
+    addNews(`${p.name} has signed with the ${t.nick} as a mid-season free agent to cover ${needPos} depth.`, {title:'Free Agent Move', type:'recruitment', tone:'neutral', playerId:p.id, teamId:t.id, tag:'Market'});
+  }
+}
+function auditContractPromises(){
+  const t = myTeam();
+  if(!t || G.phase !== 'regular') return;
+  const active = new Set(t.lineup.slice(0,17).filter(id=>id!=null));
+  const starters = new Set(t.lineup.slice(0,13).filter(id=>id!=null));
+  for(const id of t.players){
+    const p = G.players[id];
+    if(!p || !p.promises || p.promiseTeam !== t.id) continue;
+    let broken = false;
+    if(p.promises.role === 'starter' && !starters.has(p.id)) broken = true;
+    if(p.promises.role === 'bench' && !active.has(p.id)) broken = true;
+    if(p.promises.role === 'superstar' && (!starters.has(p.id) || (p.s.g >= 4 && p.s.g ? p.s.rSum/p.s.g < 6.7 : false))) broken = true;
+    if(p.promises.captain && t.roles.captain !== p.id) broken = true;
+    // Minutes promise: must have appeared in ≥55% of rounds played after round 8
+    if(p.promises.minutes && G.round >= 8){
+      const gamesExpected = Math.floor(G.round * 0.55);
+      if(p.s.g < gamesExpected) broken = true;
+    }
+    // Pathway promise: young players (≤22) must have appeared in ≥35% of rounds after round 10
+    if(p.promises.pathway && p.age <= 22 && G.round >= 10){
+      const gamesExpected = Math.floor(G.round * 0.35);
+      if(p.s.g < gamesExpected) broken = true;
+    }
+    if(broken){
+      p.promiseConcern = (p.promiseConcern || 0) + 1;
+      p.morale = clamp(p.morale - (p.promiseConcern >= 4 ? 5 : 2), 5, 99);
+      if(p.promiseConcern === 4){
+        addNews(`${p.name} is frustrated that contract promises have not been kept and may consider asking for a release.`, {title:'Promise Pressure', type:'contract', tone:'bad', playerId:p.id, teamId:t.id, tag:'Contracts'});
+      }
+      if(p.promiseConcern >= 7 && !p.releaseRequest){
+        p.releaseRequest = true;
+        addNews(`${p.name} has requested a release after repeated broken promises.`, {title:'Release Request', type:'contract', tone:'bad', playerId:p.id, teamId:t.id, tag:'Contracts'});
+      }
+    } else {
+      p.promiseConcern = Math.max(0, (p.promiseConcern || 0) - 1);
+    }
+  }
+}
+function coachWeekly(myM){
+  if(!myM) return;
+  const won = (myM.h===G.coach.teamId) ? myM.hs>myM.as : myM.as>myM.hs;
+  const drew = myM.hs===myM.as;
+  if(won){
+    G.coach.rep = clamp(G.coach.rep+.4, 1, 99);
+    G.coach.conf = clamp(G.coach.conf+3, 0, 100);
+    G.coach.careerW++;
+    if(G.coach.attrs && rnd()<0.2){
+      const keys = ['development','manMgmt','fitness','tactics'];
+      const k = keys[Math.floor(rnd()*keys.length)];
+      G.coach.attrs[k] = clamp(G.coach.attrs[k]+1, 20, 99);
+    }
+  } else if(!drew){
+    G.coach.rep = clamp(G.coach.rep-.2, 1, 99);
+    G.coach.conf = clamp(G.coach.conf-4, 0, 100);
+    G.coach.careerL++;
+  }
+  if(G.coach.conf < 20) addNews(`The ${myTeam().nick} board is losing patience with ${G.coach.name}. Results need to turn quickly.`, {
+    title: 'Board Pressure Mounts',
+    type: 'board',
+    tone: 'bad',
+    teamId: G.coach.teamId,
+    tag: 'Board',
+  });
+}
+function generateWeeklyMedia(round, myM){
+  if(!myM) return;
+  const mineHome = myM.h === G.coach.teamId;
+  const mt = myTeam();
+  const opp = G.teams[mineHome ? myM.a : myM.h];
+  const pf = mineHome ? myM.hs : myM.as;
+  const pa = mineHome ? myM.as : myM.hs;
+  const won = pf > pa;
+  const drew = pf === pa;
+  const mineDet = mineHome ? myM.det.h : myM.det.a;
+  const top = Object.entries(mineDet).map(([id,l])=>({p:G.players[id], l})).filter(x=>x.p).sort((a,b)=>b.l.r-a.l.r)[0];
+  const resultWord = drew ? 'draw with' : won ? 'beat' : 'fall to';
+  const margin = Math.abs(pf-pa);
+  const topLine = top ? ` ${top.p.name} led the side with a ${top.l.r.toFixed(1)} rating${top.l.t ? ` and ${top.l.t} ${top.l.t===1?'try':'tries'}` : ''}.` : '';
+  addNews(`${mt.nick} ${resultWord} ${opp.nick} ${pf}-${pa}${drew ? '' : ` by ${margin}`}.${topLine}`, {
+    title: drew ? 'Points Shared' : won ? 'Result: Win Banked' : 'Result: Work To Do',
+    type: 'match',
+    tone: drew ? 'neutral' : won ? 'good' : 'bad',
+    teamId: mt.id,
+    playerId: top ? top.p.id : null,
+    tag: `Round ${G.round+1}`,
+  });
+
+  const injuries = Object.entries(mineDet).filter(([id,l])=>l.inj).map(([id,l])=>({p:G.players[id], l}));
+  if(injuries.length){
+    const item = injuries[0];
+    addNews(`${item.p.name} picked up ${item.l.inj} against ${opp.nick} and is expected to miss ${item.p.injury ? item.p.injury.weeks : 0} week${item.p.injury && item.p.injury.weeks===1?'':'s'}.`, {
+      title: injuries.length > 1 ? 'Casualty Ward Fills' : 'Injury Report',
+      type: 'injury',
+      tone: 'bad',
+      playerId: item.p.id,
+      teamId: mt.id,
+      tag: 'Medical',
+    });
+  }
+
+  const fantasy = [];
+  for(const m of round){
+    if(!m.det) continue;
+    for(const side of [m.det.h, m.det.a]){
+      for(const [id,line] of Object.entries(side)){
+        const p = G.players[+id];
+        if(p && line.fp != null) fantasy.push({p, line});
+      }
+    }
+  }
+  fantasy.sort((a,b)=>b.line.fp-a.line.fp);
+  const best = fantasy[0];
+  if(best && best.line.fp >= 12){
+    const club = G.teams.find(t=>t.players.includes(best.p.id));
+    addNews(`${best.p.name} topped the fantasy charts with ${best.line.fp} FP${club ? ` for ${club.nick}` : ''}.`, {
+      title: 'Fantasy Standout',
+      type: 'fantasy',
+      tone: best.p.id in mineDet ? 'good' : 'neutral',
+      playerId: best.p.id,
+      teamId: club ? club.id : null,
+      tag: 'Fantasy',
+    });
+  }
+
+  if((G.coach.shortlist || []).length && G.phase === 'regular' && (G.round+1) % 4 === 0){
+    const offContract = (G.coach.shortlist || []).map(id=>G.players[id]).filter(p=>p && p.years<=1);
+    if(offContract.length){
+      addNews(`${offContract.length} shortlisted target${offContract.length===1?' is':'s are'} in the final year or off-contract. Recruitment staff recommend making approaches before the market moves.`, {
+        title: 'Recruitment Watch',
+        type: 'recruitment',
+        tone: 'neutral',
+        tag: 'Recruitment',
+      });
+    }
+  }
+}
+function advanceScouting(){
+  if(!G.scouting || !G.scouting.missions) return;
+  const done = [];
+  for(const mission of G.scouting.missions){
+    mission.weeksLeft--;
+    if(mission.weeksLeft > 0) continue;
+    done.push(mission);
+    const region = SCOUT_REGIONS.find(r=>r.key===mission.region);
+    const scout = (G.scouting.scouts||[]).find(s=>s.id===mission.scoutId);
+    const ability = scout ? scout.ability : 40;
+    const age = ri(16, 19);
+    const baseQ = clamp(30 + Math.floor(ability/4), 32, 58);
+    const pool = region ? region.posPool : POS;
+    let pos;
+    if(mission.targetPos && pool.includes(mission.targetPos) && Math.random() < 0.75){
+      pos = mission.targetPos;
+    } else {
+      pos = pick(pool);
+    }
+    const p = genPlayer(pos, age, baseQ + ri(-8, 12));
+    G.players[p.id] = p;
+    p.squad = 'dev';
+    // Set nationality from region and regenerate name to match
+    if(region){
+      const nat = NATIONALITY_POOL.find(n=>n.country===region.nationality);
+      if(nat){ p.nationality = nat.country; p.repTeam = nat.repTeam||null; p.name = genPlayerName(nat.country); }
+    }
+    G.scouting.prospects = G.scouting.prospects||[];
+    G.scouting.prospects.push({ playerId:p.id, scoutId:mission.scoutId, region:mission.region, foundYear:G.year, foundRound:G.round });
+    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo).`, {title:'Scout Report', type:'recruitment', tone:'good', playerId:p.id, tag:'Scouting'});
+  }
+  G.scouting.missions = G.scouting.missions.filter(m=>!done.includes(m));
+}

@@ -1,0 +1,56 @@
+'use strict';
+
+/* Coach profile — reputation, badge, record, attrs, history */
+Object.assign(UI, {
+  p_coach(){
+    const c = G.coach;
+    const badge = BADGES.slice().reverse().find(b=>c.rep>=b[0])[1];
+    const coachBadges = typeof coachBadgeList === 'function' ? coachBadgeList(c) : [];
+    const attrBar = (label, val, desc) => `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${label}</span><b>${val}</b></div>
+      <div class="bar"><i style="width:${val}%"></i></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${desc}</div></div>`;
+    const upgrade = (key,label) => `<button class="btn sm" onclick="UI.upgradeCoachAttr('${key}')">${label} +1 (${money(UI.coachUpgradeCost())})</button>`;
+    const attrsHtml = c.attrs ? `
+      <h2 class="sec">Coaching Attributes</h2>
+      <div class="grid2">
+        <div class="card">
+          ${attrBar('Player Development', c.attrs.development, 'Boosts player attribute growth rate')}
+          ${attrBar('Man Management', c.attrs.manMgmt, 'Amplifies morale changes after results')}
+        </div>
+        <div class="card">
+          ${attrBar('Fitness Management', c.attrs.fitness, 'Improves weekly condition recovery')}
+          ${attrBar('Tactical Coaching', c.attrs.tactics, 'Small match-day performance bonus')}
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px"><h2 class="sec" style="margin-top:0">Professional development</h2>
+        <p style="color:var(--muted);font-size:12px">Spend coaching salary/cash to improve your skills.</p>
+        <div class="btnrow">${upgrade('development','Development')}${upgrade('manMgmt','Man Management')}${upgrade('fitness','Fitness')}${upgrade('tactics','Tactics')}</div>
+      </div>` : '';
+    return `<h1 class="page">Coach Profile</h1><p class="page-sub">${esc(c.name)} · ${esc(teamName(myTeam()))}</p>
+    <div class="grid3">
+      <div class="card"><div class="navsep" style="margin:0">Reputation</div><div style="font-family:var(--disp);font-size:42px;font-weight:700;color:var(--brass)">${Math.round(c.rep)}</div><div class="bar"><i style="width:${c.rep}%"></i></div><p style="color:var(--muted);font-size:12px;margin-top:8px">${esc(badge)}</p></div>
+      <div class="card"><div class="navsep" style="margin:0">Career record</div><div style="font-family:var(--disp);font-size:42px;font-weight:700">${c.careerW||0}–${c.careerL||0}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.prems||0} premiership${(c.prems||0)===1?'':'s'} · season ${G.season}</p></div>
+      <div class="card"><div class="navsep" style="margin:0">Board confidence</div><div style="font-family:var(--disp);font-size:42px;font-weight:700;color:${c.conf<30?'var(--red)':c.conf>70?'var(--green)':'var(--ink)'}">${Math.round(c.conf)}%</div><p style="color:var(--muted);font-size:12px;margin-top:8px">Expectation: ${esc(c.expect.label)}</p></div>
+      <div class="card"><div class="navsep" style="margin:0">Contract</div><div style="font-family:var(--disp);font-size:32px;font-weight:700">${money(c.salary||0)}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.contractYears||0} years · cash ${money(c.cash||0)}</p></div>
+    </div>
+    <h2 class="sec">Coach Badges</h2>
+    <div class="card coach-badges">
+      ${coachBadges.length ? coachBadges.map(b=>`<span class="coach-badge ${b.tier}" title="${esc(b.desc)}"><b>${esc(b.label)}</b><em>${esc(b.desc)}</em></span>`).join('') : '<p style="color:var(--muted);font-size:12px">No coaching badges yet. Wins, reputation, premierships, loyalty, and attribute milestones unlock them.</p>'}
+    </div>
+    ${attrsHtml}
+    <h2 class="sec">Coaching history</h2>
+    <div class="card" style="padding:6px"><table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick num">Finish</th><th class="noclick"></th></tr></thead><tbody>
+    ${c.history.map(h=>`<tr><td>${h.year}</td><td>${esc(h.team)}</td><td class="num">${ord(h.pos)}</td><td>${h.premier?'★ Premiers':''}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted)">First season underway.</td></tr>'}
+    </tbody></table></div>`;
+  },
+  coachUpgradeCost(){ return 25000 + Math.round((G.coach.rep||30)*650); },
+  upgradeCoachAttr(key){
+    const cost = UI.coachUpgradeCost();
+    if((G.coach.cash||0) < cost){ UI.toast('Not enough coaching cash.'); return; }
+    G.coach.cash -= cost;
+    G.coach.attrs[key] = clamp((G.coach.attrs[key]||40)+1, 20, 99);
+    UI.toast('Coach skill improved.');
+    UI.render();
+  },
+});

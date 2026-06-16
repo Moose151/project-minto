@@ -1,0 +1,232 @@
+'use strict';
+
+/* Scouting — dispatch scouts to find young talent */
+Object.assign(UI, {
+
+  p_scouting(){
+    const sc = G.scouting || (G.scouting = {scouts:[], missions:[], prospects:[]});
+    const scouts   = sc.scouts   || [];
+    const missions = sc.missions || [];
+    const prospects = sc.prospects || [];
+    const weeks = Math.max(1, (G.fixtures ? G.fixtures.length : 24) + 3);
+
+    const busyScoutIds = new Set(missions.map(m=>m.scoutId));
+
+    // --- Scouts panel ---
+    const scoutCards = scouts.map(s => {
+      const mission = missions.find(m=>m.scoutId===s.id);
+      const pick_state = UI._scoutPick && UI._scoutPick.scoutId === s.id ? UI._scoutPick : null;
+      const abilityBar = `<div style="display:flex;align-items:center;gap:6px;margin:6px 0">
+        <div style="flex:1;height:6px;background:var(--card2);border-radius:3px;overflow:hidden">
+          <div style="width:${s.ability}%;height:100%;background:${s.ability>=70?'var(--green)':s.ability>=50?'var(--brass)':'var(--red)'}"></div>
+        </div>
+        <span style="font-size:12px;font-weight:700;min-width:24px">${s.ability}</span>
+      </div>`;
+
+      let dispatchSection = '';
+      if(mission){
+        const mRegion = SCOUT_REGIONS.find(r=>r.key===mission.region);
+        const targetLabel = mission.targetPos ? ` · Looking for ${POS_NAME[mission.targetPos]||mission.targetPos}` : '';
+        dispatchSection = `<p style="font-size:12px;color:var(--brass);margin:4px 0">On mission — ${esc(mRegion?.label||mission.region)} · ${mission.weeksLeft}w left${targetLabel}</p>`;
+      } else if(pick_state){
+        // Step 2: position picker for the selected region
+        const region = SCOUT_REGIONS.find(r=>r.key===pick_state.regionKey);
+        const posBtns = (region ? region.posPool : POS).map(pos =>
+          `<button class="btn sm" style="margin:2px" onclick="UI.dispatchScout(${s.id},'${pick_state.regionKey}','${pos}')">${POS_NAME[pos]||pos}</button>`
+        ).join('');
+        dispatchSection = `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
+          <p style="font-size:11px;color:var(--muted);margin:0 0 4px">
+            <b>${esc(region?.label||pick_state.regionKey)}</b> — target position:
+          </p>
+          <button class="btn sm" style="margin:2px;background:var(--card2)" onclick="UI.dispatchScout(${s.id},'${pick_state.regionKey}','any')">Any Position</button>
+          ${posBtns}
+          <button class="btn sm" style="margin:2px;color:var(--muted)" onclick="UI._scoutPick=null;UI.render()">Back</button>
+        </div>`;
+      } else {
+        // Step 1: region table
+        const regionRows = SCOUT_REGIONS.map(r =>
+          `<tr>
+            <td style="padding:3px 6px">${esc(r.label)}</td>
+            <td style="padding:3px 6px;color:var(--muted);font-size:11px">${r.weeks}w</td>
+            <td style="padding:3px 2px"><button class="btn sm" onclick="UI.selectScoutRegion(${s.id},'${r.key}')">Select</button></td>
+          </tr>`
+        ).join('');
+        dispatchSection = `<div style="margin-top:8px">
+          <p style="font-size:11px;color:var(--muted);margin:0 0 4px">Dispatch to region:</p>
+          <div style="max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:6px">
+            <table style="width:100%;border-collapse:collapse"><tbody>${regionRows}</tbody></table>
+          </div>
+        </div>`;
+      }
+
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <b style="font-size:15px">${esc(s.name)}</b>
+            <p style="margin:2px 0;font-size:12px;color:var(--muted)">Ability ${s.ability} · ${money(s.salary)}/yr</p>
+          </div>
+          <button class="btn sm" style="color:var(--red)" onclick="UI.fireScout(${s.id})">Fire</button>
+        </div>
+        ${abilityBar}
+        ${!mission ? `<p style="font-size:12px;color:var(--green);margin:4px 0">Available</p>` : ''}
+        ${dispatchSection}
+      </div>`;
+    }).join('') || `<div class="card"><p style="color:var(--muted)">No scouts on payroll. Hire from the market below.</p></div>`;
+
+    // --- Prospects panel ---
+    const prospectCards = prospects.length ? prospects.map(pr => {
+      const p = G.players[pr.playerId];
+      if(!p) return '';
+      const region = SCOUT_REGIONS.find(r=>r.key===pr.region);
+      const myT = myTeam();
+      const capRoom = G.config.cap - teamSalary(myT);
+      const cost = Math.round(clamp(salaryFor(p)*0.55, 65000, 180000)/5000)*5000;
+      const canSign = capRoom >= cost;
+      return `<div class="card" style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1">
+          <b class="click" onclick="UI.playerModal(${p.id})" style="text-decoration:underline;cursor:pointer">${esc(p.name)}</b>
+          <p style="margin:2px 0;font-size:12px;color:var(--muted)">${POS_NAME[p.pos]||p.pos} · ${p.age}yo · OVR ${p.ovr} · POT ~${p.pot}</p>
+          <p style="margin:2px 0;font-size:11px;color:var(--dim)">Found in ${region?esc(region.label):pr.region} (${pr.foundYear})</p>
+          <p style="font-size:11px;color:var(--muted)">Dev squad offer: ${money(cost)}</p>
+          ${!canSign ? `<p style="font-size:11px;color:var(--red)">⚠ Not enough cap room (${money(capRoom)} available)</p>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn sm primary" ${canSign?'':'disabled'} onclick="UI.signProspect(${pr.playerId})">Sign to dev squad</button>
+          <button class="btn sm" onclick="UI.dismissProspect(${pr.playerId})">Dismiss</button>
+        </div>
+      </div>`;
+    }).join('') : '';
+
+    // --- Scout market ---
+    if(!UI._scoutMarket || UI._scoutMarket.year !== G.year){
+      UI._scoutMarket = { year: G.year, list: UI._genScoutMarket() };
+    }
+    const marketScouts = (UI._scoutMarket.list || []).filter(s => !scouts.some(x=>x.id===s.id));
+    const marketRows = marketScouts.map(s => {
+      const abilityBar = `<div style="display:flex;align-items:center;gap:6px">
+        <div style="flex:1;height:5px;background:var(--card2);border-radius:3px;overflow:hidden">
+          <div style="width:${s.ability}%;height:100%;background:${s.ability>=70?'var(--green)':s.ability>=50?'var(--brass)':'var(--red)'}"></div>
+        </div><span style="font-size:11px;font-weight:700">${s.ability}</span></div>`;
+      return `<tr>
+        <td><b>${esc(s.name)}</b></td>
+        <td>${abilityBar}</td>
+        <td class="num">${money(s.salary)}</td>
+        <td class="num">${s.yearsLeft}yr</td>
+        <td><button class="btn sm primary" onclick="UI.hireScout(${s.id})">Hire</button></td>
+      </tr>`;
+    }).join('');
+
+    const totalScoutCost = scouts.reduce((s,x)=>s+(x.salary||0),0);
+
+    return `<h1 class="page">Scouting</h1>
+    <p class="page-sub">Dispatch scouts to find young talent for the development squad. Scout ability determines prospect quality.</p>
+    <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="card" style="padding:10px 16px;flex:1;min-width:130px"><span style="font-size:11px;color:var(--muted)">Scouts employed</span><div style="font-size:22px;font-weight:700;font-family:var(--disp)">${scouts.length}</div></div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:130px"><span style="font-size:11px;color:var(--muted)">Active missions</span><div style="font-size:22px;font-weight:700;font-family:var(--disp)">${missions.length}</div></div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:130px"><span style="font-size:11px;color:var(--muted)">Prospects waiting</span><div style="font-size:22px;font-weight:700;font-family:var(--disp)">${prospects.length}</div></div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:130px"><span style="font-size:11px;color:var(--muted)">Total scout cost</span><div style="font-size:22px;font-weight:700;font-family:var(--disp)">${money(totalScoutCost)}</div></div>
+    </div>
+    <h2 class="sec">Your Scouts</h2>
+    <div class="grid3" style="margin-bottom:16px">${scoutCards}</div>
+    ${prospects.length ? `<h2 class="sec">Prospects</h2><div class="grid2" style="margin-bottom:16px">${prospectCards}</div>` : ''}
+    <h2 class="sec">Scout Market</h2>
+    <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Market refreshes each season. Scout salaries are paid from club funds.</p>
+    <div class="card" style="padding:6px;overflow-x:auto">
+      <table><thead><tr>
+        <th class="noclick">Name</th><th class="noclick" style="min-width:90px">Ability</th>
+        <th class="noclick num">Salary</th><th class="noclick num">Length</th><th class="noclick"></th>
+      </tr></thead>
+      <tbody>${marketRows||'<tr><td colspan="5" style="color:var(--muted)">No scouts available.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  },
+
+  _genScoutMarket(){
+    const list = [];
+    for(let i=0;i<4;i++){
+      const ability = clamp(Math.round(30 + Math.random()*55), 20, 88);
+      const salary = Math.round((20000 + Math.pow(ability/90, 2)*90000)/5000)*5000;
+      list.push({id: 8000 + i + 1, name:`${pick(FIRST)} ${pick(LAST)}`, ability, salary, yearsLeft:ri(1,3)});
+    }
+    return list;
+  },
+
+  selectScoutRegion(scoutId, regionKey){
+    UI._scoutPick = {scoutId, regionKey};
+    UI.render();
+  },
+
+  dispatchScout(scoutId, regionKey, targetPos){
+    const sc = G.scouting;
+    if(!sc) return;
+    if(sc.missions.some(m=>m.scoutId===scoutId)){ UI.toast('That scout is already on a mission.'); return; }
+    const region = SCOUT_REGIONS.find(r=>r.key===regionKey);
+    if(!region){ UI.toast('Unknown region.'); return; }
+    if(G.phase!=='regular'){ UI.toast('Scouts can only be dispatched during the regular season.'); return; }
+    const posTarget = targetPos && targetPos !== 'any' ? targetPos : null;
+    const mission = {scoutId, region:regionKey, weeksLeft:region.weeks};
+    if(posTarget) mission.targetPos = posTarget;
+    sc.missions.push(mission);
+    UI._scoutPick = null;
+    const posLabel = posTarget ? ` looking for ${POS_NAME[posTarget]||posTarget}` : '';
+    UI.toast(`Scout dispatched to ${region.label}${posLabel}. Report in ${region.weeks} weeks.`);
+    UI.render();
+  },
+
+  signProspect(playerId){
+    const sc = G.scouting;
+    if(!sc) return;
+    const pr = (sc.prospects||[]).find(p=>p.playerId===playerId);
+    if(!pr) return;
+    const p = G.players[playerId];
+    if(!p) return;
+    const t = myTeam();
+    const cost = Math.round(clamp(salaryFor(p)*0.55, 65000, 180000)/5000)*5000;
+    if(teamSalary(t) + cost > G.config.cap){ UI.toast('Not enough cap room to sign this prospect.'); return; }
+    setPlayerContract(p, cost, 2, 'flat'); p.squad = 'dev'; p.fromScouting = true;
+    t.players.push(p.id);
+    sc.prospects = sc.prospects.filter(x=>x.playerId!==playerId);
+    UI.toast(`${p.name} signed to the development squad.`);
+    addNews(`${p.name} (${p.pos}, ${p.age}yo) signs with the ${t.nick} development squad from the scouting pipeline.`, {title:'Dev Squad Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Scouting'});
+    UI.render();
+  },
+
+  dismissProspect(playerId){
+    if(!G.scouting) return;
+    G.scouting.prospects = (G.scouting.prospects||[]).filter(p=>p.playerId!==playerId);
+    delete G.players[playerId];
+    UI.toast('Prospect dismissed.');
+    UI.render();
+  },
+
+  hireScout(id){
+    const market = (UI._scoutMarket&&UI._scoutMarket.list)||[];
+    const s = market.find(x=>x.id===id);
+    if(!s){ UI.toast('Scout not found.'); return; }
+    G.scouting = G.scouting||{scouts:[],missions:[],prospects:[]};
+    G.scouting.scouts.push(s);
+    UI.toast(`${s.name} hired as a scout.`);
+    UI.render();
+  },
+
+  fireScout(id){
+    if(!G.scouting) return;
+    const s = G.scouting.scouts.find(x=>x.id===id);
+    if(!s) return;
+    UI.modal(`<h3>Release ${esc(s.name)}?</h3>
+      <p class="page-sub">Any active missions will be cancelled.</p>
+      <div class="btnrow">
+        <button class="btn primary" onclick="UI._confirmFireScout(${id})">Confirm</button>
+        <button class="btn" onclick="UI.closeModal()">Cancel</button>
+      </div>`);
+  },
+
+  _confirmFireScout(id){
+    if(!G.scouting) return;
+    G.scouting.scouts   = G.scouting.scouts.filter(s=>s.id!==id);
+    G.scouting.missions = G.scouting.missions.filter(m=>m.scoutId!==id);
+    UI.closeModal();
+    UI.toast('Scout released.');
+    UI.render();
+  },
+});
