@@ -240,6 +240,28 @@ Object.assign(UI, {
       <div style="display:flex;justify-content:space-between;font-size:12px;margin:5px 0;color:var(--muted)">
         <span>Staff wages (outside cap)</span><span>${money(staffWages + scoutWages)}/yr</span>
       </div>
+      ${(()=>{
+        // Total outstanding payout liability if all top-squad players were released today
+        const playerLiability = t.players.map(id=>G.players[id]).filter(p=>p&&(p.squad==='top'||!p.squad)&&p.years>1).reduce((s,p)=>{
+          const py = Math.max(0,(p.years||1)-1);
+          return s + py*(p.salary||0);
+        }, 0);
+        const staffLiability = (G.staff||[]).reduce((s,x)=>{
+          const py = Math.max(0,(x.yearsLeft||1)-1);
+          return s + py*(x.salary||0);
+        }, 0);
+        const scoutLiability = ((G.scouting&&G.scouting.scouts)||[]).reduce((s,x)=>{
+          const py = Math.max(0,(x.yearsLeft||1)-1);
+          return s + py*(x.salary||0);
+        }, 0);
+        const totalLiability = playerLiability + staffLiability + scoutLiability;
+        if(!totalLiability) return '';
+        return `<div style="display:flex;justify-content:space-between;font-size:12px;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)">
+          <span style="color:var(--muted)">Total release liability (if all released today)</span>
+          <span style="color:var(--red);font-weight:700">${money(totalLiability)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin:2px 0">Players ${money(playerLiability)} · Staff ${money(staffLiability)} · Scouts ${money(scoutLiability)}</div>`;
+      })()}
       <div class="btnrow" style="margin-top:10px">
         <button class="btn sm" onclick="UI.go('contracts')">Manage Contracts</button>
         <button class="btn sm" onclick="UI.go('recruitment')">Recruitment</button>
