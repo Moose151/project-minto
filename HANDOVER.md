@@ -531,22 +531,22 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - For players who request release (`p.wantsOut`, `promiseConcern` escalation), the release is free — no payout required.
 - Display outstanding payout liability in Club Management and on the Contracts page.
 
-#### Staff Screen — Hire Button Layout Bug **[BUG]**
-- On the Staff page, hire buttons are overlapping text in their rows. Layout needs fixing so buttons sit in their own column/row and don't collide with staff name/role/ability text.
+#### Staff Screen — Hire Button Layout Bug ✅ FIXED
+- Staff card header now uses `flex-shrink:0` on the button column and `min-width:0;flex:1` on the text column so buttons never overlap name/role text.
+- Market table button column has `white-space:nowrap`; boosts column has `overflow:hidden;text-overflow:ellipsis` to prevent runover into the hire button.
 
-#### Assistant Coach Salary & Contract Management **[NEW]**
-- Staff page should show each hired assistant's current salary and years remaining on their contract.
-- Allow the coach to negotiate contract extensions for assistants before they expire — open a modal showing the assistant's current deal, their extension demand (based on ability/role/market), and accept/decline options.
-- Extension window opens when an assistant has 1 year or fewer remaining; should warn the coach in the staff row ("contract expiring").
-- Releasing a staff member mid-contract should trigger a payout (remaining years × salary) unless the staff member requested their own release — consistent with the player/coach contract payout rule.
-- Show total staff wage bill and per-staff salary in the Club Management wages breakdown (already shows aggregate; needs per-member detail on the Staff page).
+#### Assistant Coach Salary & Contract Management ✅ IMPLEMENTED
+- Staff cards show salary, years remaining, and a computed release payout (remaining years × salary). Payout is shown in the card footer and on the Fire button label.
+- Fire confirmation modal shows payout amount; payout is deducted from `G.club.funds` and generates a finance news item.
+- Staff in their final year show a red "CONTRACT EXPIRING" badge.
+- Extend button appears on expiring staff: opens a modal showing current vs demand salary (ability-weighted multiplier 1.05–1.23), with 1/2/3-year length choice. Updates `s.yearsLeft` and `s.salary`.
+- Still to do: richer demand negotiation (counter-offers, market comparison), staff requesting their own release waiving the payout, board pressure around retaining key staff..
 
-#### Coach Contract Negotiation & Extension **[NEW]**
-- Coach Profile should allow the user to view their own contract (salary, years remaining) and initiate negotiations to extend or resign.
-- Extension window should open when the coach has 1 year or fewer remaining; offer screens show year length, salary ask (based on coach rep/performance), and bonuses.
-- Board approves/rejects based on coach rep, recent results, and financial headroom.
-- Coaching contract payout applies if the board sacks the coach (see Contract Payouts above).
-- AI head-coach contracts should also be tracked and paid out when AI clubs sack their coaches (simplification: deduct from a notional AI club fund or just log it as a news event).
+#### Coach Contract Negotiation & Extension ✅ IMPLEMENTED
+- Coach Profile contract card shows years remaining (singular/plural) and a "Negotiate Extension" button when `contractYears <= 1`.
+- Extension modal shows current salary vs board offer (rep-based scaling: 60k base up to ~400k at max rep), with 1/2/3-year length choice.
+- Accepting updates `c.contractYears` and `c.salary`.
+- Still to do: board approval/rejection logic based on financial headroom and board confidence, sacking payout from club funds, AI club coaching payout tracking.
 
 #### App Conversion — Architecture Discussion **[NOTE — FUTURE PLAN]**
 - **Decision**: App conversion will happen as a **full rebuild in an appropriate engine** once the HTML game is in a complete state and the feature list is exhausted. There is no intermediate Electron wrapper step — it will be a clean rebuild.

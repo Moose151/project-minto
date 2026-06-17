@@ -30,23 +30,32 @@ Object.assign(UI, {
         : '';
       return [base, spec].filter(Boolean).join(' · ');
     };
+
     const staffCards = staff.length ? staff.map(s => {
       const info = roleInfo(s.role);
       const affects = staffAffects(s, info);
       const specLbl = specialtyLabel(s);
+      const expiring = s.yearsLeft <= 1;
+      const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
+      const payout = payoutYears * (s.salary || 0);
       return `<div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+          <div style="min-width:0;flex:1">
             <b style="font-size:15px">${esc(s.name)}</b>
+            ${expiring ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px">CONTRACT EXPIRING</span>` : ''}
             <p style="margin:2px 0;color:var(--brass);font-size:12px;font-weight:600">${esc(info.label)}${specLbl?` <span style="color:var(--blue);font-weight:500">· ${esc(specLbl)}</span>`:''}</p>
             <p style="margin:2px 0;color:var(--muted);font-size:11px">${esc(info.desc)}</p>
           </div>
-          <button class="btn sm" style="color:var(--red)" onclick="UI.fireStaff(${s.id})">Fire</button>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            ${expiring ? `<button class="btn sm primary" onclick="UI.extendStaff(${s.id})">Extend</button>` : ''}
+            <button class="btn sm" style="color:var(--red)" onclick="UI.fireStaff(${s.id})">${payout > 0 ? `Fire (${money(payout)})` : 'Release'}</button>
+          </div>
         </div>
         <div style="margin:6px 0">${abilityBar(s.ability)}</div>
         <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">
           <span style="font-size:12px;color:var(--muted)">Contract: <b>${s.yearsLeft} yr${s.yearsLeft===1?'':'s'}</b></span>
           <span style="font-size:12px;color:var(--muted)">Salary: <b>${money(s.salary)}</b></span>
+          ${payout > 0 ? `<span style="font-size:12px;color:var(--dim)">Release payout: <b>${money(payout)}</b></span>` : ''}
         </div>
         <p style="margin:6px 0 0;font-size:11px;color:var(--dim)">Boosts: ${esc(affects)}</p>
       </div>`;
@@ -65,11 +74,11 @@ Object.assign(UI, {
       const specLbl = specialtyLabel(s);
       return `<tr>
         <td><b>${esc(s.name)}</b><br><span style="font-size:11px;color:var(--brass)">${esc(info.label)}${specLbl?` · ${esc(specLbl)}`:''}</span></td>
-        <td>${abilityBar(s.ability)}</td>
-        <td class="num">${money(s.salary)}</td>
-        <td class="num">${s.yearsLeft}yr</td>
-        <td style="font-size:11px;color:var(--muted);max-width:180px">${esc(affects)}</td>
-        <td>
+        <td style="min-width:100px">${abilityBar(s.ability)}</td>
+        <td class="num" style="white-space:nowrap">${money(s.salary)}</td>
+        <td class="num" style="white-space:nowrap">${s.yearsLeft}yr</td>
+        <td style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(affects)}</td>
+        <td style="white-space:nowrap">
           ${alreadyHaveRole
             ? `<span style="font-size:11px;color:var(--dim)" title="You already have a ${info.label}">Role filled</span>`
             : `<button class="btn sm primary" onclick="UI.hireStaff(${s.id})">Hire</button>`}
@@ -155,18 +164,68 @@ Object.assign(UI, {
     if(!G.staff) return;
     const s = G.staff.find(x => x.id === id);
     if(!s) return;
-    UI.modal(`<h3>Fire ${esc(s.name)}?</h3>
-      <p class="page-sub">This will remove them from your coaching staff immediately.</p>
+    const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
+    const payout = payoutYears * (s.salary || 0);
+    const payoutLine = payout > 0
+      ? `<p style="color:var(--red);font-size:13px">Contract payout: <b>${money(payout)}</b> (${payoutYears} year${payoutYears===1?'':'s'} remaining × ${money(s.salary)})</p>`
+      : `<p style="color:var(--muted);font-size:13px">No payout — contract is in its final year.</p>`;
+    UI.modal(`<h3>Release ${esc(s.name)}?</h3>
+      ${payoutLine}
+      <p style="font-size:12px;color:var(--muted)">This will remove them from your coaching staff immediately.</p>
       <div class="btnrow">
-        <button class="btn primary" onclick="UI._confirmFireStaff(${id})">Confirm</button>
+        <button class="btn primary" style="background:var(--red)" onclick="UI._confirmFireStaff(${id}, ${payout})">Confirm</button>
         <button class="btn" onclick="UI.closeModal()">Cancel</button>
       </div>`);
   },
 
-  _confirmFireStaff(id){
+  _confirmFireStaff(id, payout){
+    if(payout > 0){
+      G.club.funds = (G.club.funds || 0) - payout;
+      addNews(`Staff release payout: ${money(payout)} paid from club funds.`, {type:'finance', tone:'bad', tag:'Staff', teamId:G.coach.teamId});
+    }
     G.staff = (G.staff || []).filter(s => s.id !== id);
     UI.closeModal();
-    UI.toast('Staff member released.');
+    UI.toast(payout > 0 ? `Staff released. ${money(payout)} payout deducted.` : 'Staff member released.');
+    UI.render();
+  },
+
+  extendStaff(id){
+    const s = (G.staff || []).find(x => x.id === id);
+    if(!s) return;
+    const info = STAFF_ROLES.find(r => r.key === s.role) || {label: s.role};
+    // Demand: current salary × multiplier (ability-weighted), rounded to $5k
+    const demandMult = 1.05 + (s.ability / 90) * 0.18;
+    const newSalary = Math.round(s.salary * demandMult / 5000) * 5000;
+    const salaryChange = newSalary - s.salary;
+    const salColour = salaryChange > 0 ? 'var(--red)' : 'var(--green)';
+    UI.modal(`<h3>Extend ${esc(s.name)}</h3>
+      <p class="page-sub">${esc(info.label)}${s.posSpecialty ? ` · ${POS_NAME[s.posSpecialty]||s.posSpecialty} Specialist` : ''} · Ability ${s.ability}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+        <div class="card" style="padding:10px">
+          <div style="font-size:11px;color:var(--muted)">Current salary</div>
+          <div style="font-size:18px;font-weight:700">${money(s.salary)}</div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div style="font-size:11px;color:var(--muted)">Demand</div>
+          <div style="font-size:18px;font-weight:700;color:${salColour}">${money(newSalary)} <span style="font-size:12px">(${salaryChange>0?'+':''}${money(salaryChange)})</span></div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Choose extension length:</p>
+      <div class="btnrow">
+        <button class="btn sm primary" onclick="UI._confirmExtendStaff(${id}, 1, ${newSalary})">1 year</button>
+        <button class="btn sm primary" onclick="UI._confirmExtendStaff(${id}, 2, ${newSalary})">2 years</button>
+        <button class="btn sm primary" onclick="UI._confirmExtendStaff(${id}, 3, ${newSalary})">3 years</button>
+        <button class="btn" onclick="UI.closeModal()">Cancel</button>
+      </div>`);
+  },
+
+  _confirmExtendStaff(id, years, newSalary){
+    const s = (G.staff || []).find(x => x.id === id);
+    if(!s) return;
+    s.yearsLeft = (s.yearsLeft || 1) + years;
+    s.salary = newSalary;
+    UI.closeModal();
+    UI.toast(`${s.name} extended for ${years} year${years===1?'':'s'} at ${money(newSalary)}/yr.`);
     UI.render();
   },
 });

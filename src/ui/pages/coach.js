@@ -32,7 +32,7 @@ Object.assign(UI, {
       <div class="card"><div class="navsep" style="margin:0">Reputation</div><div style="font-family:var(--disp);font-size:42px;font-weight:700;color:var(--brass)">${Math.round(c.rep)}</div><div class="bar"><i style="width:${c.rep}%"></i></div><p style="color:var(--muted);font-size:12px;margin-top:8px">${esc(badge)}</p></div>
       <div class="card"><div class="navsep" style="margin:0">Career record</div><div style="font-family:var(--disp);font-size:42px;font-weight:700">${c.careerW||0}–${c.careerL||0}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.prems||0} premiership${(c.prems||0)===1?'':'s'} · season ${G.season}</p></div>
       <div class="card"><div class="navsep" style="margin:0">Board confidence</div><div style="font-family:var(--disp);font-size:42px;font-weight:700;color:${c.conf<30?'var(--red)':c.conf>70?'var(--green)':'var(--ink)'}">${Math.round(c.conf)}%</div><p style="color:var(--muted);font-size:12px;margin-top:8px">Expectation: ${esc(c.expect.label)}</p></div>
-      <div class="card"><div class="navsep" style="margin:0">Contract</div><div style="font-family:var(--disp);font-size:32px;font-weight:700">${money(c.salary||0)}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.contractYears||0} years · cash ${money(c.cash||0)}</p></div>
+      <div class="card"><div class="navsep" style="margin:0">Contract</div><div style="font-family:var(--disp);font-size:32px;font-weight:700">${money(c.salary||0)}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.contractYears||0} year${(c.contractYears||0)===1?'':'s'} remaining · cash ${money(c.cash||0)}</p>${(c.contractYears||0)<=1?`<button class="btn sm primary" style="margin-top:8px" onclick="UI.coachContractExtension()">Negotiate Extension</button>`:''}</div>
     </div>
     <h2 class="sec">Coach Badges</h2>
     <div class="card coach-badges">
@@ -43,6 +43,40 @@ Object.assign(UI, {
     <div class="card" style="padding:6px"><table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick num">Finish</th><th class="noclick"></th></tr></thead><tbody>
     ${c.history.map(h=>`<tr><td>${h.year}</td><td>${esc(h.team)}</td><td class="num">${ord(h.pos)}</td><td>${h.premier?'★ Premiers':''}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted)">First season underway.</td></tr>'}
     </tbody></table></div>`;
+  },
+  coachContractExtension(){
+    const c = G.coach;
+    // Board offer: salary scales with rep; more experienced coaches can demand more
+    const baseDemand = Math.round((60000 + Math.pow((c.rep||30)/99, 1.8) * 340000) / 5000) * 5000;
+    const salaryChange = baseDemand - (c.salary || 0);
+    const salColour = salaryChange > 0 ? 'var(--red)' : 'var(--green)';
+    UI.modal(`<h3>Contract Extension</h3>
+      <p class="page-sub">${esc(c.name)} · Rep ${Math.round(c.rep||0)}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+        <div class="card" style="padding:10px">
+          <div style="font-size:11px;color:var(--muted)">Current salary</div>
+          <div style="font-size:18px;font-weight:700">${money(c.salary||0)}</div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div style="font-size:11px;color:var(--muted)">Board offer</div>
+          <div style="font-size:18px;font-weight:700;color:${salColour}">${money(baseDemand)} <span style="font-size:12px">(${salaryChange>0?'+':''}${money(salaryChange)})</span></div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Choose extension length:</p>
+      <div class="btnrow">
+        <button class="btn sm primary" onclick="UI._confirmCoachExtension(1, ${baseDemand})">1 year</button>
+        <button class="btn sm primary" onclick="UI._confirmCoachExtension(2, ${baseDemand})">2 years</button>
+        <button class="btn sm primary" onclick="UI._confirmCoachExtension(3, ${baseDemand})">3 years</button>
+        <button class="btn" onclick="UI.closeModal()">Decline</button>
+      </div>`);
+  },
+  _confirmCoachExtension(years, newSalary){
+    const c = G.coach;
+    c.contractYears = (c.contractYears || 0) + years;
+    c.salary = newSalary;
+    UI.closeModal();
+    UI.toast(`Contract extended ${years} year${years===1?'':'s'} at ${money(newSalary)}/yr.`);
+    UI.render();
   },
   coachUpgradeCost(){ return 25000 + Math.round((G.coach.rep||30)*650); },
   upgradeCoachAttr(key){
