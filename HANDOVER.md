@@ -523,13 +523,11 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
   5. **Convert to app with bundled assets**: Moving to Electron/Tauri or a React app would allow importing actual image files (PNG/WebP/SVG) from the file system rather than base64-encoding everything.
 - **Recommended path**: For the field, use SVG filters for turf texture. For logos, add more shape variety and gradient fills. For avatars, switch to a pixel-art sprite approach or bold cartoon (option 3 above from avatar section). For a serious long-term improvement, consider step 5 (app conversion).
 
-#### Contract Payouts on Release / Sacking **[NEW]**
-- When a player is released early (before their contract expires), the club should pay out the remaining contract value unless the player requested the release themselves.
-- Same rule for head coaches and staff: sacking mid-contract costs the club a payout; coaches/staff who request release forfeit their remaining salary.
-- Payout amount = remaining years × current salary (or remaining schedule sum for loaded contracts).
-- Club funds must cover the payout at the moment of release; show a confirmation dialog with the payout cost.
-- For players who request release (`p.wantsOut`, `promiseConcern` escalation), the release is free — no payout required.
-- Display outstanding payout liability in Club Management and on the Contracts page.
+#### Contract Payouts on Release / Sacking ✅ IMPLEMENTED
+- **Players**: Contracts page now has a "Cut" column. For players with ≥1 year left, a red "Cut (payout)" button shows the payout cost (`(years-1) × salary`). If the player requested release (`p.releaseRequest`), button reads "Release (free)" with no cost. Confirmation modal details payout; deducted from `G.club.funds` with a finance news item. Player moved to free agency via `releasePlayer(t, id)`.
+- **Staff**: Fire confirmation shows payout; deducted from `G.club.funds` (see Staff section above).
+- **Coach**: Extension implemented; sacking payout still to do.
+- Still to do: display total outstanding payout liability in Club Management; board pressure if payout causes funds to go negative; coach sacking deducts from funds.
 
 #### Staff Screen — Hire Button Layout Bug ✅ FIXED
 - Staff card header now uses `flex-shrink:0` on the button column and `min-width:0;flex:1` on the text column so buttons never overlap name/role text.
