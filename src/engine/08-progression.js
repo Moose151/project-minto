@@ -6,6 +6,21 @@ function advanceRound(){
     const round = G.fixtures[G.round];
     for(const m of round) simMatch(m, false);
     const myM = round.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);
+
+    // Bye week: give coached team players a bonus rest boost
+    const byeTeams = (G.byes && G.byes[G.round]) || [];
+    const onBye = byeTeams.includes(G.coach.teamId);
+    if(onBye){
+      const mt = myTeam();
+      for(const id of mt.players){
+        const p = G.players[id];
+        if(p && !p.injury) p.cond = Math.min(100, p.cond + 8);
+      }
+      addNews(`${mt.nick} have a bye in Round ${G.round+1}. Players take advantage of the rest week.`, {
+        title:'Bye Round', type:'club', tone:'neutral', teamId:G.coach.teamId, tag:'Bye'
+      });
+    }
+
     recordTeamOfWeek(round);
     weeklyRecoveryAndDev();
     payCoachWeekly();
@@ -18,7 +33,7 @@ function advanceRound(){
     checkAchievements('round', {round, myM});
     G.round++;
     if(G.round >= G.fixtures.length){ startFinals(); }
-    return {type:'round', round, myM};
+    return {type:'round', round, myM, onBye};
   }
   if(G.phase==='finals'){ return advanceFinals(); }
   return null;
@@ -583,6 +598,30 @@ function generateWeeklyMedia(round, myM){
       teamId: mt.id,
       tag: 'Medical',
     });
+  }
+
+  // Post-match analysis: richer item for the inbox
+  if(myM.det){
+    const oppDet = mineHome ? myM.det.a : myM.det.h;
+    const topMine = Object.entries(mineDet).map(([id,l])=>({p:G.players[+id], l})).filter(x=>x.p).sort((a,b)=>b.l.r-a.l.r).slice(0,3);
+    const topOpp  = Object.entries(oppDet).map(([id,l])=>({p:G.players[+id], l})).filter(x=>x.p).sort((a,b)=>b.l.r-a.l.r).slice(0,1);
+    const myTk  = Object.values(mineDet).reduce((s,l)=>s+(l.tk||0), 0);
+    const myErr = Object.values(mineDet).reduce((s,l)=>s+(l.err||0), 0);
+    const myRuns= Object.values(mineDet).reduce((s,l)=>s+(l.runs||0), 0);
+    const perfLines = topMine.map(x=>`${x.p.name} (${x.l.r.toFixed(1)}${x.l.t?', '+x.l.t+'T':''})`).join('; ');
+    const oppStar = topOpp[0] ? ` Opponent standout: ${topOpp[0].p.name} (${topOpp[0].l.r.toFixed(1)}).` : '';
+    const statsLine = `Tackles ${myTk} · Errors ${myErr} · Runs ${myRuns}.`;
+    addNews(
+      `${won?'Victory':'Defeat'} — ${pf}-${pa}${drew?' (draw)':''}. Standouts: ${perfLines||'-'}.${oppStar} ${statsLine}`,
+      {
+        title: 'Post-Match Analysis',
+        type: 'analysis',
+        tone: drew ? 'neutral' : won ? 'good' : 'bad',
+        teamId: mt.id,
+        tag: `Round ${G.round+1}`,
+        matchId: G.round,
+      }
+    );
   }
 
   const fantasy = [];

@@ -8,19 +8,36 @@ function fitCap(G, t){ // scale salaries so squad fits under cap
   if(total > target){ const f = target/total; for(const id of t.players){ const p=G.players[id]; p.salary = Math.max(85000, Math.round(p.salary*f/5000)*5000); if(p.contractSchedule && p.contractSchedule.length) p.contractSchedule = p.contractSchedule.map(v=>Math.max(85000, Math.round(v*f/5000)*5000)); } }
 }
 function genFixtures(teamIds){
-  // double round robin, circle method
-  const ids = shuffle(teamIds); const n = ids.length;
+  // double round robin, circle method; odd team count → one bye per round
+  const ids = shuffle(teamIds);
+  const n = ids.length;
+  const hasNaturalBye = n % 2 !== 0;
+  const workIds = hasNaturalBye ? [...ids, -1] : ids; // -1 = bye slot
+  const m = workIds.length; // always even
+  const arr = workIds.slice();
   const rounds = [];
-  const arr = ids.slice();
-  for(let r=0; r<n-1; r++){
+  const byesByRound = [];
+
+  for(let r = 0; r < m - 1; r++){
     const games = [];
-    for(let i=0; i<n/2; i++){
-      const a = arr[i], b = arr[n-1-i];
-      games.push(r%2===0 ? {h:a, a:b} : {h:b, a:a});
+    const byeTeams = [];
+    for(let i = 0; i < m/2; i++){
+      const a = arr[i], b = arr[m-1-i];
+      if(a === -1){ byeTeams.push(b); }
+      else if(b === -1){ byeTeams.push(a); }
+      else { games.push(r%2===0 ? {h:a, a:b} : {h:b, a:a}); }
     }
     rounds.push(games);
-    arr.splice(1,0,arr.pop());
+    byesByRound.push(byeTeams);
+    arr.splice(1, 0, arr.pop());
   }
-  const second = rounds.map(g => g.map(m => ({h:m.a, a:m.h})));
-  return rounds.concat(second).map(g => g.map(m => ({...m, played:false, hs:0, as:0, det:null})));
+
+  const secondHalf = rounds.map(g => g.map(mm => ({h:mm.a, a:mm.h})));
+  const allRounds = [...rounds, ...secondHalf];
+  const allByes = [...byesByRound, ...byesByRound];
+
+  return {
+    rounds: allRounds.map(g => g.map(mm => ({...mm, played:false, hs:0, as:0, det:null}))),
+    byes: allByes,
+  };
 }

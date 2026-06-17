@@ -47,6 +47,7 @@ function migrateSave(G){
     p.ovr = calcOvr(p);
     p.pot = Math.max(p.pot || p.ovr, p.ovr);
   }
+  if(!G.byes) G.byes = (G.fixtures || []).map(() => []);
   if(!G.freeAgents) G.freeAgents = [];
   if(!G.hallOfFame) G.hallOfFame = [];
   if(!G.achievements) G.achievements = [];

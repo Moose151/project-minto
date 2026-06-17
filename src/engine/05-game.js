@@ -80,7 +80,9 @@ function startNewGame(cfg){
   buildFreeAgentPool(G);
   for(const t of G.teams) fitCap(G, t);
   G.coach.teamId = cfg.teamId;
-  G.fixtures = genFixtures(G.teams.map(t=>t.id));
+  const fixtResult = genFixtures(G.teams.map(t=>t.id));
+  G.fixtures = fixtResult.rounds;
+  G.byes = fixtResult.byes;
   for(const t of G.teams) autoPick(t);
   if(cfg.teamId != null){
     G.coach.expect = setExpectation();

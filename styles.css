@@ -139,7 +139,7 @@ td.num,th.num{text-align:right}
 .goal-post.top{top:-28px}.goal-post.bottom{bottom:-28px}
 .goal-post svg{display:block; margin:0 auto}
 /* pitch player cards */
-.pitch-player{position:absolute; transform:translate(-50%,-50%); width:118px; border:0; background:rgba(14,18,24,.86); backdrop-filter:blur(2px); color:var(--ink); border-radius:9px; padding:5px 6px 7px; box-shadow:0 3px 12px rgba(0,0,0,.55); z-index:3; text-align:center; cursor:pointer}
+.pitch-player{position:absolute; transform:translate(-50%,-50%); width:124px; border:0; background:rgba(14,18,24,.86); backdrop-filter:blur(2px); color:var(--ink); border-radius:9px; padding:5px 6px 8px; box-shadow:0 3px 12px rgba(0,0,0,.55); z-index:3; text-align:center; cursor:pointer}
 .pitch-player .status-stack{position:absolute; top:-8px; right:-3px; display:flex; gap:2px}
 .pitch-avatar{display:block; margin:0 auto 3px}
 .pitch-num{width:22px; height:24px; font-size:12px; border-radius:4px 4px 5px 5px; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; margin-right:3px; flex-shrink:0}
@@ -150,14 +150,14 @@ td.num,th.num{text-align:right}
 .pitch-player.fit-red{box-shadow:0 0 0 2px rgba(200,90,79,.95),0 3px 12px rgba(0,0,0,.55)}
 .pitch-player.fit-empty{box-shadow:0 0 0 1px rgba(180,180,180,.3),0 3px 10px rgba(0,0,0,.4)}
 .pitch-jersey{width:32px; height:35px; margin:0 auto 2px; display:block}
-.pitch-name{display:flex; align-items:center; justify-content:center; gap:0; font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.01em; line-height:1.2; max-width:100%}
-.pitch-sub{display:flex; align-items:center; justify-content:center; gap:5px; margin-top:3px}
-.ovr-xs{font-size:14px; font-weight:900; font-family:var(--disp)}
+.pitch-name{display:flex; align-items:center; justify-content:center; gap:0; font-weight:800; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.01em; line-height:1.2; max-width:100%}
+.pitch-sub{display:flex; align-items:center; justify-content:center; gap:5px; margin-top:4px}
+.ovr-xs{font-size:17px; font-weight:900; font-family:var(--disp)}
 .ovr-xs.ovr-elite{color:#E8C84A}
 .ovr-xs.ovr-good{color:#8FCF9F}
 .ovr-xs.ovr-avg{color:#9BA6B2}
 .ovr-xs.ovr-poor{color:#C47830}
-.pitch-pos{font-size:10px; color:var(--dim); letter-spacing:.04em; text-transform:uppercase; font-weight:700}
+.pitch-pos{font-size:11px; color:var(--dim); letter-spacing:.04em; text-transform:uppercase; font-weight:700}
 .coh-line{position:absolute; height:3px; background:rgba(210,165,62,.30); transform-origin:center; border-radius:99px; z-index:1; pointer-events:none}
 .coh-line.good{background:rgba(76,175,125,.45)}
 .coh-line.bad{background:rgba(200,90,79,.45)}
@@ -169,7 +169,17 @@ td.num,th.num{text-align:right}
 .squad-drag-row .pname{font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .squad-drag-row .pmeta{font-size:12px; color:var(--muted); white-space:nowrap}
 @media(max-width:1100px){.team-sheet-layout{grid-template-columns:1fr}.rl-pitch{max-height:none; min-height:680px}}
-@media(max-width:620px){.rl-pitch{min-height:560px}.pitch-player{width:84px}.pitch-name{font-size:11px}.pitch-sub{display:none}.pitch-jersey{width:26px;height:29px;font-size:13px}.ovr-xs{font-size:12px}}
+@media(max-width:620px){.rl-pitch{min-height:560px}.pitch-player{width:88px}.pitch-name{font-size:11px}.pitch-sub{display:none}.pitch-jersey{width:26px;height:29px;font-size:13px}.ovr-xs{font-size:13px}}
+/* inbox */
+.inbox-item{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:7px;cursor:pointer;transition:border-color .15s}
+.inbox-item:hover{border-color:var(--brass)}
+.inbox-item.expanded{border-color:var(--brass);background:rgba(255,255,255,.03)}
+.inbox-header{display:flex;gap:8px;align-items:center}
+.inbox-tone{font-size:15px;flex-shrink:0;width:16px;text-align:center}
+.inbox-title{flex:1;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox-meta{font-size:10px;color:var(--dim);white-space:nowrap;flex-shrink:0}
+.inbox-preview{font-size:12px;color:var(--muted);margin-top:4px;padding-left:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox-body{font-size:13px;color:var(--ink);margin-top:8px;padding-left:24px;line-height:1.55;white-space:pre-wrap}
 
 /* ---------- buttons ---------- */
 .btn{background:var(--panel2); border:1px solid var(--line2); color:var(--ink); border-radius:6px; padding:7px 14px; font-size:13px; font-weight:600}

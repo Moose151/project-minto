@@ -14,9 +14,11 @@ Object.assign(UI, {
     const r = Math.max(0, Math.min(UI._fixtRound, total - 1));
 
     const round = G.fixtures[r];
+    const byeTeamIds = (G.byes && G.byes[r]) || [];
+    const myBye = byeTeamIds.includes(G.coach.teamId);
     const isNext = r === G.round && G.phase === 'regular';
     const isCompleted = r < G.round || G.phase !== 'regular';
-    const roundLabel = `Round ${r+1}${isNext ? ' — Next Up' : isCompleted ? ' — Completed' : ' — Upcoming'}`;
+    const roundLabel = `Round ${r+1}${myBye ? ' — BYE' : ''}${isNext && !myBye ? ' — Next Up' : isCompleted ? ' — Completed' : !myBye ? ' — Upcoming' : ''}`;
 
     const gameRow = m => {
       const th = G.teams[m.h], ta = G.teams[m.a];
@@ -37,10 +39,17 @@ Object.assign(UI, {
       </div>`;
     };
 
+    const byeCard = byeTeamIds.length ? `<div style="text-align:center;padding:10px 0 6px;border-top:1px solid var(--line);margin-top:8px">
+      <span style="color:var(--brass);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase">BYE — </span>
+      ${byeTeamIds.map(id=>{ const bt=G.teams[id]; return bt?`<span style="font-size:12px">${teamLogo(bt,16)} ${esc(bt.nick)}</span>`:''; }).join(' ')}
+    </div>` : '';
+
     // Round navigation
-    const jumpOpts = G.fixtures.map((_, i) =>
-      `<option value="${i}" ${i === r ? 'selected' : ''}>Round ${i+1}${i === G.round && G.phase === 'regular' ? ' ▸' : ''}</option>`
-    ).join('');
+    const jumpOpts = G.fixtures.map((_, i) => {
+      const rByeIds = (G.byes && G.byes[i]) || [];
+      const rMyBye = rByeIds.includes(G.coach.teamId);
+      return `<option value="${i}" ${i === r ? 'selected' : ''}>Round ${i+1}${rMyBye ? ' (BYE)' : ''}${i === G.round && G.phase === 'regular' ? ' ▸' : ''}</option>`;
+    }).join('');
     const nav = `<div class="btnrow" style="margin-bottom:12px;align-items:center;gap:6px">
       <button class="btn sm" onclick="UI._fixtRound=Math.max(0,UI._fixtRound-1);UI.render()" ${r===0?'disabled':''}>◀ Prev</button>
       <select style="flex:1;max-width:200px" onchange="UI._fixtRound=+this.value;UI.render()">${jumpOpts}</select>
@@ -48,9 +57,12 @@ Object.assign(UI, {
       ${G.phase==='regular' ? `<button class="btn sm" onclick="UI._fixtRound=${G.round};UI.render()">Now</button>` : ''}
     </div>`;
 
+    const byeAlert = myBye ? `<div style="background:rgba(210,165,62,.1);border:1px solid var(--brass);border-radius:6px;padding:8px 12px;margin-bottom:10px;color:var(--brass);font-weight:700;text-align:center">YOUR TEAM HAS A BYE THIS ROUND · Players are resting and recovering</div>` : '';
     const roundCard = `<div class="card" style="padding:12px">
       <div class="navsep" style="margin:0 0 10px">${roundLabel}</div>
+      ${byeAlert}
       ${round.map(gameRow).join('')}
+      ${byeCard}
     </div>`;
 
     // Finals bracket (shown above pagination when available)

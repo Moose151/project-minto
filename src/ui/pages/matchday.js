@@ -8,7 +8,21 @@ Object.assign(UI, {
   p_matchday(){
     const t = myTeam();
     const m = G.phase==='regular' && G.fixtures[G.round] ? G.fixtures[G.round].find(m=>m.h===t.id||m.a===t.id) : null;
-    if(!m) return `<h1 class="page">Match Day</h1><p class="page-sub">No regular-season match is currently available.</p>`;
+    if(!m){
+      const onBye = G.phase==='regular' && (G.byes && G.byes[G.round] || []).includes(t.id);
+      return `<h1 class="page">Match Day</h1>
+        ${onBye
+          ? `<div style="text-align:center;padding:40px 0">
+              <div style="font-size:56px;font-weight:900;font-family:var(--disp);color:var(--brass);letter-spacing:.08em">BYE</div>
+              <p class="page-sub" style="margin:6px 0 14px">Round ${G.round+1} — your team has no match this week. Players rest and recover.</p>
+              <div class="btnrow" style="justify-content:center">
+                <button class="btn primary" onclick="UI.advance()">Advance (Bye)</button>
+                <button class="btn" onclick="UI.go('fixtures')">View round fixtures</button>
+                <button class="btn" onclick="UI.go('training')">Training</button>
+              </div>
+            </div>`
+          : `<p class="page-sub">No regular-season match is currently available.</p>`}`;
+    }
     const h = G.teams[m.h], a = G.teams[m.a];
     const stadium = h.stadium || pick(STADIUM_NAMES);
     if(!m.projWeather) m.projWeather = pick(WEATHER);

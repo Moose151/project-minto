@@ -45,6 +45,7 @@ Object.assign(UI, {
     const t = myTeam();
     const lad = ladder();
     const next = G.phase==='regular' && G.fixtures[G.round] ? G.fixtures[G.round].find(m=>m.h===t.id||m.a===t.id) : null;
+    const onBye = G.phase==='regular' && (G.byes && G.byes[G.round] || []).includes(t.id);
     const rec = lad.find(r=>r.id===t.id);
     const pos = lad.findIndex(r=>r.id===t.id)+1;
     const capSpend = teamSalary(t);
@@ -57,7 +58,13 @@ Object.assign(UI, {
     const club = G.club || { funds: 0 };
     const clubFundsTone = club.funds < 0 ? 'bad' : club.funds > 2000000 ? 'good' : '';
     let nextHtml = '<p class="page-sub">No upcoming fixture.</p>';
-    if(next){
+    if(onBye && !next){
+      nextHtml = `<div style="text-align:center;padding:16px 0 8px">
+        <div style="font-size:40px;font-weight:900;font-family:var(--disp);color:var(--brass);letter-spacing:.06em">BYE</div>
+        <p class="page-sub" style="margin:4px 0 10px">Round ${G.round+1} — rest week. Players get a bonus conditioning boost.</p>
+        <div class="btnrow" style="justify-content:center"><button class="btn primary" onclick="UI.advance()">Advance (Bye)</button><button class="btn" onclick="UI.go('fixtures')">View fixtures</button></div>
+      </div>`;
+    } else if(next){
       const opp = G.teams[next.h===t.id ? next.a : next.h];
       const home = next.h===t.id;
       const oppPos = lad.findIndex(r=>r.id===opp.id)+1;

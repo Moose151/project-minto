@@ -464,11 +464,12 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Nationality-weighted hair styles (mohawk, dreadlocks, ponytail) are in `genPlayerFace` in `03-players.js` — these should be preserved regardless of rendering approach.
 - `genPlayerFace` now also stores `facialHair` boolean (seeded per player, age 22+).
 
-#### Team Sheet — Larger Player Cards **[NEW]**
-- Player cards on the pitch are currently too small — name, OVR, and position need to be significantly more visible.
-- Increase card width from 96px to at least 120px; increase font sizes for name (14px) and OVR/position.
-- OVR should be displayed as a clear coloured badge/number, not a small inline span.
-- Position label should be clearly readable even at a glance.
+#### Team Sheet — Larger Player Cards ✅ IMPLEMENTED
+- Card width increased from 118px → 124px.
+- Player name font: 13px → 14px (bold).
+- OVR number: `ovr-xs` 14px → 17px (dominant visual element on card, colour-coded by tier).
+- Position label: 10px → 11px, slightly more readable.
+- Responsive breakpoint adjusted: mobile (≤620px) now 88px wide cards instead of 84px.
 
 #### Team List Player Ordering — NRL Standard ✅
 - `NRL_POS_ORDER = ['FB','WG','CE','FE','HB','PR','HK','SR','LK']` added to `05-helpers.js` with `nrlPosIdx(p)` and `nrlSort(a, b)` helpers.
@@ -482,13 +483,15 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Round schedule should match the NRL structure: games per round, double-header rounds, Origin round scheduling.
 - Future: real club stadiums with real capacities, match scheduling by day-of-week (Thursday night, Friday night, Saturday, Sunday afternoon/evening).
 
-#### Bye Rounds — NRL Structure **[NEW]**
-- Each team should have at least 2 byes in a regular season; some teams may have 3.
-- Standard rounds: 1 team on bye per round (or sometimes 2 if team count requires it).
-- Origin rounds (typically rounds 11–15): 4+ teams on bye simultaneously while selected players fulfil rep duties.
-- Fixture generator (`genFixtures` in `04-teams.js`) needs to account for byes — teams on bye are excluded from that round's fixtures.
-- Bye round should show on the Fixtures page, dashboard next-match widget, and wherever "next opponent" is displayed.
-- A team on a bye should not accumulate condition loss from a match that week.
+#### Bye Rounds — NRL Structure ✅ FIRST SLICE IMPLEMENTED
+- **Fixture generator updated** (`genFixtures` in `04-teams.js`): odd team counts (9, 11, 13, 15, 17…) now automatically generate bye rounds using a phantom bye slot (-1) in the circle algorithm. Each team gets 2 byes in a full double-round-robin season (once per half).
+- **`G.byes` array**: stores `[teamId]` (or `[]`) per round; set at game start; old saves migrate with empty arrays.
+- **Fixtures page**: bye rounds show a highlighted "YOUR TEAM HAS A BYE THIS ROUND" banner; all teams on bye listed at the bottom; round dropdown shows `(BYE)` label.
+- **Dashboard**: bye rounds show a large "BYE" display with rest week context and advance button instead of next-match widget.
+- **Match Day**: bye rounds show a full-page bye screen with advance/fixtures/training buttons.
+- **Topbar**: shows `Round X · BYE` and advance button says "Advance (Bye)".
+- **Condition boost**: coached team players get +8 condition on bye weeks (in addition to normal weekly recovery).
+- Still to do: forced even-team-count byes (for 16-team leagues), Origin round bye blocks, bye scheduling tuning for multi-bye-per-team distribution.
 
 #### Magic Round **[NEW]**
 - One round per season where every team plays at the same neutral venue over 3 days (modelled on NRL Magic Round at Suncorp Stadium).
@@ -598,13 +601,12 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Coaches should be able to adjust tactics on the fly to suit conditions, choosing more expansive play or a safer/territory-focused approach.
 - AI coaches should also adapt tactics to weather, match situation, squad strengths, and fatigue.
 
-#### Inbox & Staff Communication **[NEW]**
-- Implement an Inbox / Mail page as a central place for club communication.
-- Receive post-match analysis mail after fixtures, especially coached-club games.
-- Receive assistant coach recommendations about tactics, selection, training, fatigue, player form, and development.
-- Receive scout emails when missions progress, prospects are found, or a scout has a recommendation.
-- Receive player emails/messages when players want something done, including role concerns, contract issues, fatigue complaints, transfer requests, captaincy requests, playing-time concerns, or morale issues.
-- Inbox items should link directly to relevant pages, players, matches, training controls, contract screens, or scouting results.
+#### Inbox & Staff Communication ✅ FIRST SLICE IMPLEMENTED
+- **Inbox page** added under nav (between Dashboard and Squad): reads from `G.news`, category filter tabs (All, Match Analysis, Results, Medical, Club, Board, Scouting, Recruitment, Contracts, Achievements), item counts per tab, expand/collapse individual items.
+- **Post-match analysis news item**: `generateWeeklyMedia` now generates a second, richer `type:'analysis'` item after every coached-team match, with standout performers (name, rating, tries), opponent standout, and team stats summary (tackles, errors, runs).
+- **Inbox page** in offseason allowlist; nav shows "Inbox" between Dashboard and Squad; items sorted newest-first.
+- **Player quick-link**: expanded inbox items with a `playerId` show a "View [player]" button.
+- Still to do: assistant coach recommendation items, scout report items, player message items (contract concerns/morale/release requests), read/unread state, direct action links from inbox to relevant pages.
 
 #### Offseason Training Boosts & Growth Visuals **[NEW]**
 - Players should gain or lose meaningful OVR through offseason training, aging, development, injuries, morale, potential, facilities, and coaching.
