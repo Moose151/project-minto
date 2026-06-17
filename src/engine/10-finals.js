@@ -128,7 +128,7 @@ function _advanceTop8(F){
 
 function _advanceTop4(F){
   if(F.week === 1){
-    const matches = F.qf || F.sf;  // handle old saves that used 'sf' for this round
+    const matches = F.qf;
     for(const m of matches) simMatch(m, true);
     weeklyRecoveryAndDev();
     payCoachWeekly();

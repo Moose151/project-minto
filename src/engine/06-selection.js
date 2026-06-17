@@ -4,7 +4,7 @@
 function availablePlayers(t){
   return t.players
     .map(id=>G.players[id])
-    .filter(p=>p && !isPlayerUnavailable(p) && (p.squad==='top' || !p.squad)); // !p.squad = migration fallback
+    .filter(p=>p && !isPlayerUnavailable(p) && p.squad==='top');
 }
 function isPlayerUnavailable(p){
   if(!p) return true;

@@ -18,8 +18,6 @@ Object.assign(UI, {
     const coy = O.awards.coachYear;
     const toty = O.awards.teamOfYear || [];
     let offers = O.offers && O.offers.length ? O.offers : (O.offers = generateJobOffers());
-    // backward compat: old saves stored plain IDs
-    if(offers.length && typeof offers[0] === 'number') offers = offers.map(id=>({teamId:id, salary:G.coach.salary||120000, years:2, pos:0, reason:'take the job', w:0, l:0}));
     if(O.sacked && !offers.length){ const lad=ladder(); const fb=lad[lad.length-1].id===G.coach.teamId?lad[lad.length-2]:lad[lad.length-1]; offers.push({teamId:fb.id, salary:Math.round((G.coach.salary||120000)*0.85/5000)*5000, years:1, pos:lad.length, reason:'stabilise the club', w:fb.w, l:fb.l}); }
     const premier = G.teams[G.finals.premier];
     const awardPlayer = (label, p, detail, empty) => `<div class="card ${p?'click':''}" ${p?`onclick="UI.playerModal(${p.id})"`:''}>

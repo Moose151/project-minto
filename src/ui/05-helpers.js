@@ -212,9 +212,6 @@ function nationalityFlag(country){
     'Fiji':             '🇫🇯',
     'Cook Islands':     '🇨🇰',
     'Lebanon':          '🇱🇧',
-    // legacy demonym fallbacks for old saves not yet migrated
-    'Australian':'🇦🇺','New Zealander':'🇳🇿','Tongan':'🇹🇴','Samoan':'🇼🇸',
-    'Papua New Guinean':'🇵🇬','English':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Fijian':'🇫🇯','Cook Islander':'🇨🇰','Lebanese':'🇱🇧'
   }[country] || '🏉';
 }
 function repChip(team){
