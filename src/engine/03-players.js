@@ -54,6 +54,7 @@ function genPlayer(pos, age, quality){ // quality ~ league tier centre, e.g. 60
   p.seasonStartOvr = p.ovr;
   p.seasonStartPot = p.pot;
   p.seasonStartGames = 0;
+  p.seasonStartAttrs = {...p.attrs};
   p.morale = ri(55,80); p.form = ri(48,62); p.cond = 100; p.injury = null;
   p.salary = salaryFor(p); p.years = ri(1,3); p.contractType = 'flat'; p.contractSchedule = Array(p.years).fill(p.salary);
   p.career = {seasons:0, games:0, tries:0, goals:0, points:0, premierships:0, ga:0, fg:0, ta:0, tk:0, m:0, runs:0, err:0, fpts:0, k4020:0, fdo:0, mins:0, mt:0, lb:0, lba:0, ks:0, km:0, inf:0, rSum:0, votes:0};
@@ -69,6 +70,7 @@ function genPlayer(pos, age, quality){ // quality ~ league tier centre, e.g. 60
   p.maori = nationality === 'New Zealand' && rnd() < 0.30;
   const curYear = (typeof G !== 'undefined' && G && G.year) ? G.year : 2026;
   p.dobYear = curYear - age;
+  p.ovrHistory = [{year: curYear, ovr: p.ovr}];
   p.dobMonth = ri(1, 12);
   p.dobDay = ri(1, 28);
   p.birthTown = pickBirthTown(p);

@@ -4,6 +4,7 @@
 Object.assign(UI, {
   _playerHistSort: 'newest',
   _playerHistSearch: '',
+  _playerTab: 'stats',
 
   playerModal(id){
     if(!G.players[id]) return;
@@ -81,6 +82,31 @@ Object.assign(UI, {
         return `<tr><td>${teamCell}</td><td class="num">${x.games||0}</td><td class="num">${x.tries||0}</td><td class="num">${x.ta||0}</td><td class="num">${x.goals||0}/${x.ga||0}</td><td class="num">${x.fg||0}</td><td class="num">${x.tk||0}</td><td class="num">${x.m||0}</td><td class="num">${x.k4020||0}</td><td class="num">${x.fdo||0}</td><td class="num">${x.points||0}</td><td class="num">${avg}</td></tr>`;
       }).join('');
 
+    // OVR sparkline from ovrHistory
+    const ovrSparkline = (history) => {
+      if(!history || history.length < 2) return '';
+      const vals = history.map(h=>h.ovr);
+      const lo = Math.min(...vals) - 2, hi = Math.max(...vals) + 2;
+      const range = Math.max(hi - lo, 8);
+      const W = 180, H = 48, pad = 6;
+      const x = (i) => pad + (i / (vals.length - 1)) * (W - pad*2);
+      const y = (v) => H - pad - ((v - lo) / range) * (H - pad*2);
+      const pts = vals.map((v,i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const latestOvr = vals[vals.length - 1];
+      const firstOvr = vals[0];
+      const trend = latestOvr > firstOvr ? 'var(--green)' : latestOvr < firstOvr ? 'var(--red)' : 'var(--brass)';
+      const dots = vals.map((v,i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${i===vals.length-1?trend:'var(--dim)'}" stroke="var(--bg)" stroke-width="1.5"/>`).join('');
+      const labels = [history[0], history[history.length-1]];
+      const labelHtml = labels.filter((h,i,arr)=>arr.indexOf(h)===i).map((h,i)=>{
+        const ix = i===0?0:vals.length-1;
+        return `<text x="${x(ix).toFixed(1)}" y="${H}" font-size="8" fill="var(--dim)" text-anchor="${ix===0?'start':'end'}">${h.year}</text>`;
+      }).join('');
+      return `<svg width="${W}" height="${H+8}" viewBox="0 0 ${W} ${H+8}" style="display:block">
+        <polyline points="${pts}" fill="none" stroke="${trend}" stroke-width="2" stroke-linejoin="round"/>
+        ${dots}${labelHtml}
+      </svg>`;
+    };
+
     const natLine = playerRepLine(p);
 
     return `<div class="player-title"><div>${playerAvatar(p,76)}</div><div><h1 class="page">${playerTierBadge(p)} ${esc(p.name)}</h1>
@@ -90,7 +116,11 @@ Object.assign(UI, {
       <div class="player-score">
         <span class="lbl">${isMyTeam?'OVR':'Est. OVR'}</span>
         ${ovrHtml(p)}
-        ${isMyTeam&&ovrGain?`<em style="color:${ovrGain>0?'var(--green)':'var(--red)'}">${ovrGain>0?'+':''}${ovrGain} this season</em>`:'<em style="font-size:10px;color:var(--dim)">${isMyTeam?\'\':`${scoutedOvr(p).confidence} conf.`}</em>'}
+        ${isMyTeam && ovrGain !== 0
+          ? `<em style="color:${ovrGain>0?'var(--green)':'var(--red)'};font-weight:700">${ovrGain>0?'+':''}${ovrGain} this season</em>`
+          : isMyTeam
+            ? `<em style="font-size:10px;color:var(--dim)">No change yet</em>`
+            : `<em style="font-size:10px;color:var(--dim)">${scoutedOvr(p).confidence} conf.</em>`}
       </div>
       <div class="player-score">
         <span class="lbl">Est. POT</span>
@@ -115,6 +145,10 @@ Object.assign(UI, {
       ${alreadyApproached?`<span style="font-size:12px;color:var(--green);align-self:center">✓ Pre-contract approach made</span>`:''}
     </div>
     <p style="color:var(--muted);font-size:11px;margin:-6px 0 12px">★ = key attribute for ${POS_NAME[p.pos]}. ${!isMyTeam ? `Values shown at ${scoutedOvr(p).confidence.toLowerCase()} scouting confidence.` : ''}</p>
+    <div class="btnrow" style="margin-bottom:12px;gap:4px">
+      ${['stats','development','history'].map(tab=>`<button class="btn sm ${UI._playerTab===tab?'primary':''}" onclick="UI._playerTab='${tab}';UI.render()">${tab==='stats'?'Stats':tab==='development'?'Development':'History'}</button>`).join('')}
+    </div>
+    ${UI._playerTab === 'stats' ? `
     <div class="grid3">
       <div class="card"><h2 class="sec" style="margin-top:0">This season</h2>
         <p class="bigline">${p.s.g} games · ${p.s.mins||0} mins · avg rating ${statAvg}</p>
@@ -137,27 +171,82 @@ Object.assign(UI, {
       ${attrBlock('Defensive', ATTR_GROUPS.defensive)}
       ${attrBlock('Physical', ATTR_GROUPS.physical)}
       ${attrBlock('Mental', ATTR_GROUPS.mental)}
-    </div>
-    <div class="grid2" style="margin-top:16px">
+    </div>` : ''}
+    ${UI._playerTab === 'development' ? (()=>{
+      const sa = p.seasonStartAttrs;
+      const hist = p.ovrHistory;
+      const spark = ovrSparkline(hist);
+      const lastSeason = p.history && p.history.length ? p.history[0] : null;
+      const ovrColor = ovrGain > 0 ? 'var(--green)' : ovrGain < 0 ? 'var(--red)' : 'var(--muted)';
+
+      const attrDeltaGroup = (title, keys) => {
+        if(!sa) return '';
+        const rows = keys.map(a => {
+          const cur = p.attrs[a], prev = sa[a] != null ? sa[a] : cur;
+          const delta = cur - prev;
+          const isKey = keyAttrs.has(a);
+          const deltaHtml = delta > 0
+            ? `<span style="color:var(--green);font-weight:700">+${delta}</span>`
+            : delta < 0
+              ? `<span style="color:var(--red);font-weight:700">${delta}</span>`
+              : `<span style="color:var(--dim)">—</span>`;
+          return `<tr style="${isKey?'background:rgba(210,165,62,.06)':''}">
+            <td style="${isKey?'color:var(--brass);font-weight:600':'color:var(--muted)'};font-size:12px">${ATTR_LABEL[a]}${isKey?' ★':''}</td>
+            <td class="num" style="font-size:12px"><span class="ovr ${ovrCls(cur)}">${cur}</span></td>
+            <td class="num" style="font-size:12px;color:var(--dim)">${prev}</td>
+            <td class="num" style="font-size:12px">${deltaHtml}</td>
+          </tr>`;
+        }).join('');
+        return `<div class="card"><h2 class="sec" style="margin-top:0;font-size:13px">${title}</h2>
+          <table><thead><tr><th class="noclick">Attribute</th><th class="noclick num">Now</th><th class="noclick num" style="color:var(--dim)">Start</th><th class="noclick num">Δ</th></tr></thead>
+          <tbody>${rows}</tbody></table></div>`;
+      };
+
+      const seasonCmp = lastSeason ? `
+        <div class="card"><h2 class="sec" style="margin-top:0;font-size:13px">This season vs ${lastSeason.year}</h2>
+          <table style="font-size:12px"><thead><tr><th class="noclick"></th><th class="noclick num">Now</th><th class="noclick num" style="color:var(--dim)">${lastSeason.year}</th><th class="noclick num">Δ</th></tr></thead><tbody>
+          ${[['Games',p.s.g,lastSeason.g],['Tries',p.s.t,lastSeason.t],['Tackles',p.s.tk,lastSeason.tk],['Run metres',p.s.m,lastSeason.m],['Avg rating',p.s.g?(p.s.rSum/p.s.g).toFixed(1):0,lastSeason.avg||0]].map(([l,cur,prev])=>{
+            const d = typeof cur==='number'&&typeof prev==='number' ? cur-prev : null;
+            const da = d===null?'—':d>0?`<span style="color:var(--green)">+${d.toFixed?d.toFixed(d<10?1:0):d}</span>`:d<0?`<span style="color:var(--red)">${d.toFixed?d.toFixed(d>-10?1:0):d}</span>`:'—';
+            return `<tr><td style="color:var(--muted)">${l}</td><td class="num">${typeof cur==='number'&&cur%1!==0?cur:cur}</td><td class="num" style="color:var(--dim)">${typeof prev==='number'&&prev%1!==0?prev:prev}</td><td class="num">${da}</td></tr>`;
+          }).join('')}
+          </tbody></table></div>` : '';
+
+      return `<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:10px">
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">OVR change this season</div>
+          <div style="font-family:var(--disp);font-size:52px;font-weight:900;color:${ovrColor};line-height:1">${ovrGain>0?'+':''}${ovrGain}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">${p.seasonStartOvr != null ? `Was ${p.seasonStartOvr} → Now ${p.ovr}` : ''}</div>
+        </div>
+        ${spark ? `<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Career OVR history</div>${spark}</div>` : ''}
+      </div>
+      ${sa ? `<div class="player-attrs">
+        ${attrDeltaGroup('Offensive', ATTR_GROUPS.offensive)}
+        ${attrDeltaGroup('Defensive', ATTR_GROUPS.defensive)}
+        ${attrDeltaGroup('Physical', ATTR_GROUPS.physical)}
+        ${attrDeltaGroup('Mental', ATTR_GROUPS.mental)}
+      </div>` : `<p style="color:var(--muted);font-size:12px">Attribute-level changes will appear here after the next season starts.</p>`}
+      ${seasonCmp}`;
+    })() : ''}
+    ${UI._playerTab === 'history' ? `
+    <div class="grid2" style="margin-top:8px">
       <div class="card" style="padding:6px;overflow-x:auto"><h2 class="sec" style="margin:8px 10px">Awards</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Award</th><th class="noclick">Detail</th></tr></thead><tbody>${awards||'<tr><td colspan="3" style="color:var(--muted)">No awards yet.</td></tr>'}</tbody></table></div>
       <div class="card" style="padding:6px;overflow-x:auto"><h2 class="sec" style="margin:8px 10px">Injury History</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Round</th><th class="noclick">Injury</th><th class="noclick num">Time</th></tr></thead><tbody>${injuries||'<tr><td colspan="4" style="color:var(--muted)">No recorded injuries.</td></tr>'}</tbody></table></div>
     </div>
-    <div class="card" style="padding:6px;overflow-x:auto;margin-top:16px"><h2 class="sec" style="margin:8px 10px">Club Career Totals</h2>
+    <div class="card" style="padding:6px;overflow-x:auto;margin-top:12px"><h2 class="sec" style="margin:8px 10px">Club Career Totals</h2>
       <table><thead><tr><th class="noclick">Club</th><th class="noclick num">G</th><th class="noclick num">T</th><th class="noclick num">TA</th><th class="noclick num">Goals</th><th class="noclick num">FG</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">40/20</th><th class="noclick num">FDO</th><th class="noclick num">Pts</th><th class="noclick num">Avg</th></tr></thead>
       <tbody>${clubRows||'<tr><td colspan="12" style="color:var(--muted)">Club totals will appear after this player completes matches.</td></tr>'}</tbody></table>
     </div>
-    <div class="card" style="padding:6px;overflow-x:auto;margin-top:16px"><h2 class="sec" style="margin:8px 10px">Season History</h2>
+    <div class="card" style="padding:6px;overflow-x:auto;margin-top:12px"><h2 class="sec" style="margin:8px 10px">Season History</h2>
       <div class="history-controls player-history-controls">
         <div class="field"><label>Search seasons</label><input type="search" value="${esc(UI._playerHistSearch||'')}" placeholder="Year, club, position..." oninput="UI._playerHistSearch=this.value;UI.render()"></div>
         <div class="field"><label>Sort</label><select onchange="UI._playerHistSort=this.value;UI.render()">
-          ${[
-            ['newest','Newest first'],['oldest','Oldest first'],['ovr','Best OVR'],['games','Most games'],['rating','Best avg rating'],['tries','Most tries']
-          ].map(([v,l])=>`<option value="${v}" ${UI._playerHistSort===v?'selected':''}>${l}</option>`).join('')}
+          ${[['newest','Newest first'],['oldest','Oldest first'],['ovr','Best OVR'],['games','Most games'],['rating','Best avg rating'],['tries','Most tries']].map(([v,l])=>`<option value="${v}" ${UI._playerHistSort===v?'selected':''}>${l}</option>`).join('')}
         </select></div>
         <button class="btn sm" onclick="UI._playerHistSearch='';UI._playerHistSort='newest';UI.render()">Clear</button>
       </div>
       <table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick">Age</th><th class="noclick">Pos</th><th class="noclick num">OVR</th><th class="noclick num">G</th><th class="noclick num">T</th><th class="noclick num">Runs</th><th class="noclick num">TA</th><th class="noclick num">Goals</th><th class="noclick num">FG</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">40/20</th><th class="noclick num">FDO</th><th class="noclick num">FP</th><th class="noclick num">Avg</th><th class="noclick num">Votes</th></tr></thead><tbody>${history||'<tr><td colspan="18" style="color:var(--muted)">Completed seasons will appear here.</td></tr>'}</tbody></table>
-    </div>`;
+    </div>` : ''}`;
   },
 
   toggleShortlist(id){

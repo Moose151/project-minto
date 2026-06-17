@@ -74,7 +74,7 @@ Object.assign(UI, {
         <td><b>${esc(p.name)}</b> <span class="pos-tag">${p.pos}</span>${p.releaseRequest?` <span class="inj">Release requested</span>`:''}
           <br><span style="color:var(--muted);font-size:11px">${esc(promiseSummary(p))} · Loyalty ${p.loyalty} · Form ${formText(p)}</span></td>
         <td class="num">${p.age}</td>
-        <td class="num"><span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span></td>
+        <td class="num"><span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span>${(()=>{const g=(p.seasonStartOvr!=null)?p.ovr-p.seasonStartOvr:0;return g>0?`<span style="color:var(--green);font-size:10px"> +${g}</span>`:g<0?`<span style="color:var(--red);font-size:10px"> ${g}</span>`:''})()}</td>
         <td class="num">${money(currentSalary(p))}</td>
         <td class="num">${money(contractAvg(p))}</td>
         <td class="num">${money(contractTotal(p))}</td>

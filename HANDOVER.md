@@ -543,7 +543,15 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Fire confirmation modal shows payout amount; payout is deducted from `G.club.funds` and generates a finance news item.
 - Staff in their final year show a red "CONTRACT EXPIRING" badge.
 - Extend button appears on expiring staff: opens a modal showing current vs demand salary (ability-weighted multiplier 1.05–1.23), with 1/2/3-year length choice. Updates `s.yearsLeft` and `s.salary`.
-- Still to do: richer demand negotiation (counter-offers, market comparison), staff requesting their own release waiving the payout, board pressure around retaining key staff..
+- Still to do: richer demand negotiation (counter-offers, market comparison), staff requesting their own release waiving the payout, board pressure around retaining key staff.
+
+#### Scouts & Medical Staff on Staff Page — Contract Payout on Release **[NEW]**
+- Scouts (from `G.scouting.scouts`) and Medical/Physio staff (role `'medical'` in `G.staff`) should be visible on the Staff page alongside assistant coaches, so all contracted personnel are managed in one place.
+- Currently scouts are only shown on the Scouting page with no contract detail; medical staff appear on the Staff page but may not have full payout logic.
+- **Scouts on Staff page**: each scout card should show name, ability, salary, years remaining, active mission count, and a "Release" button. Releasing a scout mid-contract must deduct a payout (remaining years × salary) from `G.club.funds`, cancel any active missions, and generate a finance news item — identical behaviour to firing an assistant coach.
+- **Medical staff on Staff page**: confirm the Fire button deducts the correct payout (remaining years × salary) from `G.club.funds`. If not already implemented, apply the same payout logic as assistant coaches.
+- Scouts and medical staff should also show CONTRACT EXPIRING badges and Extend buttons on the same terms as assistant coaches.
+- The Scouting page can retain its scout dispatch/mission UI but should not duplicate the full contract management that now lives on the Staff page (or link across clearly).
 
 #### Coach Contract Negotiation & Extension ✅ IMPLEMENTED
 - Coach Profile contract card shows years remaining (singular/plural) and a "Negotiate Extension" button when `contractYears <= 1`.
@@ -623,6 +631,44 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - **Injuries and citations** listed at the bottom of the post-match card.
 - **`injMin` stored per player in match lines** (`07-match.js`): each injured player now has a stored `injMin` (minute they left the field). Live match feed in `matchday.js` uses this to suppress try/40-20/FDO events occurring after a player's injury minute. Injury events use the stored minute rather than a random value.
 - Still to do: save full match report objects with fixtures for historical reopening, sorting/filtering in the post-match player stats table, possession/completion rate/territory team stats, richer half-by-half scoring breakdown, and deep-link from every name in the report.
+
+#### Dashboard — Team Attack / Defence Ratings ✅ IMPLEMENTED
+- Attack and Defence rating pills added to the Dashboard status strip via `teamRatings(t)` (already used for opponent pills in the next-match widget).
+- Colour-coded green/red/neutral consistent with OVR scale. Opponent ATT/DEF still shown in the next-match widget for comparison.
+
+#### Dashboard — My Team OVR / ATK / DEF in Next Match Widget **[NEW]**
+- The "Next match" widget already shows OVR, ATT, and DEF pills for the opponent. The coached team should show the same three pills (OVR, ATK, DEF) directly beneath or beside their own logo/name, so the coach can compare both sides at a glance without leaving the dashboard.
+- Pills should use the same `teamRatingPill` helper with exact values (coached team is always high-confidence) and the same colour coding.
+
+#### Player Development Insights ✅ FIRST SLICE IMPLEMENTED — Remaining **[NEW]**
+- `p.ovrHistory = [{year, ovr}]` initialised in `genPlayer` and appended in `startNewSeason` (capped at 20 entries). No migration — new games only.
+- Player modal has a **Development** section showing: SVG OVR sparkline, "+N OVR this season" badge, and current vs last season stats comparison table.
+- Squad page and Contracts page OVR column show `+X`/`-X` season delta badge.
+- **Still to do — Development tab (high priority):**
+  - The OVR change badge is not actually visible yet on any screen in testing — verify the `seasonStartOvr` is being set correctly and the badge renders. Fix if broken.
+  - Replace the "Development" card below the stats cards with a proper **Development tab** on the player info screen (alongside "This season", "Career", etc.).
+  - The tab should list every attribute group (Offensive / Defensive / Physical / Mental) and show each individual attribute's current value alongside its value at season start, with a `+X` / `−X` delta and a coloured arrow. Requires snapshotting `p.seasonStartAttrs = {...p.attrs}` at the start of each new season in `startNewSeason`.
+  - Show overall OVR change prominently at the top of the tab (large number, green/red colour).
+  - Squad page OVR delta badge must be clearly visible — confirm it renders, increase size/contrast if needed.
+  - Surface biggest improvers (≥+2 OVR) and decliners (≤−2 OVR) in the Offseason development review screen.
+
+#### Watch Game — Hide Result Until Full Time ✅ IMPLEMENTED
+- Modal header now shows `– : –` placeholders and a "Kick off…" banner instead of the final score.
+- `_revealFeed` updates the score and WIN/LOSS banner only when the FULL TIME event fires; the "Full results" button is also hidden until that point.
+- This fix applies to both the legacy modal path and the new full-screen watch page.
+
+#### Watch Game — Speed Selector Resets Feed **[BUG]**
+- Changing the watch speed during a live match (via the speed buttons: 1x / 2x / 4x / 8x) currently triggers `UI.render()`, which re-renders the page from scratch and restarts the feed from the beginning.
+- Fix: the speed buttons should update `UI._watchSpeed` and re-render the page HTML **without** restarting the feed. Options: (a) write the speed selector directly to the DOM without a full render; (b) preserve `_revealFeedPage` timer state and resume from the current event index after re-render; (c) use `onclick` that only updates `UI._watchSpeed` and rebinds the button styles without calling `UI.render()`.
+- The simplest fix is to update the button active state in-place (toggle a CSS class on the speed buttons) rather than triggering a full page re-render.
+
+#### Watch Game — Full-Screen Dedicated Window ✅ FIRST SLICE IMPLEMENTED
+- `playMatchDay(watch=true)` now stores round results in `UI._watchGameRound` and navigates to `UI.go('watchgame')` instead of opening a modal.
+- `p_watchgame` renders a full-page layout: large live score header (team logos, `–:–` placeholders, venue/weather/crowd line), lineups sidebar (both teams, all 17 slots, pos + OVR), live event feed panel with speed controls, and a hidden post-match section.
+- `_revealFeedPage` drives the animation: updates score header at FULL TIME, reveals WIN/LOSS banner and post-match summary inline using `_buildMatchReportHtml`.
+- `_buildMatchReportHtml` is extracted as a shared helper (used by watchgame; `showRoundResults` modal still uses its own inline version).
+- `watchgame` added to the offseason page allowlist.
+- Still to do: live possession/tackle stats updating mid-feed, collapsible lineup panel on mobile, better visual polish (animations, in-goal zone graphic), keyboard shortcut to skip to full-time.
 
 #### Match Engine — On-Field Tracking, Substitutions & HIA **[NEW]**
 - **Injury-minute bug fixed**: `l.injMin` is now stored on each player's match line (random minute between 10–72). The live match feed in `matchday.js` uses an `injMins` lookup map to cap try minutes, 40/20 minutes, and FDO minutes to before the player's injury minute, and injury event itself uses the stored minute. This prevents "player scores after leaving the field" events.

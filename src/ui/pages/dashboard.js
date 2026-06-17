@@ -70,7 +70,7 @@ Object.assign(UI, {
       const oppPos = lad.findIndex(r=>r.id===opp.id)+1;
       const oppRec = lad.find(r=>r.id===opp.id);
       nextHtml = `<div class="vs-big" style="padding:8px 0">
-        <div class="tm">${teamLogo(t,58)}<div class="nm">${esc(t.nick)}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(t,'overall','OVR')}</div></div>
+        <div class="tm">${teamLogo(t,58)}<div class="nm">${esc(t.nick)}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}</div></div>
         <div class="dash">v</div>
         <div class="tm">${teamLogo(opp,58)}<div class="nm">${esc(opp.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(oppPos)} · ${oppRec.w}-${oppRec.l}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(opp,'overall','OVR')}${teamRatingPill(opp,'atk','ATT')}${teamRatingPill(opp,'def','DEF')}</div></div>
       </div>
@@ -116,6 +116,7 @@ Object.assign(UI, {
       ${UI._dashStatus('Ladder', ord(pos), `${rec.w}-${rec.l}, ${rec.pts} pts`, pos<=4?'good':pos>G.teams.length*.7?'bad':'')}
       ${UI._dashStatus('Board', `${Math.round(G.coach.conf)}%`, 'confidence', G.coach.conf>=70?'good':G.coach.conf<35?'bad':'')}
       ${UI._dashStatus('Cohesion', `${Math.round(t.cohesion||50)}%`, 'lineup rhythm', (t.cohesion||50)>=70?'good':(t.cohesion||50)<35?'bad':'')}
+      ${(()=>{ const r=teamRatings(t); return UI._dashStatus('Attack', r.atk, 'squad attack rating', r.atk>=72?'good':r.atk<55?'bad':'') + UI._dashStatus('Defence', r.def, 'squad defence rating', r.def>=72?'good':r.def<55?'bad':''); })()}
       ${UI._dashStatus('Cap', `${capPct}%`, `${money(capSpend)} spent`, capPct>98?'bad':capPct<88?'good':'')}
       ${UI._dashStatus('Squad', `${topCount}/30`, `${injured} injured · ${suspended} suspended`, (injured||suspended)?'bad':devReady?'good':'')}
       ${UI._dashStatus('Shortlist', shortlist, 'targets watched', shortlist?'good':'')}
