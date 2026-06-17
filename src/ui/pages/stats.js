@@ -13,11 +13,19 @@ Object.assign(UI, {
       ['mins','Minutes'],['inf','Infringements'],['votes','Medal votes'],['avg','Avg rating'],
     ];
     const positions = ['all','FB','WG','CE','FE','HB','PR','HK','SR','LK'];
+    const per80Cats = new Set(['t','ta','lb','lba','tk','mt','runs','m','ks','km','gl','pts','inf']);
+    const showPer80 = per80Cats.has(UI.statCat);
     const v = p => {
       if(UI.statCat==='pts')  return p.s.t*4 + p.s.gl*2 + (p.s.fg||0);
       if(UI.statCat==='avg')  return p.s.g ? p.s.rSum/p.s.g : 0;
       if(UI.statCat==='gkp') return p.s.ga ? p.s.gl/p.s.ga*100 : 0;
       return p.s[UI.statCat] || 0;
+    };
+    const per80 = p => {
+      const mins = p.s.mins || 0;
+      if(!mins) return null;
+      const raw = UI.statCat==='pts' ? p.s.t*4+p.s.gl*2+(p.s.fg||0) : (p.s[UI.statCat]||0);
+      return (raw / mins) * 80;
     };
     const fmt = val => UI.statCat==='avg'||UI.statCat==='gkp' ? val.toFixed(1)+(UI.statCat==='gkp'?'%':'') : Math.round(val);
 
