@@ -194,6 +194,35 @@ function clubPrestigeTier(t){
   if(score >= 38) return {key:'developing', label:'Developing Club', icon:'D', score};
   return {key:'rebuild', label:'Rebuild Club', icon:'R', score};
 }
+function leagueTicketInfo(){
+  const myPrice = G.club ? (G.club.ticketPrice || 28) : 28;
+  const teamPrices = G.teams.map(t => {
+    if(t.id === G.coach.teamId) return myPrice;
+    const str = squadStrength(t);
+    return Math.round(clamp(14 + str * 0.24, 15, 46));
+  }).sort((a,b) => a - b);
+  const avg = Math.round(teamPrices.reduce((s,p) => s+p, 0) / teamPrices.length);
+  const cheaperCount = teamPrices.filter(p => p < myPrice).length;
+  const moreExpensiveCount = teamPrices.filter(p => p > myPrice).length;
+  return { avg, myPrice, rankFromCheapest: cheaperCount+1, rankFromMostExpensive: moreExpensiveCount+1, totalTeams: G.teams.length };
+}
+function recentWinStreak(teamId){
+  const played = [];
+  (G.fixtures || []).forEach((round, rIdx) => {
+    if(!round) return;
+    for(const f of round){
+      if(f && f.played && (f.h === teamId || f.a === teamId)) played.push({f, rIdx});
+    }
+  });
+  played.sort((a, b) => b.rIdx - a.rIdx);
+  let streak = 0;
+  for(const {f} of played.slice(0, 8)){
+    const won = f.h === teamId ? f.hScore > f.aScore : f.aScore > f.hScore;
+    if(won) streak++;
+    else break;
+  }
+  return streak;
+}
 function matchCrowd(homeTeam, isFinal){
   if(isFinal) return ri(52000, 82000);
   const isMine = homeTeam && homeTeam.id === G.coach.teamId;
@@ -201,8 +230,21 @@ function matchCrowd(homeTeam, isFinal){
   const rep = homeTeam ? (homeTeam.rep || squadStrength(homeTeam)) : 55;
   const formBoost = homeTeam ? Math.max(-1800, Math.min(3000, ((homeTeam.cohesion || 50) - 50) * 90)) : 0;
   const price = isMine ? clamp(G.club.ticketPrice || 28, 10, 120) : 28;
-  const priceDrag = (price - 28) * 280;
-  const demand = Math.round(8500 + rep * 360 + formBoost - priceDrag + rf(-3500, 4500));
+
+  let priceDrag;
+  if(isMine){
+    const leagueAvg = leagueTicketInfo().avg;
+    const prestige = clubPrestigeScore(homeTeam);
+    const priceAboveAvg = price - leagueAvg;
+    const sensitivity = clamp(1.8 - (prestige / 99) * 1.3, 0.35, 1.8);
+    priceDrag = priceAboveAvg > 0 ? priceAboveAvg * 260 * sensitivity : priceAboveAvg * 160;
+  } else {
+    priceDrag = (price - 28) * 280;
+  }
+
+  const winStreak = homeTeam ? recentWinStreak(homeTeam.id) : 0;
+  const streakBoost = Math.min(winStreak, 5) * 800;
+  const demand = Math.round(8500 + rep * 360 + formBoost - priceDrag + streakBoost + rf(-3500, 4500));
   return clamp(demand, Math.min(9000, cap), cap);
 }
 function weeklyRecoveryAndDev(){

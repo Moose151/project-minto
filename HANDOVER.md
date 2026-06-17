@@ -507,11 +507,12 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Show vendor revenue separately in Club Management revenue breakdown.
 - Prestige and facility quality affect per-head spend cap (premium clubs can charge more).
 
-#### Ticket Pricing — Comparison vs League & Prestige Effects **[NEW]**
-- When setting home ticket price (in Preseason or Match Day), show a label comparing the set price to the league average and ranking it: e.g. "2nd cheapest", "Above average (13th most expensive)", "Most expensive in the league".
-- Prestige tier and stadium level should have a meaningful cap on what price fans will pay: low-prestige/small stadium clubs lose attendance steeply above the average; high-prestige/large stadium clubs can sustain premium prices.
-- Show projected crowd at current price so the manager can tune it before committing.
-- Crowd attendance formula should explicitly factor in: ticket price vs league avg, home win streak, rivalry/derby multiplier, weather, round importance (finals multiplier), and day of week.
+#### Ticket Pricing — Comparison vs League & Prestige Effects ✅ FIRST SLICE IMPLEMENTED
+- **League avg comparison**: `leagueTicketInfo()` in `08-progression.js` computes a notional ticket price for each AI team based on their squad strength (proxy for pricing power) and returns league avg, rank from cheapest, and rank from most expensive.
+- **Matchday ticket controls** now show: league average price, ranking label ("3rd most expensive in the league", "Below average — 2nd cheapest", etc.), and a prestige note ("Premium club: fans tolerate higher prices" vs "Fans are price-sensitive at this prestige level").
+- **Prestige-sensitive price drag**: `matchCrowd()` now uses `clubPrestigeScore` to compute a price sensitivity factor. Dynasty/Elite clubs (prestige 72+) lose far fewer fans when pricing above avg (sensitivity ~0.5–0.7); Rebuild/Developing clubs (prestige <40) lose attendance steeply above avg (sensitivity ~1.5–1.8).
+- **Win streak crowd boost**: `recentWinStreak(teamId)` counts consecutive wins from recent fixtures; each win adds ~800 fans up to 5 wins (+4000 max crowd boost for a 5-game winning streak), applies to all teams.
+- Still to do: rivalry/derby multiplier, round importance (finals) multiplier, day-of-week multiplier, prestige-capped price ceiling, preseason ticket pricing comparison, crowd vendor revenue stream.
 
 #### Art Quality — Possible Approaches **[NOTE]**
 - Current art (player avatars, team logos, the pitch field) all look extremely poor. This is a known limitation of procedural SVG.

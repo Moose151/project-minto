@@ -34,16 +34,38 @@ Object.assign(UI, {
         </div>
       </div>
     </div>` : '';
-    const ticketControls = homeGame && !m.played ? `<div class="card" style="margin-top:12px">
-      <h2 class="sec" style="margin-top:0">Home Tickets</h2>
-      <p class="page-sub">Price affects projected crowd and gate revenue. Lower prices usually lift attendance; higher prices risk empty seats.</p>
-      <div class="btnrow" style="align-items:center">
-        <button class="btn sm" onclick="UI.setTicketPrice(${ticketPrice-5})">-5</button>
-        <span style="font-family:var(--disp);font-size:28px;font-weight:700;min-width:80px;text-align:center">${money(ticketPrice)}</span>
-        <button class="btn sm" onclick="UI.setTicketPrice(${ticketPrice+5})">+5</button>
-        <span style="font-size:12px;color:var(--muted)">Projected gate: ${money(m.projCrowd * ticketPrice)}</span>
-      </div>
-    </div>` : '';
+    let ticketControls = '';
+    if(homeGame && !m.played){
+      const li = leagueTicketInfo();
+      const myPrestige = clubPrestigeScore(t);
+      const ordinal = n => n+(n===1?'st':n===2?'nd':n===3?'rd':'th');
+      let rankLabel;
+      if(li.rankFromMostExpensive === 1) rankLabel = 'Most expensive in the league';
+      else if(li.rankFromCheapest === 1) rankLabel = 'Cheapest in the league';
+      else if(li.rankFromMostExpensive <= 3) rankLabel = `${ordinal(li.rankFromMostExpensive)} most expensive in the league`;
+      else if(li.rankFromCheapest <= 3) rankLabel = `${ordinal(li.rankFromCheapest)} cheapest in the league`;
+      else if(ticketPrice >= li.avg) rankLabel = `Above average — ${ordinal(li.rankFromMostExpensive)} most expensive`;
+      else rankLabel = `Below average — ${ordinal(li.rankFromCheapest)} cheapest`;
+      const rankColor = ticketPrice > li.avg ? 'var(--brass)' : ticketPrice < li.avg ? 'var(--green)' : 'var(--muted)';
+      const presNote = myPrestige >= 72 ? 'Premium club: fans tolerate higher prices'
+        : myPrestige >= 50 ? 'Moderate price sensitivity'
+        : 'Fans are price-sensitive at this prestige level';
+      ticketControls = `<div class="card" style="margin-top:12px">
+        <h2 class="sec" style="margin-top:0">Home Tickets</h2>
+        <p class="page-sub">Price affects projected crowd and gate revenue. Lower prices lift attendance; higher prices risk empty seats.</p>
+        <div class="btnrow" style="align-items:center">
+          <button class="btn sm" onclick="UI.setTicketPrice(${ticketPrice-5})">-5</button>
+          <span style="font-family:var(--disp);font-size:28px;font-weight:700;min-width:80px;text-align:center">${money(ticketPrice)}</span>
+          <button class="btn sm" onclick="UI.setTicketPrice(${ticketPrice+5})">+5</button>
+          <span style="font-size:12px;color:var(--muted)">Projected gate: <b>${money(m.projCrowd * ticketPrice)}</b> · crowd ${m.projCrowd.toLocaleString()}</span>
+        </div>
+        <div style="font-size:12px;margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+          <span>League avg: <b>${money(li.avg)}</b></span>
+          <span style="color:${rankColor}">${rankLabel}</span>
+          <span style="color:var(--dim)">${presNote}</span>
+        </div>
+      </div>`;
+    }
     const o = UI._matchOdds(m);
     const favTeam = o.favoured==='h' ? h : a;
     const oddsBar = `<div style="display:flex;gap:12px;align-items:center;margin:8px 0 4px;flex-wrap:wrap">
