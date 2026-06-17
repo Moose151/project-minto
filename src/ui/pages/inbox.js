@@ -13,6 +13,7 @@ Object.assign(UI, {
       ['injury',         'Medical'],
       ['club',           'Club'],
       ['board',          'Board'],
+      ['origin',         'State of Origin'],
       ['recommendation', 'Staff Reports'],
       ['form',           'Form Alerts'],
       ['scouting',       'Scouting'],

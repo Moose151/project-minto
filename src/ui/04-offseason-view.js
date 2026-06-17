@@ -17,8 +17,10 @@ Object.assign(UI, {
     const roy = O.awards.rookie ? G.players[O.awards.rookie] : null;
     const coy = O.awards.coachYear;
     const toty = O.awards.teamOfYear || [];
-    const offers = O.offers.length ? O.offers : (O.offers = generateJobOffers());
-    if(O.sacked && !offers.length){ const lad=ladder(); offers.push(lad[lad.length-1].id===G.coach.teamId ? lad[lad.length-2].id : lad[lad.length-1].id); }
+    let offers = O.offers && O.offers.length ? O.offers : (O.offers = generateJobOffers());
+    // backward compat: old saves stored plain IDs
+    if(offers.length && typeof offers[0] === 'number') offers = offers.map(id=>({teamId:id, salary:G.coach.salary||120000, years:2, pos:0, reason:'take the job', w:0, l:0}));
+    if(O.sacked && !offers.length){ const lad=ladder(); const fb=lad[lad.length-1].id===G.coach.teamId?lad[lad.length-2]:lad[lad.length-1]; offers.push({teamId:fb.id, salary:Math.round((G.coach.salary||120000)*0.85/5000)*5000, years:1, pos:lad.length, reason:'stabilise the club', w:fb.w, l:fb.l}); }
     const premier = G.teams[G.finals.premier];
     const awardPlayer = (label, p, detail, empty) => `<div class="card ${p?'click':''}" ${p?`onclick="UI.playerModal(${p.id})"`:''}>
       <div class="navsep" style="margin:0">${label}</div>
@@ -41,17 +43,30 @@ Object.assign(UI, {
     </tbody></table></div>
     ${O.retirements.length?`<h2 class="sec">Retirements</h2><div class="card"><p style="font-size:13px; color:var(--muted)">${O.retirements.map(r=>`${esc(r.name)} (${r.team}, ${r.games} games)`).join(' · ')}</p></div>`:''}
     ${offers.length?`<h2 class="sec">${O.sacked?'You need a new job':'Job offers'}</h2>
-    <p class="page-sub">${O.sacked?'The following clubs are willing to give you a shot.':'Other boards have noticed your work. Staying put is also an option.'}</p>
-    <div class="team-pick">${offers.map(id=>{ const t=G.teams[id];
-      return `<div class="tp" onclick="UI.takeJob(${id})"><div class="city">${esc(t.city)}</div><div class="nick">${esc(t.nick)}</div><div class="str">Squad ${Math.round(squadStrength(t))} · tap to accept</div></div>`;}).join('')}</div>`:''}
+    <p class="page-sub">${O.sacked?'The following clubs have offered you a role. You must accept one to continue.':'Rival boards have taken notice. These clubs are open to talks — or you can stay put.'}</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    ${offers.map(offer=>{ const t=G.teams[offer.teamId]; const sq=Math.round(squadStrength(t)); const tier=sq>=64?'Contender':sq>=60?'Finals hopeful':sq>=57?'Mid-table':'Rebuilding';
+      return `<div class="card" style="flex:1;min-width:220px;cursor:pointer" onclick="UI.takeJob(${offer.teamId})">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">${teamLogo(t,44)}<div><div style="font-family:var(--disp);font-size:20px;font-weight:700">${esc(t.city)} ${esc(t.nick)}</div><div style="font-size:11px;color:var(--muted)">${ord(offer.pos)} · ${offer.w}W–${offer.l}L · ${tier}</div></div></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Looking to <b style="color:var(--ink)">${esc(offer.reason)}</b></div>
+        <div style="font-size:13px;margin-bottom:10px"><b style="color:var(--green)">${money(offer.salary)}/season</b> · ${offer.years} year${offer.years>1?'s':''} · Squad OVR ${sq}</div>
+        <button class="btn primary" style="width:100%">Accept offer</button>
+      </div>`;}).join('')}
+    </div>`:''}
     <div class="btnrow" style="margin-top:18px">
-      ${O.sacked?'':`<button class="btn primary" onclick="G.offseason.step='contracts'; UI.render()">Continue to contracts</button>`}
+      ${O.sacked?'':`<button class="btn primary" onclick="G.offseason.step='contracts'; UI.render()">Stay at ${esc(myTeam().nick)} — continue to contracts</button>`}
     </div>`;
   },
   takeJob(id){
     const old = teamName(myTeam());
-    G.coach.teamId = id; G.coach.conf = 60; G.coach.seasonsAtClub = 0; G.offseason.sacked = false;
-    addNews(`${G.coach.name} leaves ${old} to take over the ${teamName(myTeam())}.`);
+    const offer = (G.offseason.offers||[]).find(o=>(o.teamId||o)===id);
+    G.coach.teamId = id;
+    G.coach.conf = 60;
+    G.coach.seasonsAtClub = 0;
+    G.offseason.sacked = false;
+    if(offer && offer.salary){ G.coach.salary = offer.salary; G.coach.contractYears = offer.years||2; }
+    addNews(`${G.coach.name} leaves ${old} to take over the ${teamName(myTeam())} on a ${offer&&offer.years?offer.years+'-year':''} deal${offer&&offer.salary?' worth '+money(offer.salary)+'/season':''}.`,
+      {title:'Coaching Change', type:'club', tone:'neutral', tag:'Coach'});
     G.offseason.expiring = myTeam().players.filter(pid=>G.players[pid].years<=0);
     G.offseason.step='contracts';
     UI.toast(`Appointed at the ${myTeam().nick}.`);

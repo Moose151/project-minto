@@ -64,7 +64,7 @@ function startNewGame(cfg){
   srand(cfg.seed || Date.now());
   _pid = 1;
   G = { v:1, year:2026, season:1, round:0, phase:'regular', godMode:false, achievementsLocked:false,
-    config:{ nTeams:cfg.nTeams, cap:cfg.cap, capGrowth:.03, leagueName:'Minto Premiership' },
+    config:{ nTeams:cfg.nTeams, cap:cfg.cap, capGrowth:.03, leagueName: cfg.leagueName || 'Minto Premiership' },
     players:{}, teams:[], freeAgents:[], news:[], history:[], hallOfFame:[], achievements:[], finals:null, offseason:null,
     staff: [genStaff('attacking', 52), genStaff('defensive', 52), genStaff('fitness', 48)],
     club: { funds: 1500000, seasonRevenue: 0, seasonWages: 0, gateRevenue: 0, broadcastRevenue: 0,
@@ -73,7 +73,7 @@ function startNewGame(cfg){
     coach:{ name:cfg.coachName, rep:30, teamId:null, conf:60, expect:null, history:[], seasonsAtClub:0, careerW:0, careerL:0, prems:0,
       shortlist:[], salary:120000, contractYears:2, cash:60000, attrs:{development:42, manMgmt:42, fitness:42, tactics:42} }
   };
-  const idents = shuffle(IDENTITIES).slice(0, cfg.nTeams);
+  const idents = cfg.identities ? cfg.identities.slice(0, cfg.nTeams) : shuffle(IDENTITIES).slice(0, cfg.nTeams);
   const spread = []; for(let i=0;i<cfg.nTeams;i++) spread.push(54 + Math.round(i*14/(cfg.nTeams-1)));
   const strengths = shuffle(spread);
   idents.forEach((ident,i)=> G.teams.push(buildTeam(G, ident, i, strengths[i])));
@@ -92,6 +92,7 @@ function startNewGame(cfg){
   } else {
     G.magicRound = null;
   }
+  G.origin = typeof generateOriginSchedule === 'function' ? generateOriginSchedule(G.fixtures.length) : null;
   for(const t of G.teams) autoPick(t);
   if(cfg.teamId != null){
     G.coach.expect = setExpectation();

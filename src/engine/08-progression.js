@@ -7,6 +7,76 @@ const VENDOR_MERCH_REV = [0, 1.5, 2.5, 4, 6, 8];
 const VENDOR_FB_COSTS    = [0, 100000, 200000, 350000, 600000];
 const VENDOR_MERCH_COSTS = [0, 60000, 120000, 200000, 350000];
 
+function generateOriginSchedule(totalRounds){
+  const g1 = Math.max(8,  Math.round(totalRounds * 0.38));
+  const g2 = Math.max(g1+3, Math.round(totalRounds * 0.52));
+  const g3 = Math.max(g2+3, Math.round(totalRounds * 0.66));
+  return {
+    series: {qld:0, nsw:0, draws:0},
+    games: [
+      {num:1, round:g1, played:false, qldScore:0, nswScore:0, venue:'Suncorp Stadium'},
+      {num:2, round:g2, played:false, qldScore:0, nswScore:0, venue:'Accor Stadium'},
+      {num:3, round:g3, played:false, qldScore:0, nswScore:0, venue:'Suncorp Stadium'},
+    ]
+  };
+}
+function simOriginIfDue(roundIdx){
+  if(!G.origin || !G.origin.games) return;
+  const game = G.origin.games.find(g => g.round === roundIdx && !g.played);
+  if(!game) return;
+  const all = Object.values(G.players).filter(p => p && !p.injury);
+  const qldPool = all.filter(p => p.stateRep === 'Queensland').sort((a,b)=>b.ovr-a.ovr);
+  const nswPool = all.filter(p => p.stateRep === 'New South Wales').sort((a,b)=>b.ovr-a.ovr);
+  if(qldPool.length < 13 || nswPool.length < 13){ game.played = true; return; }
+  const qldXIII = qldPool.slice(0,13);
+  const nswXIII = nswPool.slice(0,13);
+  const qldAvg = qldXIII.reduce((s,p)=>s+p.ovr,0)/13;
+  const nswAvg = nswXIII.reduce((s,p)=>s+p.ovr,0)/13;
+  const diff = (qldAvg - nswAvg) * 0.18;
+  const qldTries = Math.max(0, Math.round(gauss(3.8 + diff, 1.8)));
+  const nswTries = Math.max(0, Math.round(gauss(3.8 - diff, 1.8)));
+  game.qldScore = qldTries*4 + Math.round(qldTries*0.72)*2;
+  game.nswScore = nswTries*4 + Math.round(nswTries*0.72)*2;
+  game.played = true;
+  const qWon = game.qldScore > game.nswScore;
+  const nWon = game.nswScore > game.qldScore;
+  if(qWon) G.origin.series.qld++;
+  else if(nWon) G.origin.series.nsw++;
+  else G.origin.series.draws++;
+  // Condition hit for coached team's Origin-eligible players
+  const mt = myTeam();
+  if(mt){
+    for(const id of mt.players){
+      const p = G.players[id];
+      if(p && (p.stateRep==='Queensland'||p.stateRep==='New South Wales'))
+        p.cond = Math.max(40, p.cond - ri(5, 12));
+    }
+  }
+  const s = G.origin.series;
+  const result = qWon
+    ? `Queensland ${game.qldScore} def. New South Wales ${game.nswScore}`
+    : nWon
+    ? `New South Wales ${game.nswScore} def. Queensland ${game.qldScore}`
+    : `Drawn ${game.qldScore}-${game.nswScore}`;
+  const seriesStatus = s.qld===s.nsw
+    ? `Series level ${s.qld} all.`
+    : `${s.qld>s.nsw?'Queensland':'New South Wales'} lead ${Math.max(s.qld,s.nsw)}-${Math.min(s.qld,s.nsw)}.`;
+  const remaining = 3 - game.num;
+  addNews(
+    `${result} at ${game.venue}. ${seriesStatus}${remaining>0?` ${remaining} game${remaining>1?'s':''} to go.`:' Series concluded.'}`,
+    {title:`State of Origin — Game ${game.num}`, type:'origin', tone:'neutral', tag:'State of Origin', r:roundIdx+1, y:G.year}
+  );
+  // Highlight coached team players in Origin
+  if(mt){
+    const mySelected = [...qldXIII, ...nswXIII].filter(p=>mt.players.includes(p.id));
+    if(mySelected.length){
+      addNews(
+        `${mySelected.map(p=>p.name).join(', ')} ${mySelected.length===1?'is':'are'} representing ${mySelected[0].stateRep==='Queensland'?'Queensland':'New South Wales'} in Origin Game ${game.num}.`,
+        {title:'Your Players in Origin', type:'origin', tone:'good', tag:'State of Origin', r:roundIdx+1, y:G.year}
+      );
+    }
+  }
+}
 function vendorRevenuePerHead(){
   const v = (G.club && G.club.vendors) || {fb:1, merch:1};
   return (VENDOR_FB_REV[v.fb || 1] || 3) + (VENDOR_MERCH_REV[v.merch || 1] || 1.5);
@@ -44,6 +114,7 @@ function advanceRound(){
     generateStaffRecommendations();
     advanceScouting();
     checkAchievements('round', {round, myM});
+    simOriginIfDue(G.round);
     G.round++;
     if(G.round >= G.fixtures.length){ startFinals(); }
     return {type:'round', round, myM, onBye};

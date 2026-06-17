@@ -779,12 +779,19 @@ function generateJobOffers(){
   const lad = ladder();
   const offers = [];
   for(const t of G.teams){
-    if(t.id===G.coach.teamId && !G.offseason.sacked) continue;
     if(t.id===G.coach.teamId) continue;
     const pos = lad.findIndex(r=>r.id===t.id)+1;
-    const desperation = pos / G.teams.length; // worse teams more open
+    const desperation = pos / G.teams.length;
     const fit = G.coach.rep + desperation*30 - squadStrength(t)*0.6;
-    if(G.offseason.sacked ? desperation>.4 : (fit > 18 && rnd()<.5)) offers.push(t.id);
+    if(!(G.offseason.sacked ? desperation>.4 : (fit > 18 && rnd()<.5))) continue;
+    const salBase = Math.round((80000 + G.coach.rep*2800 + desperation*45000)/5000)*5000;
+    const years = G.coach.rep >= 60 ? ri(2,3) : 2;
+    const reasons = pos<=3 ? 'compete for the premiership'
+      : pos<=6 ? 'push into the top eight'
+      : desperation>.65 ? 'rebuild from the bottom'
+      : 'build a promising young group';
+    const rec = lad.find(r=>r.id===t.id)||{w:0,l:0,pts:0};
+    offers.push({teamId:t.id, salary:salBase, years, pos, reason:reasons, w:rec.w, l:rec.l});
   }
   return offers.slice(0, 3);
 }
@@ -829,6 +836,7 @@ function startNewSeason(){
     (mrIsMyClub ? ' Your club will receive a $1,500,000 NRL hosting payment.' : ''),
     {title:'Magic Round Announced', type:'club', tone:mrIsMyClub?'good':'neutral', teamId:G.coach.teamId, tag:'Magic Round'}
   );
+  G.origin = typeof generateOriginSchedule === 'function' ? generateOriginSchedule(G.fixtures.length) : null;
   G.coach.expect = setExpectation();
   G.coach.conf = clamp(G.coach.conf, 35, 100);
   G.coach.seasonsAtClub++;

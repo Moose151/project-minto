@@ -85,8 +85,31 @@ Object.assign(UI, {
     }
     const mini = lad.slice(0,8).map((r,i)=>{
       const tm = G.teams[r.id];
-      return `<tr class="${tm.id===t.id?'':''}" style="${tm.id===t.id?'background:rgba(210,165,62,.07)':''}"><td class="lpos">${i+1}</td><td>${teamLogo(tm,24)} ${esc(tm.nick)}</td><td class="num">${r.pts}</td></tr>`;
+      return `<tr style="${tm.id===t.id?'background:rgba(210,165,62,.07)':''}"><td class="lpos">${i+1}</td><td>${teamLogo(tm,24)} ${esc(tm.nick)}</td><td class="num">${r.pts}</td><td>${r.form.slice(-5).map(f=>`<span class="form-dot ${f}"></span>`).join('')}</td></tr>`;
     }).join('');
+    // State of Origin widget
+    const originHtml = (() => {
+      const orig = G.origin;
+      if(!orig || !orig.games) return '';
+      const played = orig.games.filter(g=>g.played);
+      const next = orig.games.find(g=>!g.played);
+      if(!played.length && !next) return '';
+      const s = orig.series;
+      const seriesLabel = s.qld===s.nsw ? `${s.qld} all` : `${s.qld>s.nsw?'QLD':' NSW'} ${Math.max(s.qld,s.nsw)}-${Math.min(s.qld,s.nsw)}`;
+      const lastGame = played[played.length-1];
+      const lastLine = lastGame ? `Game ${lastGame.num}: QLD ${lastGame.qldScore}–${lastGame.nswScore} NSW · ` : '';
+      const nextLine = next ? `Game ${next.num} · Round ${next.round+1} · ${next.venue}` : 'Series complete';
+      return `<div class="card" style="margin-top:12px;padding:10px 14px;border-color:rgba(210,165,62,.4)">
+        <div style="font-size:11px;color:var(--brass);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">State of Origin ${G.year}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div>
+            <span style="font-size:20px;font-weight:700;font-family:var(--disp)">QLD ${s.qld} – NSW ${s.nsw}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px">${s.qld===s.nsw?'Level':''+seriesLabel}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);text-align:right">${lastLine}${nextLine}</div>
+        </div>
+      </div>`;
+    })();
     const news = (G.news || []).slice(0,12).map(n=>UI._newsCard(n)).join('') || '<p class="page-sub">Quiet week.</p>';
     return `<h1 class="page">Dashboard</h1><p class="page-sub">${esc(teamName(t))} · ${G.year} · Board expectation: ${esc(G.coach.expect.label)}</p>
     <div class="dash-strip">
@@ -98,7 +121,8 @@ Object.assign(UI, {
       ${UI._dashStatus('Shortlist', shortlist, 'targets watched', shortlist?'good':'')}
       ${UI._dashStatus('Club Funds', money(club.funds), `${money(club.seasonRevenue||0)} revenue this season`, clubFundsTone)}
     </div>
-    <div class="grid2">
+    ${originHtml}
+    <div class="grid2" style="margin-top:${originHtml?'12':'16'}px">
       <div class="card"><h2 class="sec" style="margin-top:0">Next match</h2>${nextHtml}</div>
       <div class="card"><h2 class="sec" style="margin-top:0">Club alerts</h2><div class="alert-list">${UI._dashAlerts(t, lad)}</div></div>
     </div>

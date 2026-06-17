@@ -60,6 +60,26 @@ const IDENTITIES = [
   {city:'Cairns',       nick:'Mavericks',    abbr:'CNS', c1:'#9BC53D', c2:'#1D3461', stadium:'Cazalys Arena'},
   {city:'Darwin',       nick:'Privateers',   abbr:'DRW', c1:'#B87333', c2:'#232B2B', stadium:'TIO Traeger Park'},
 ];
+// NRL Standard league preset — 17 real NRL clubs
+const NRL_IDENTITIES = [
+  {city:'Brisbane',     nick:'Broncos',    abbr:'BRI', c1:'#5E1224', c2:'#F5A827', stadium:'Suncorp Stadium'},
+  {city:'Sydney',       nick:'Roosters',   abbr:'SYD', c1:'#003087', c2:'#CC0000', stadium:'Allianz Stadium'},
+  {city:'South Sydney', nick:'Rabbitohs',  abbr:'SOU', c1:'#007A4E', c2:'#CC0000', stadium:'Accor Stadium'},
+  {city:'Melbourne',    nick:'Storm',      abbr:'MEL', c1:'#4B1B85', c2:'#E3B23C', stadium:'AAMI Park'},
+  {city:'Penrith',      nick:'Panthers',   abbr:'PEN', c1:'#231F20', c2:'#D94F28', stadium:'BlueBet Stadium'},
+  {city:'Parramatta',   nick:'Eels',       abbr:'PAR', c1:'#003DA5', c2:'#FFD700', stadium:'CommBank Stadium'},
+  {city:'Canterbury',   nick:'Bulldogs',   abbr:'CBU', c1:'#003DA5', c2:'#FFFFFF', stadium:'Accor Stadium'},
+  {city:'St George',    nick:'Dragons',    abbr:'DRA', c1:'#CD0000', c2:'#FFFFFF', stadium:'WIN Stadium'},
+  {city:'Cronulla',     nick:'Sharks',     abbr:'CRO', c1:'#67B2C8', c2:'#2B2B2B', stadium:'PointsBet Stadium'},
+  {city:'Manly',        nick:'Sea Eagles', abbr:'MAN', c1:'#6F263D', c2:'#D2A83A', stadium:'4 Pines Park'},
+  {city:'North QLD',    nick:'Cowboys',    abbr:'NQL', c1:'#003087', c2:'#EDBA00', stadium:'QCB Stadium'},
+  {city:'Gold Coast',   nick:'Titans',     abbr:'GCT', c1:'#013087', c2:'#F0A200', stadium:'Cbus Super Stadium'},
+  {city:'Canberra',     nick:'Raiders',    abbr:'CBR', c1:'#69BE28', c2:'#9BC53D', stadium:'GIO Stadium'},
+  {city:'New Zealand',  nick:'Warriors',   abbr:'WZL', c1:'#2B5797', c2:'#B0BEC5', stadium:'Go Media Stadium'},
+  {city:'Wests',        nick:'Tigers',     abbr:'WTI', c1:'#F36A23', c2:'#231F20', stadium:'CommBank Stadium'},
+  {city:'Newcastle',    nick:'Knights',    abbr:'NEW', c1:'#003DA5', c2:'#C0272D', stadium:'McDonald Jones Stadium'},
+  {city:'Redcliffe',    nick:'Dolphins',   abbr:'DOL', c1:'#E21F26', c2:'#1E3A6E', stadium:'Moreton Daily Stadium'},
+];
 const STADIUM_NAMES = ['Central Stadium','Riverside Park','Harbour Ground','Civic Stadium','Lang Park South','Showgrounds Stadium','Coastal Arena','National Football Park'];
 const WEATHER = ['Clear','Fine','Humid','Light rain','Heavy rain','Windy'];
 const FACILITY_DEFS = {

@@ -49,6 +49,8 @@ function migrateSave(G){
   }
   if(!G.byes) G.byes = (G.fixtures || []).map(() => []);
   if(!G.magicRound) G.magicRound = null;
+  if(!G.origin) G.origin = null;
+  if(!G.config.leagueName) G.config.leagueName = 'Minto Premiership';
   if(G.club && !G.club.vendors) G.club.vendors = {fb:1, merch:1};
   if(G.club && G.club.vendorRevenue === undefined) G.club.vendorRevenue = 0;
   if(G.club && G.club.magicRoundRevenue === undefined) G.club.magicRoundRevenue = 0;
