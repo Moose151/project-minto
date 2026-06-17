@@ -65,15 +65,11 @@ Object.assign(UI, {
       ${select('_conSalary', [['all','Any salary'],['under200','Under $200k'],['200-500','$200k-$500k'],['500-900','$500k-$900k'],['900+','$900k+']])}
       ${select('_conSort', [['ovr','Sort: OVR'],['current','Sort: current salary'],['avg','Sort: avg salary'],['total','Sort: total value'],['years','Sort: years left'],['pot','Sort: potential'],['age','Sort: youngest'],['ageOld','Sort: oldest'],['demand','Sort: cheapest demand'],['form','Sort: form'],['runs','Sort: runs'],['tries','Sort: tries'],['tackles','Sort: tackles'],['fantasy','Sort: fantasy'],['goal','Sort: goal kicking'],['kicking','Sort: general kicking'],['speed','Sort: speed'],['playmaking','Sort: playmaking'],['defence','Sort: defence']])}
     </div>
-    <div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Player</th><th class="noclick num">Age</th><th class="noclick num">OVR</th><th class="noclick num">Current</th><th class="noclick num">Avg</th><th class="noclick num">Total</th><th class="noclick num">Yrs</th><th class="noclick">Structure</th><th class="noclick">Intent</th><th class="noclick"></th><th class="noclick"></th></tr></thead><tbody>
+    <div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Player</th><th class="noclick num">Age</th><th class="noclick num">OVR</th><th class="noclick num">Current</th><th class="noclick num">Avg</th><th class="noclick num">Total</th><th class="noclick num">Yrs</th><th class="noclick">Structure</th><th class="noclick">Intent</th><th class="noclick"></th></tr></thead><tbody>
     ${players.map(p=>{
       const intent=contractIntent(p,t);
       const sched=(p.contractSchedule&&p.contractSchedule.length?p.contractSchedule:Array(Math.max(0,p.years||0)).fill(p.salary||0));
       const schedText=sched.length?sched.map((v,i)=>`Y${i+1} ${money(v)}`).join(' · '):'Off contract';
-      const payout = p.releaseRequest ? 0 : Math.max(0,(p.years||0)-1)*(p.salary||0);
-      const cutBtn = (p.years||0) >= 1
-        ? `<button class="btn sm" style="color:var(--red);white-space:nowrap" onclick="event.stopPropagation();UI.cutPlayerModal(${p.id})">${p.releaseRequest?'Release (free)':`Cut (${money(payout)})`}</button>`
-        : '';
       return `<tr class="click" onclick="UI.playerModal(${p.id})">
         <td><b>${esc(p.name)}</b> <span class="pos-tag">${p.pos}</span>${p.releaseRequest?` <span class="inj">Release requested</span>`:''}
           <br><span style="color:var(--muted);font-size:11px">${esc(promiseSummary(p))} · Loyalty ${p.loyalty} · Form ${formText(p)}</span></td>
@@ -85,10 +81,9 @@ Object.assign(UI, {
         <td class="num">${p.years||0}</td>
         <td><b>${contractTypeLabel(p.contractType)}</b><br><span style="color:var(--muted);font-size:10px">${schedText}</span></td>
         <td><span style="color:${intent.open?'var(--green)':intent.key==='wants_out'||intent.key==='test_market'?'var(--red)':'var(--muted)'};font-size:11px">${esc(intent.label)}</span></td>
-        <td>${intent.open||p.years<=1?`<button class="btn sm primary" onclick="event.stopPropagation();UI.contractOfferModal(${p.id})">Negotiate</button>`:`<span style="color:var(--dim);font-size:11px" title="${esc(intent.reason)}">No talks</span>`}</td>
-        <td>${cutBtn}</td>
+        <td><button class="btn sm primary" onclick="event.stopPropagation();UI.manageContractModal(${p.id})">Negotiate</button></td>
       </tr>`;
-    }).join('')||'<tr><td colspan="11" style="color:var(--muted)">No players match those contract filters.</td></tr>'}
+    }).join('')||'<tr><td colspan="10" style="color:var(--muted)">No players match those contract filters.</td></tr>'}
     </tbody></table></div>`;
   },
   contractOfferModal(id){
@@ -168,23 +163,86 @@ Object.assign(UI, {
       UI.renderContractOffer();
     }
   },
-  cutPlayerModal(id){
+  manageContractModal(id){
     const p = G.players[id]; if(!p) return;
     const t = myTeam();
+    const intent = contractIntent(p, t);
+    const sched = (p.contractSchedule && p.contractSchedule.length)
+      ? p.contractSchedule
+      : Array(Math.max(0, p.years || 0)).fill(p.salary || 0);
     const isFree = !!p.releaseRequest;
-    const payout = isFree ? 0 : Math.max(0, (p.years || 0) - 1) * (p.salary || 0);
-    const payoutLine = isFree
-      ? `<p style="color:var(--green);font-size:13px">No payout — player requested this release.</p>`
+    const payoutYears = Math.max(0, (p.years || 0) - 1);
+    const payout = isFree ? 0 : payoutYears * (p.salary || 0);
+    const capAfterRelease = G.config.cap - teamSalary(t) + currentSalary(p);
+    const demand = demandFor(p, t);
+
+    const payoutSection = isFree
+      ? `<div style="background:rgba(60,180,80,.1);border:1px solid var(--green);border-radius:6px;padding:10px;margin:10px 0">
+           <b style="color:var(--green);font-size:12px">Player has requested release — no payout required</b>
+         </div>`
       : payout > 0
-        ? `<p style="color:var(--red);font-size:13px">Contract payout: <b>${money(payout)}</b> (${(p.years||0)-1} remaining year${(p.years||0)-1===1?'':'s'} × ${money(p.salary||0)})</p>`
-        : `<p style="color:var(--muted);font-size:13px">No payout — contract expires this season.</p>`;
-    UI.modal(`<h3>Release ${esc(p.name)}?</h3>
-      <p class="page-sub">${p.pos} · ${p.age}yo · OVR ${p.ovr} · ${p.years||0} yr${(p.years||0)===1?'':'s'} remaining</p>
-      ${payoutLine}
-      <p style="font-size:12px;color:var(--muted)">The player will be moved to free agency immediately.</p>
-      <div class="btnrow">
-        <button class="btn primary" style="background:var(--red)" onclick="UI._confirmCutPlayer(${id}, ${payout})">Confirm release</button>
-        <button class="btn" onclick="UI.closeModal()">Cancel</button>
+        ? `<div style="background:rgba(200,50,50,.08);border:1px solid var(--red);border-radius:6px;padding:10px;margin:10px 0">
+             <b style="font-size:13px">Release payout: ${money(payout)}</b>
+             <p style="color:var(--muted);font-size:11px;margin:4px 0 0">${payoutYears} year${payoutYears===1?'':'s'} remaining after this season × ${money(p.salary||0)} cap hit · Cap room after release: ${money(capAfterRelease)}</p>
+           </div>`
+        : `<div style="background:rgba(100,100,100,.08);border:1px solid var(--line);border-radius:6px;padding:10px;margin:10px 0">
+             <b style="font-size:13px;color:var(--muted)">No payout</b>
+             <p style="color:var(--muted);font-size:11px;margin:4px 0 0">Contract expires at the end of this season.</p>
+           </div>`;
+
+    const releaseLabel = isFree ? 'Release (free)' : payout > 0 ? `Release (${money(payout)} payout)` : 'Release player';
+
+    UI.modal(`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px">
+        <div>
+          <h3 style="margin:0 0 2px">${esc(p.name)}</h3>
+          <p style="margin:0;color:var(--muted);font-size:12px">${p.pos}${p.pos2?'/'+p.pos2:''} · ${p.age}yo · <span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span> OVR · ${esc(nationalityFlag(p.nationality))} ${esc(p.nationality)}</p>
+        </div>
+        <button class="btn sm" onclick="UI.closeModal();UI.playerModal(${p.id})">View profile</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div class="card" style="padding:8px">
+          <div style="font-size:10px;color:var(--muted)">This season</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--disp)">${money(currentSalary(p))}</div>
+          <div style="font-size:11px;color:var(--muted)">${contractTypeLabel(p.contractType)}</div>
+        </div>
+        <div class="card" style="padding:8px">
+          <div style="font-size:10px;color:var(--muted)">Avg / yr</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--disp)">${money(contractAvg(p))}</div>
+          <div style="font-size:11px;color:var(--muted)">${p.years||0} yr${(p.years||0)===1?'':'s'} remaining</div>
+        </div>
+        <div class="card" style="padding:8px">
+          <div style="font-size:10px;color:var(--muted)">Total value</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--disp)">${money(contractTotal(p))}</div>
+          <div style="font-size:11px;color:var(--muted)">Market demand ${money(demand)}</div>
+        </div>
+      </div>
+
+      ${sched.length > 1 ? `<div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Schedule</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${sched.map((v,i)=>`<span style="font-size:12px;background:var(--card2);padding:3px 8px;border-radius:4px">Y${i+1} <b>${money(v)}</b></span>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;font-size:12px">
+        <div><span style="color:var(--muted)">Intent</span> <b style="color:${intent.open?'var(--green)':intent.key==='wants_out'||intent.key==='test_market'?'var(--red)':'var(--ink)'}">${esc(intent.label)}</b></div>
+        <div><span style="color:var(--muted)">Form</span> <b>${formText(p)}</b></div>
+        <div><span style="color:var(--muted)">Loyalty</span> <b>${p.loyalty}</b></div>
+        <div><span style="color:var(--muted)">Morale</span> <b>${p.morale}</b></div>
+      </div>
+      ${intent.reason ? `<p style="font-size:11px;color:var(--dim);margin:4px 0 8px;font-style:italic">"${esc(intent.reason)}"</p>` : ''}
+      ${promiseSummary(p) !== 'No promises' ? `<p style="font-size:11px;color:var(--brass);margin:0 0 8px">Promises: ${esc(promiseSummary(p))}</p>` : ''}
+
+      ${payoutSection}
+
+      <div class="btnrow" style="margin-top:12px">
+        ${intent.open || (p.years||0) <= 1
+          ? `<button class="btn primary" onclick="UI.closeModal();UI.contractOfferModal(${p.id})">Negotiate contract</button>`
+          : `<span style="font-size:12px;color:var(--dim);padding:6px 0" title="${esc(intent.reason)}">Not open to talks</span>`}
+        <button class="btn" style="color:var(--red)" onclick="UI._confirmCutPlayer(${id}, ${payout})">${releaseLabel}</button>
+        <button class="btn" onclick="UI.closeModal()">Close</button>
       </div>`);
   },
   _confirmCutPlayer(id, payout){
