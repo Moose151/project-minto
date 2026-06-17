@@ -325,6 +325,14 @@ const SCOUT_REGIONS = [
   {key:'england',     label:'England',                nationality:'England',         weeks:6, posPool:['HB','FE','FB','CE','PR','SR']},
   {key:'france',      label:'France',                 nationality:'France',          weeks:6, posPool:['PR','HK','SR','LK','FE']},
   {key:'ireland',     label:'Ireland & Scotland',     nationality:'England',         weeks:7, posPool:['PR','SR','LK','HB','FE']},
+  {key:'cook',        label:'Cook Islands',           nationality:'Cook Islands',     weeks:5, posPool:['WG','CE','PR','HK','SR','FB']},
+  {key:'lebanon',     label:'Lebanon',                nationality:'Lebanon',          weeks:6, posPool:['HB','FE','CE','PR','SR','HK']},
+  {key:'polynesia',   label:'Polynesia (wider)',      nationality:'Samoa',            weeks:6, posPool:['PR','SR','LK','WG','CE','HK','FB']},
+  {key:'americas',    label:'Americas & Canada',      nationality:'Australia',        weeks:7, posPool:['PR','SR','LK','FB','WG','CE']},
+  {key:'japan',       label:'Japan & Asia',           nationality:'Australia',        weeks:8, posPool:['HB','FE','CE','FB','PR','SR']},
+  {key:'south_sydney',label:'South Sydney',           nationality:'Australia',        weeks:2, posPool:['HB','FE','HK','FB','WG','CE']},
+  {key:'west_sydney', label:'Western Sydney',         nationality:'Australia',        weeks:2, posPool:['PR','HK','SR','LK','WG','CE','FE']},
+  {key:'vic_country', label:'Victoria Country',       nationality:'Australia',        weeks:4, posPool:['PR','SR','LK','WG','CE','FB']},
 ];
 function genStaff(role, abilityBase, posSpecialty){
   const ability = clamp(Math.round(abilityBase + (Math.random()-0.5)*16), 25, 90);

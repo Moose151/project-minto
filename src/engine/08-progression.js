@@ -757,6 +757,43 @@ function generateWeeklyMedia(round, myM){
     }
   }
 
+  // Contract concern messages — fire every 3 rounds for relevant players
+  if(G.phase === 'regular' && (G.round+1) % 3 === 0){
+    const mt3 = myTeam();
+    const squad = mt3.players.map(id=>G.players[id]).filter(p=>p && (p.squad==='top'||!p.squad));
+
+    // Final-year unhappy players who might want out
+    const wantsOut = squad.filter(p => p.years <= 1 && (p.morale||50) < 42 && p.age < 35 && rnd() < 0.5);
+    if(wantsOut.length){
+      const p = wantsOut[0];
+      addNews(
+        `${p.name} has one year remaining on his contract and club sources indicate he is unsettled. A new deal or release may need to be considered before the off-season.`,
+        {title:'Contract Concern', type:'contract', tone:'bad', playerId:p.id, teamId:mt3.id, tag:'Contracts', r:G.round+1, y:G.year}
+      );
+    }
+
+    // Release requests — very low morale in top squad
+    const releaseRequest = squad.filter(p => (p.morale||50) < 28 && p.years >= 1 && rnd() < 0.45);
+    if(releaseRequest.length){
+      const p = releaseRequest[0];
+      addNews(
+        `${p.name}'s agent has contacted the club to request a formal release. His morale has dropped significantly and he wants to explore his options elsewhere.`,
+        {title:'Release Request', type:'contract', tone:'bad', playerId:p.id, teamId:mt3.id, tag:'Contracts', r:G.round+1, y:G.year}
+      );
+    }
+
+    // Expiring contracts no offer tabled — gentle nudge every 6 rounds
+    if((G.round+1) % 6 === 0){
+      const expiring = squad.filter(p => p.years <= 1 && (p.morale||50) >= 50 && p.age <= 32);
+      if(expiring.length >= 3){
+        addNews(
+          `${expiring.length} top-squad players are heading into the final year of their contracts with no extension tabled. Club management should act before rivals start circling.`,
+          {title:'Contract Queue Warning', type:'contract', tone:'neutral', teamId:mt3.id, tag:'Contracts', r:G.round+1, y:G.year}
+        );
+      }
+    }
+  }
+
   // Form alerts: hot streak or form slump for key players
   const mt2 = myTeam();
   if(mt2 && rnd() < 0.55){
@@ -830,7 +867,7 @@ function advanceScouting(){
     }
     G.scouting.prospects = G.scouting.prospects||[];
     G.scouting.prospects.push({ playerId:p.id, scoutId:mission.scoutId, region:mission.region, foundYear:G.year, foundRound:G.round });
-    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo).`, {title:'Scout Report', type:'recruitment', tone:'good', playerId:p.id, tag:'Scouting'});
+    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo).`, {title:'Scout Report', type:'scouting', tone:'good', playerId:p.id, tag:'Scouting'});
   }
   G.scouting.missions = G.scouting.missions.filter(m=>!done.includes(m));
 }
