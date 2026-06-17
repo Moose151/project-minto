@@ -36,8 +36,11 @@ Object.assign(UI, {
     if(!m.projWeather) m.projWeather = pick(WEATHER);
     if(!m.projCrowd) m.projCrowd = matchCrowd(h, false);
     const homeGame = m.h === G.coach.teamId;
+    const isMagicRound = G.magicRound && G.magicRound.round === G.round;
+    const mrHost = isMagicRound ? G.teams.find(x => x.id === G.magicRound.hostTeamId) : null;
     const ticketPrice = G.club ? (G.club.ticketPrice || 28) : 28;
-    const venue = `${esc(stadium)} · ${esc(m.projWeather)} · projected crowd ${m.projCrowd.toLocaleString()}${homeGame?` · tickets ${money(ticketPrice)}`:''}`;
+    const displayVenue = isMagicRound ? (G.magicRound.venue || (mrHost ? mrHost.city + ' Stadium' : 'Magic Round Venue')) : stadium;
+    const venue = `${esc(displayVenue)} · ${esc(m.projWeather)} · projected crowd ${m.projCrowd.toLocaleString()}${homeGame&&!isMagicRound?` · tickets ${money(ticketPrice)}`:''}`;
     const label = v => String(v).replace(/([A-Z])/g,' $1').replace(/^./, c=>c.toUpperCase());
     const row = (team, i) => {
       const p = G.players[team.lineup[i]];
@@ -104,6 +107,11 @@ Object.assign(UI, {
     const coachLine = `<p style="font-size:12px;color:var(--muted);margin:2px 0 8px"><b>${esc(myCoach)}</b> vs <b>${esc(oppCoach)}</b>${oppTeam.headCoach?` (rep ${oppTeam.headCoach.rep})`:''}  · ${esc(venue)}</p>`;
     return `<h1 class="page">Match Day</h1>
     <p class="page-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Round ${G.round+1} · ${teamLogo(h,28)} ${esc(teamName(h))} v ${teamLogo(a,28)} ${esc(teamName(a))}</p>
+    ${isMagicRound ? `<div style="background:linear-gradient(135deg,rgba(210,165,62,.15),rgba(210,165,62,.05));border:1px solid rgba(210,165,62,.5);border-radius:8px;padding:10px 14px;margin:6px 0;display:flex;align-items:center;gap:10px">
+      <div style="font-size:20px">✦</div>
+      <div><div style="font-weight:700;color:var(--brass);font-size:14px">Magic Round ${G.year}</div>
+      <div style="font-size:11px;color:var(--muted)">All fixtures at ${esc(G.magicRound.venue)} · Neutral ground — no home advantage for either side${mrHost&&mrHost.id===G.coach.teamId?' · Your club earns a $1.5M hosting fee':''}</div></div>
+    </div>` : ''}
     ${coachLine}
     ${oddsBar}
     <div class="btnrow"><button class="btn ${UI._matchMode==='result'?'primary':''}" onclick="UI._matchMode='result';UI.render()">Sim result</button><button class="btn ${UI._matchMode==='watch'?'primary':''}" onclick="UI._matchMode='watch';UI.render()">Watch game</button><button class="btn" onclick="UI.go('teamsheet')">Adjust team sheet</button></div>

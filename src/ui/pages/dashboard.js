@@ -74,7 +74,14 @@ Object.assign(UI, {
         <div class="dash">v</div>
         <div class="tm">${teamLogo(opp,58)}<div class="nm">${esc(opp.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(oppPos)} · ${oppRec.w}-${oppRec.l}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(opp,'overall','OVR')}${teamRatingPill(opp,'atk','ATT')}${teamRatingPill(opp,'def','DEF')}</div></div>
       </div>
-      <p style="text-align:center; color:var(--muted); font-size:12px">${home?'Home':'Away'} · Round ${G.round+1}</p>
+      ${(()=>{
+        const mr = G.magicRound;
+        if(mr && mr.round === G.round){
+          const mrH = G.teams.find(x=>x.id===mr.hostTeamId);
+          return `<div style="text-align:center;margin:4px 0;padding:4px 8px;background:rgba(210,165,62,.12);border-radius:6px;font-size:11px;color:var(--brass);font-weight:600">✦ Magic Round · ${esc(mr.venue)} · Neutral venue — no home advantage</div>`;
+        }
+        return `<p style="text-align:center; color:var(--muted); font-size:12px">${home?'Home':'Away'} · Round ${G.round+1}</p>`;
+      })()}
       <div class="btnrow" style="justify-content:center"><button class="btn" onclick="UI.go('teamsheet')">Set team</button><button class="btn primary" onclick="UI.advance()">Play round</button></div>`;
     }
     if(G.phase==='finals'){

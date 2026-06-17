@@ -63,17 +63,21 @@ function simMatch(m, isFinal){
   const th = G.teams[m.h], ta = G.teams[m.a];
   if(!validateLineup(th)) autoPick(th);
   if(!validateLineup(ta)) autoPick(ta);
-  const venue = isFinal ? 'Grand Final Stadium' : (th.stadium || pick(STADIUM_NAMES));
+  const isMagicRound = !isFinal && G.magicRound && G.magicRound.round === G.round;
+  const mrHost = isMagicRound ? G.teams.find(t => t.id === G.magicRound.hostTeamId) : null;
+  const venue = isFinal ? 'Grand Final Stadium'
+    : isMagicRound ? (G.magicRound.venue || (mrHost ? mrHost.city + ' Magic Round' : 'Magic Round'))
+    : (th.stadium || pick(STADIUM_NAMES));
   const weather = m.projWeather || pick(WEATHER);
-  const crowd = m.projCrowd || matchCrowd(th, isFinal);
+  const crowd = m.projCrowd || matchCrowd(isMagicRound ? mrHost || th : th, isFinal);
   const ticketPrice = th.id===G.coach.teamId && G.club ? (G.club.ticketPrice || 28) : 28;
   const weatherTryMod = weather==='Heavy rain' ? .84 : weather==='Light rain' ? .92 : weather==='Windy' ? .95 : weather==='Humid' ? .96 : 1;
   const weatherKickMod = weather==='Heavy rain' ? .88 : weather==='Light rain' ? .93 : weather==='Windy' ? .90 : weather==='Humid' ? .97 : 1;
-  const crowdHomeMod = isFinal ? 1 : clamp(0.985 + crowd / 1200000, .985, 1.035);
+  const crowdHomeMod = (isFinal || isMagicRound) ? 1 : clamp(0.985 + crowd / 1200000, .985, 1.035);
   th._prevLineup = th.lineup.slice(0,13);
   ta._prevLineup = ta.lineup.slice(0,13);
   const ph = lineupPower(th), pa = lineupPower(ta);
-  const hAdj = 1.035;
+  const hAdj = isMagicRound ? 1 : 1.035;
   // Cap the dominance ratio to prevent runaway blowouts; exponent 1.65 vs old 2.6
   const ratH = Math.min((ph.atk*hAdj)/pa.def, 1.65);
   const ratA = Math.min(pa.atk/(ph.def*hAdj), 1.65);
