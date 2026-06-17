@@ -2,6 +2,11 @@
 
 Updated every session. Lists every requested feature with implementation status.
 
+## Workflow Rules
+
+- **Push to GitHub after every change.** Any time files are modified, added, or the handover is updated, commit and push to `origin main` before ending the session.
+- GitHub remote: `https://github.com/Moose151/project-minto.git`
+
 ## Project Shape
 
 - Plain browser SPA: `index.html`, `styles.css`, global JS files. No build step.
