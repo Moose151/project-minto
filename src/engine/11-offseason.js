@@ -808,12 +808,27 @@ function startNewSeason(){
     addNews(`Facility wear and tear: ${degraded.join(', ')} ${degraded.length>1?'have':'has'} degraded by one level. Consider reinvesting in infrastructure.`,
       {title:'Facility Degradation', type:'board', tone:'bad', tag:'Facilities'});
   }
-  G.club.seasonRevenue = 0; G.club.seasonWages = 0; G.club.gateRevenue = 0; G.club.broadcastRevenue = 0; G.club.membershipRevenue = 0; G.club.sponsorshipRevenue = 0;
+  G.club.seasonRevenue = 0; G.club.seasonWages = 0; G.club.gateRevenue = 0; G.club.broadcastRevenue = 0; G.club.membershipRevenue = 0; G.club.sponsorshipRevenue = 0; G.club.vendorRevenue = 0; G.club.magicRoundRevenue = 0;
   G.club.sponsorships = (G.club.sponsorships || []).map(s=>({...s, yearsLeft:Math.max(0,(s.yearsLeft||1)-1)})).filter(s=>s.yearsLeft>0);
   G.config.cap = Math.round(G.config.cap * (1+G.config.capGrowth) / 10000)*10000;
   for(const id in G.players){ const p=G.players[id]; resetSeasonStats(p); p.morale=clamp(p.morale, 45, 90); p.form=clamp(Math.round((p.form == null ? 50 : p.form)*0.72 + 50*0.28), 25, 85); p.ovr=calcOvr(p); p.pot=Math.max(p.pot,p.ovr); p.seasonStartOvr=p.ovr; p.seasonStartPot=p.pot; p.seasonStartGames=p.career.games; delete p.approachTeam; }
   for(const t of G.teams){ t.rep = Math.round(squadStrength(t)); autoPick(t); }
-  G.fixtures = genFixtures(G.teams.map(t=>t.id));
+  const fixtResult = genFixtures(G.teams.map(t=>t.id));
+  G.fixtures = fixtResult.rounds;
+  G.byes = fixtResult.byes;
+  // Magic Round: pick host by prestige bid (squad strength + randomness)
+  const mrRound = clamp(Math.round(G.fixtures.length * 0.42 + Math.floor(rf(0,1) * G.fixtures.length * 0.16)), 7, G.fixtures.length - 4);
+  const mrBids = G.teams.map(t => ({t, bid: squadStrength(t) + rf(0, 32)}));
+  mrBids.sort((a, b) => b.bid - a.bid);
+  const mrHost = mrBids[0].t;
+  const mrVenue = `${mrHost.city} Magic Round`;
+  G.magicRound = {round: mrRound, hostTeamId: mrHost.id, venue: mrVenue};
+  const mrIsMyClub = mrHost.id === G.coach.teamId;
+  addNews(
+    `Magic Round ${G.year} will be hosted by ${mrHost.nick} in ${mrHost.city} — all Round ${mrRound+1} fixtures played at ${mrHost.stadium || mrHost.city+' Stadium'}.` +
+    (mrIsMyClub ? ' Your club will receive a $1,500,000 NRL hosting payment.' : ''),
+    {title:'Magic Round Announced', type:'club', tone:mrIsMyClub?'good':'neutral', teamId:G.coach.teamId, tag:'Magic Round'}
+  );
   G.coach.expect = setExpectation();
   G.coach.conf = clamp(G.coach.conf, 35, 100);
   G.coach.seasonsAtClub++;

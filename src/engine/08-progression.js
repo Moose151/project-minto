@@ -1,5 +1,17 @@
 'use strict';
 
+// Vendor revenue per attendee by level [unused, L1, L2, L3, L4, L5]
+const VENDOR_FB_REV    = [0, 3, 5, 7, 10, 14];
+const VENDOR_MERCH_REV = [0, 1.5, 2.5, 4, 6, 8];
+// Upgrade cost FROM each level (index = current level)
+const VENDOR_FB_COSTS    = [0, 100000, 200000, 350000, 600000];
+const VENDOR_MERCH_COSTS = [0, 60000, 120000, 200000, 350000];
+
+function vendorRevenuePerHead(){
+  const v = (G.club && G.club.vendors) || {fb:1, merch:1};
+  return (VENDOR_FB_REV[v.fb || 1] || 3) + (VENDOR_MERCH_REV[v.merch || 1] || 1.5);
+}
+
 /* ---------- weekly progression ---------- */
 function advanceRound(){
   if(G.phase==='regular'){
@@ -29,6 +41,7 @@ function advanceRound(){
     auditContractPromises();
     coachWeekly(myM);
     generateWeeklyMedia(round, myM);
+    generateStaffRecommendations();
     advanceScouting();
     checkAchievements('round', {round, myM});
     G.round++;
@@ -467,8 +480,20 @@ function payClubWeekly(round){
   const crowd = myM && myM.det ? myM.det.crowd : 18000;
   const ticketPrice = myM && myM.det && myM.det.ticketPrice ? myM.det.ticketPrice : (G.club.ticketPrice || 28);
   const gateRevenue = mineHome ? Math.round(crowd * ticketPrice) : 0;
+  const vendorRevenue = mineHome ? Math.round(crowd * vendorRevenuePerHead()) : 0;
   const broadcastRevenue = 75000;
-  const totalRevenue = gateRevenue + broadcastRevenue;
+  // Magic Round hosting windfall
+  let magicRoundRevenue = 0;
+  if(G.magicRound && G.round === G.magicRound.round && G.magicRound.hostTeamId === G.coach.teamId){
+    magicRoundRevenue = 1500000;
+    G.club.magicRoundRevenue = (G.club.magicRoundRevenue || 0) + magicRoundRevenue;
+    const mrHost = myTeam();
+    addNews(
+      `Magic Round hosting payment received — $1,500,000 windfall from NRL for hosting all Round ${G.round+1} fixtures at ${G.magicRound.venue}.`,
+      {title:'Magic Round Revenue', type:'club', tone:'good', teamId:G.coach.teamId, tag:'Magic Round'}
+    );
+  }
+  const totalRevenue = gateRevenue + vendorRevenue + broadcastRevenue + magicRoundRevenue;
   // Wages: player salaries + staff salaries (weekly portion of annual)
   const playerWages = Math.round(teamSalary(t) / weeks);
   const staffWages = (G.staff || []).reduce((s, x) => s + Math.round((x.salary || 0) / weeks), 0);
@@ -476,6 +501,7 @@ function payClubWeekly(round){
   G.club.funds = Math.round((G.club.funds || 0) + totalRevenue - totalWages);
   G.club.seasonRevenue = (G.club.seasonRevenue || 0) + totalRevenue;
   G.club.gateRevenue = (G.club.gateRevenue || 0) + gateRevenue;
+  G.club.vendorRevenue = (G.club.vendorRevenue || 0) + vendorRevenue;
   G.club.broadcastRevenue = (G.club.broadcastRevenue || 0) + broadcastRevenue;
   G.club.seasonWages = (G.club.seasonWages || 0) + totalWages;
 }
@@ -657,6 +683,50 @@ function generateWeeklyMedia(round, myM){
         tone: 'neutral',
         tag: 'Recruitment',
       });
+    }
+  }
+
+  // Form alerts: hot streak or form slump for key players
+  const mt2 = myTeam();
+  if(mt2 && rnd() < 0.55){
+    const squad = mt2.players.map(id=>G.players[id]).filter(p=>p && p.form != null && !p.injury && (p.squad==='top' || !p.squad));
+    const hotPlayer = squad.find(p=>p.form >= 82);
+    const coldPlayer = squad.find(p=>p.form <= 26);
+    if(hotPlayer && rnd() < 0.55){
+      addNews(
+        `${hotPlayer.name} is in outstanding form this season (${hotPlayer.form} rating) — a player to build around while momentum is high.`,
+        {title:'Hot Streak', type:'form', tone:'good', playerId:hotPlayer.id, teamId:mt2.id, tag:'Form', r:G.round+1, y:G.year}
+      );
+    } else if(coldPlayer && rnd() < 0.65){
+      addNews(
+        `${coldPlayer.name} is struggling for form (${coldPlayer.form} rating) — coaching staff should consider rotation or a confidence-building run in reserves.`,
+        {title:'Form Slump', type:'form', tone:'bad', playerId:coldPlayer.id, teamId:mt2.id, tag:'Form', r:G.round+1, y:G.year}
+      );
+    }
+  }
+}
+function generateStaffRecommendations(){
+  if(!G.staff || !G.staff.length || !myTeam()) return;
+  const mt = myTeam();
+  const fitnessCoach = G.staff.find(s=>s.role==='fitness');
+  if(fitnessCoach && rnd() < 0.38){
+    const fatigued = mt.players.map(id=>G.players[id]).filter(p=>p && p.cond<73 && !p.injury && (p.squad==='top'||!p.squad)).sort((a,b)=>a.cond-b.cond);
+    if(fatigued.length >= 2){
+      addNews(
+        `${fatigued[0].name} (${Math.round(fatigued[0].cond)}% cond) and ${fatigued[1].name} (${Math.round(fatigued[1].cond)}% cond) are showing fatigue — ${fitnessCoach.name} recommends rotation this week.`,
+        {title:'Fitness Report', type:'recommendation', tone:'neutral', tag:'Staff', r:G.round+1, y:G.year}
+      );
+    }
+  }
+  const devCoach = G.staff.find(s=>s.role==='development');
+  if(devCoach && G.round % 4 === 0){
+    const prospects = mt.players.map(id=>G.players[id]).filter(p=>p && p.age<=21 && p.squad==='dev' && p.ovr>=56).sort((a,b)=>b.pot-a.pot);
+    if(prospects.length){
+      const pr = prospects[0];
+      addNews(
+        `${devCoach.name} recommends giving ${pr.name} (${pr.age} yo, OVR ${pr.ovr}, POT ${pr.pot}) top-squad exposure — development staff believe he is ready to step up.`,
+        {title:'Development Report', type:'recommendation', tone:'good', playerId:pr.id, tag:'Staff', r:G.round+1, y:G.year}
+      );
     }
   }
 }

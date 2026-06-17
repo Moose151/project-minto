@@ -7,16 +7,18 @@ Object.assign(UI, {
 
   p_inbox(){
     const CATS = [
-      ['all',         'All'],
-      ['analysis',    'Match Analysis'],
-      ['match',       'Results'],
-      ['injury',      'Medical'],
-      ['club',        'Club'],
-      ['board',       'Board'],
-      ['scouting',    'Scouting'],
-      ['recruitment', 'Recruitment'],
-      ['contract',    'Contracts'],
-      ['achievement', 'Achievements'],
+      ['all',            'All'],
+      ['analysis',       'Match Analysis'],
+      ['match',          'Results'],
+      ['injury',         'Medical'],
+      ['club',           'Club'],
+      ['board',          'Board'],
+      ['recommendation', 'Staff Reports'],
+      ['form',           'Form Alerts'],
+      ['scouting',       'Scouting'],
+      ['recruitment',    'Recruitment'],
+      ['contract',       'Contracts'],
+      ['achievement',    'Achievements'],
     ];
 
     const news = G.news || [];

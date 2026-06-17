@@ -50,6 +50,41 @@ Object.assign(UI, {
     const totalBcast = club.broadcastRevenue === undefined ? club.seasonRevenue - totalGate : club.broadcastRevenue;
     const totalMembers = club.membershipRevenue || 0;
     const totalSponsors = club.sponsorshipRevenue || 0;
+    const totalVendors = club.vendorRevenue || 0;
+    const totalMagic = club.magicRoundRevenue || 0;
+
+    // Vendor card builder
+    const vendorCard = (key, label, desc) => {
+      const vendors = club.vendors || {fb:1, merch:1};
+      const lvl = vendors[key] || 1;
+      const costs = key==='fb' ? VENDOR_FB_COSTS : VENDOR_MERCH_COSTS;
+      const revs  = key==='fb' ? VENDOR_FB_REV   : VENDOR_MERCH_REV;
+      const cost = lvl < 5 ? costs[lvl] : 0;
+      const perHead = revs[lvl] || 0;
+      return `<div class="facility-row">
+        <div style="min-width:0;flex:1">
+          <b>${label}</b>
+          <div class="facility-bar">${Array.from({length:5}, (_,i)=>`<i class="${i<lvl?'on':''}"></i>`).join('')}</div>
+          <p style="color:var(--muted);font-size:11px;margin:3px 0 0">${desc} · Level ${lvl}/5 · ${money(perHead)}/head per home match</p>
+        </div>
+        <button class="btn sm${lvl<5?' primary':''}" onclick="${lvl<5?`UI.upgradeVendor('${key}')`:''}" ${!cost?'disabled':''}>
+          ${cost ? `Upgrade ${money(cost)}` : 'Maxed'}
+        </button>
+      </div>`;
+    };
+
+    // Magic round display info
+    const mrHostTeam = G.magicRound ? G.teams.find(t=>t.id===G.magicRound.hostTeamId) : null;
+    const mrIsHost = G.magicRound && G.magicRound.hostTeamId === G.coach.teamId;
+    const magicRoundInfo = G.magicRound
+      ? (mrIsHost
+          ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(210,165,62,.12);border:1px solid rgba(210,165,62,.4);border-radius:6px;font-size:12px">
+              <b style="color:var(--brass)">Magic Round Host</b> — ${esc(G.magicRound.venue)} · Round ${G.magicRound.round+1} · Hosting windfall: <b>$1,500,000</b>
+             </div>`
+          : `<div style="margin-top:10px;padding:8px 12px;background:var(--card2);border-radius:6px;font-size:12px;color:var(--muted)">
+              Magic Round — hosted by <b>${esc(mrHostTeam?mrHostTeam.nick:'?')}</b> in Round ${G.magicRound.round+1} · ${esc(G.magicRound.venue)}
+             </div>`)
+      : '';
 
     const capBar = pct => `<div style="height:8px;background:var(--card2);border-radius:4px;overflow:hidden;margin:6px 0">
       <div style="width:${Math.min(100, Math.round(pct*100))}%;height:100%;background:${capCls}"></div></div>`;
@@ -161,12 +196,24 @@ Object.assign(UI, {
       <div class="facility-grid">${Object.keys(FACILITY_DEFS).map(facilityCard).join('')}</div>
     </div>
 
+    <h2 class="sec">Concessions &amp; Merchandise</h2>
+    <div class="card" style="margin-bottom:16px">
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px">Vendor stalls earn revenue per attendee on home match days. Upgrades are instant — no build time.</p>
+      <div class="facility-grid">
+        ${vendorCard('fb', 'Food &amp; Beverage', 'Kiosk network across the stadium')}
+        ${vendorCard('merch', 'Merchandise', 'Club store and match-day stall network')}
+      </div>
+      ${magicRoundInfo}
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="card">
         <div style="font-size:11px;color:var(--brass);font-weight:700;text-transform:uppercase;margin-bottom:8px">Revenue This Season</div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--muted)">Memberships</span><b>${money(totalMembers)}</b></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--muted)">Sponsorship</span><b>${money(totalSponsors)}</b></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--muted)">Gate receipts</span><b>${money(totalGate)}</b></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--muted)">Vendor revenue</span><b>${money(totalVendors)}</b></div>
+        ${totalMagic ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--brass)">Magic Round windfall</span><b style="color:var(--brass)">${money(totalMagic)}</b></div>` : ''}
         <div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--muted)">Broadcast share</span><b>${money(totalBcast)}</b></div>
         <div style="border-top:1px solid var(--line);margin:8px 0"></div>
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span>Total</span><span>${money(club.seasonRevenue)}</span></div>
@@ -224,6 +271,23 @@ Object.assign(UI, {
     if(!G.godMode) return;
     G.coach.conf = clamp(+value || 0, 0, 100);
     UI.toast(`Board confidence set to ${Math.round(G.coach.conf)}%.`);
+    UI.render();
+  },
+  upgradeVendor(key){
+    const club = G.club;
+    if(!club) return;
+    if(!club.vendors) club.vendors = {fb:1, merch:1};
+    const lvl = club.vendors[key] || 1;
+    if(lvl >= 5){ UI.toast('Already at maximum level.'); return; }
+    const costs = key==='fb' ? VENDOR_FB_COSTS : VENDOR_MERCH_COSTS;
+    const cost = costs[lvl];
+    if((club.funds||0) < cost){ UI.toast(`Not enough funds. Need ${money(cost)}.`); return; }
+    club.funds -= cost;
+    club.vendors[key] = lvl + 1;
+    const label = key==='fb' ? 'Food & Beverage' : 'Merchandise';
+    addNews(`${label} stalls upgraded to Level ${club.vendors[key]} — ${money(key==='fb'?VENDOR_FB_REV[club.vendors[key]]:VENDOR_MERCH_REV[club.vendors[key]])}/head revenue per home match.`,
+      {title:'Vendor Upgrade', type:'club', tone:'good', teamId:G.coach.teamId, tag:'Facilities'});
+    UI.toast(`${label} upgraded to Level ${club.vendors[key]}.`);
     UI.render();
   },
   upgradeFacility(key){

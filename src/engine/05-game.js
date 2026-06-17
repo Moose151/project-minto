@@ -83,6 +83,15 @@ function startNewGame(cfg){
   const fixtResult = genFixtures(G.teams.map(t=>t.id));
   G.fixtures = fixtResult.rounds;
   G.byes = fixtResult.byes;
+  if(G.fixtures.length >= 10){
+    const mrRound = clamp(Math.round(G.fixtures.length * 0.42 + Math.floor(rf(0,1) * G.fixtures.length * 0.16)), 7, G.fixtures.length - 4);
+    const mrBids = G.teams.map(t => ({t, bid: squadStrength(t) + rf(0, 32)}));
+    mrBids.sort((a, b) => b.bid - a.bid);
+    const mrHost = mrBids[0].t;
+    G.magicRound = {round: mrRound, hostTeamId: mrHost.id, venue: `${mrHost.city} Magic Round`};
+  } else {
+    G.magicRound = null;
+  }
   for(const t of G.teams) autoPick(t);
   if(cfg.teamId != null){
     G.coach.expect = setExpectation();

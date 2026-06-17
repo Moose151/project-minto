@@ -18,7 +18,9 @@ Object.assign(UI, {
     const myBye = byeTeamIds.includes(G.coach.teamId);
     const isNext = r === G.round && G.phase === 'regular';
     const isCompleted = r < G.round || G.phase !== 'regular';
-    const roundLabel = `Round ${r+1}${myBye ? ' — BYE' : ''}${isNext && !myBye ? ' — Next Up' : isCompleted ? ' — Completed' : !myBye ? ' — Upcoming' : ''}`;
+    const isMagicRound = G.magicRound && G.magicRound.round === r;
+    const magicHostTeam = isMagicRound ? G.teams.find(t=>t.id===G.magicRound.hostTeamId) : null;
+    const roundLabel = `Round ${r+1}${isMagicRound ? ' ★ Magic Round' : ''}${myBye ? ' — BYE' : ''}${isNext && !myBye ? ' — Next Up' : isCompleted ? ' — Completed' : !myBye ? ' — Upcoming' : ''}`;
 
     const gameRow = m => {
       const th = G.teams[m.h], ta = G.teams[m.a];
@@ -48,7 +50,8 @@ Object.assign(UI, {
     const jumpOpts = G.fixtures.map((_, i) => {
       const rByeIds = (G.byes && G.byes[i]) || [];
       const rMyBye = rByeIds.includes(G.coach.teamId);
-      return `<option value="${i}" ${i === r ? 'selected' : ''}>Round ${i+1}${rMyBye ? ' (BYE)' : ''}${i === G.round && G.phase === 'regular' ? ' ▸' : ''}</option>`;
+      const rIsMR = G.magicRound && G.magicRound.round === i;
+      return `<option value="${i}" ${i === r ? 'selected' : ''}>Round ${i+1}${rIsMR ? ' ★' : ''}${rMyBye ? ' (BYE)' : ''}${i === G.round && G.phase === 'regular' ? ' ▸' : ''}</option>`;
     }).join('');
     const nav = `<div class="btnrow" style="margin-bottom:12px;align-items:center;gap:6px">
       <button class="btn sm" onclick="UI._fixtRound=Math.max(0,UI._fixtRound-1);UI.render()" ${r===0?'disabled':''}>◀ Prev</button>
@@ -58,8 +61,13 @@ Object.assign(UI, {
     </div>`;
 
     const byeAlert = myBye ? `<div style="background:rgba(210,165,62,.1);border:1px solid var(--brass);border-radius:6px;padding:8px 12px;margin-bottom:10px;color:var(--brass);font-weight:700;text-align:center">YOUR TEAM HAS A BYE THIS ROUND · Players are resting and recovering</div>` : '';
+    const magicRoundBanner = isMagicRound ? `<div style="background:linear-gradient(135deg,rgba(210,165,62,.18),rgba(210,165,62,.06));border:1px solid rgba(210,165,62,.5);border-radius:6px;padding:8px 12px;margin-bottom:10px;text-align:center">
+      <div style="color:var(--brass);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase">★ Magic Round</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">All matches at ${magicHostTeam ? esc(magicHostTeam.stadium||magicHostTeam.city+' Stadium') : ''} · ${esc(G.magicRound.venue)}</div>
+    </div>` : '';
     const roundCard = `<div class="card" style="padding:12px">
       <div class="navsep" style="margin:0 0 10px">${roundLabel}</div>
+      ${magicRoundBanner}
       ${byeAlert}
       ${round.map(gameRow).join('')}
       ${byeCard}
