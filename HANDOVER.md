@@ -534,6 +534,13 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 #### Staff Screen — Hire Button Layout Bug **[BUG]**
 - On the Staff page, hire buttons are overlapping text in their rows. Layout needs fixing so buttons sit in their own column/row and don't collide with staff name/role/ability text.
 
+#### Assistant Coach Salary & Contract Management **[NEW]**
+- Staff page should show each hired assistant's current salary and years remaining on their contract.
+- Allow the coach to negotiate contract extensions for assistants before they expire — open a modal showing the assistant's current deal, their extension demand (based on ability/role/market), and accept/decline options.
+- Extension window opens when an assistant has 1 year or fewer remaining; should warn the coach in the staff row ("contract expiring").
+- Releasing a staff member mid-contract should trigger a payout (remaining years × salary) unless the staff member requested their own release — consistent with the player/coach contract payout rule.
+- Show total staff wage bill and per-staff salary in the Club Management wages breakdown (already shows aggregate; needs per-member detail on the Staff page).
+
 #### Coach Contract Negotiation & Extension **[NEW]**
 - Coach Profile should allow the user to view their own contract (salary, years remaining) and initiate negotiations to extend or resign.
 - Extension window should open when the coach has 1 year or fewer remaining; offer screens show year length, salary ask (based on coach rep/performance), and bonuses.
