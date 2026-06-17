@@ -142,6 +142,7 @@ function addNews(txt, opts){
   story.r = story.r || G.round+1;
   story.y = story.y || G.year;
   story.createdAt = story.createdAt || Date.now();
+  if(story.read === undefined) story.read = false;
   G.news.unshift(story);
   if(G.news.length>160) G.news.pop();
 }
