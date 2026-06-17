@@ -59,13 +59,20 @@ Object.assign(UI, {
         </div>`;
       }
 
+      const expiring = s.yearsLeft <= 1;
+      const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
+      const payout = payoutYears * (s.salary || 0);
       return `<div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+          <div style="min-width:0;flex:1">
             <b style="font-size:15px">${esc(s.name)}</b>
-            <p style="margin:2px 0;font-size:12px;color:var(--muted)">Ability ${s.ability} · ${money(s.salary)}/yr</p>
+            ${expiring ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px">CONTRACT EXPIRING</span>` : ''}
+            <p style="margin:2px 0;font-size:12px;color:var(--muted)">Scout · ${money(s.salary)}/yr · ${s.yearsLeft} yr${s.yearsLeft===1?'':'s'} left</p>
           </div>
-          <button class="btn sm" style="color:var(--red)" onclick="UI.fireScout(${s.id})">Fire</button>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            ${expiring ? `<button class="btn sm primary" onclick="UI.extendScout(${s.id})">Extend</button>` : ''}
+            <button class="btn sm" style="color:var(--red)" onclick="UI.fireScout(${s.id})">${payout > 0 ? `Fire (${money(payout)})` : 'Release'}</button>
+          </div>
         </div>
         ${abilityBar}
         ${!mission ? `<p style="font-size:12px;color:var(--green);margin:4px 0">Available</p>` : ''}
@@ -213,20 +220,68 @@ Object.assign(UI, {
     if(!G.scouting) return;
     const s = G.scouting.scouts.find(x=>x.id===id);
     if(!s) return;
+    const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
+    const payout = payoutYears * (s.salary || 0);
+    const payoutLine = payout > 0
+      ? `<p style="color:var(--red);font-size:13px">Contract payout: <b>${money(payout)}</b> (${payoutYears} year${payoutYears===1?'':'s'} remaining × ${money(s.salary)})</p>`
+      : `<p style="color:var(--muted);font-size:13px">No payout — contract is in its final year.</p>`;
     UI.modal(`<h3>Release ${esc(s.name)}?</h3>
-      <p class="page-sub">Any active missions will be cancelled.</p>
+      ${payoutLine}
+      <p style="font-size:12px;color:var(--muted)">Any active missions will be cancelled.</p>
       <div class="btnrow">
-        <button class="btn primary" onclick="UI._confirmFireScout(${id})">Confirm</button>
+        <button class="btn primary" style="background:var(--red)" onclick="UI._confirmFireScout(${id}, ${payout})">Confirm</button>
         <button class="btn" onclick="UI.closeModal()">Cancel</button>
       </div>`);
   },
 
-  _confirmFireScout(id){
+  _confirmFireScout(id, payout){
     if(!G.scouting) return;
+    if(payout > 0){
+      G.club.funds = (G.club.funds || 0) - payout;
+      addNews(`Scout release payout: ${money(payout)} paid from club funds.`, {type:'finance', tone:'bad', tag:'Staff', teamId:G.coach.teamId});
+    }
     G.scouting.scouts   = G.scouting.scouts.filter(s=>s.id!==id);
     G.scouting.missions = G.scouting.missions.filter(m=>m.scoutId!==id);
     UI.closeModal();
-    UI.toast('Scout released.');
+    UI.toast(payout > 0 ? `Scout released. ${money(payout)} payout deducted.` : 'Scout released.');
+    UI.render();
+  },
+
+  extendScout(id){
+    const s = (G.scouting && G.scouting.scouts || []).find(x=>x.id===id);
+    if(!s) return;
+    const demandMult = 1.05 + (s.ability / 90) * 0.18;
+    const newSalary = Math.round(s.salary * demandMult / 5000) * 5000;
+    const salaryChange = newSalary - s.salary;
+    const salColour = salaryChange > 0 ? 'var(--red)' : 'var(--green)';
+    UI.modal(`<h3>Extend ${esc(s.name)}</h3>
+      <p class="page-sub">Scout · Ability ${s.ability}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+        <div class="card" style="padding:10px">
+          <div style="font-size:11px;color:var(--muted)">Current salary</div>
+          <div style="font-size:18px;font-weight:700">${money(s.salary)}</div>
+        </div>
+        <div class="card" style="padding:10px">
+          <div style="font-size:11px;color:var(--muted)">Demand</div>
+          <div style="font-size:18px;font-weight:700;color:${salColour}">${money(newSalary)} <span style="font-size:12px">(${salaryChange>0?'+':''}${money(salaryChange)})</span></div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Choose extension length:</p>
+      <div class="btnrow">
+        <button class="btn sm primary" onclick="UI._confirmExtendScout(${id}, 1, ${newSalary})">1 year</button>
+        <button class="btn sm primary" onclick="UI._confirmExtendScout(${id}, 2, ${newSalary})">2 years</button>
+        <button class="btn sm primary" onclick="UI._confirmExtendScout(${id}, 3, ${newSalary})">3 years</button>
+        <button class="btn" onclick="UI.closeModal()">Cancel</button>
+      </div>`);
+  },
+
+  _confirmExtendScout(id, years, newSalary){
+    const s = (G.scouting && G.scouting.scouts || []).find(x=>x.id===id);
+    if(!s) return;
+    s.yearsLeft = (s.yearsLeft || 1) + years;
+    s.salary = newSalary;
+    UI.closeModal();
+    UI.toast(`${s.name} extended for ${years} year${years===1?'':'s'} at ${money(newSalary)}/yr.`);
     UI.render();
   },
 });
