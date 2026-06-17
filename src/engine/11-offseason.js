@@ -269,10 +269,19 @@ function applyOffseasonDevelopment(){
       else if(delta <= -2) decliners.push({p, delta});
     }
   }
+  // Store full data for offseason development review screen
+  if(G.offseason){
+    improvers.sort((a,b)=>b.delta-a.delta);
+    decliners.sort((a,b)=>a.delta-b.delta);
+    G.offseason.devSummary = {
+      improvers: improvers.map(x=>({id:x.p.id, delta:x.p.ovr-(x.p.seasonStartOvr||x.p.ovr-x.delta), ovr:x.p.ovr})),
+      decliners: decliners.map(x=>({id:x.p.id, delta:x.p.ovr-(x.p.seasonStartOvr||x.p.ovr-x.delta), ovr:x.p.ovr})),
+    };
+  }
   // News summary for coached club
   const parts = [];
-  if(improvers.length) parts.push(`Biggest improvers: ${improvers.sort((a,b)=>b.delta-a.delta).slice(0,3).map(x=>`${x.p.name} +${x.delta}`).join(', ')}.`);
-  if(decliners.length) parts.push(`Declines: ${decliners.sort((a,b)=>a.delta-b.delta).slice(0,2).map(x=>`${x.p.name} ${x.delta}`).join(', ')}.`);
+  if(improvers.length) parts.push(`Biggest improvers: ${improvers.slice(0,3).map(x=>`${x.p.name} +${x.delta}`).join(', ')}.`);
+  if(decliners.length) parts.push(`Declines: ${decliners.slice(0,2).map(x=>`${x.p.name} ${x.delta}`).join(', ')}.`);
   if(parts.length){
     addNews(`Offseason training complete. ${parts.join(' ')}`, {
       title:'Offseason Development', type:'development',

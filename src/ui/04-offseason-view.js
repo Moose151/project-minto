@@ -6,6 +6,7 @@ Object.assign(UI, {
     const O = G.offseason;
     if(!O) return UI.p_dashboard();
     if(O.step==='review') return UI.osReview();
+    if(O.step==='development') return UI.osDevReview();
     if(O.step==='contracts') return UI.osContracts();
     if(O.step==='preseason') return UI.osPreseason();
     return UI.osDone();
@@ -52,7 +53,7 @@ Object.assign(UI, {
       </div>`;}).join('')}
     </div>`:''}
     <div class="btnrow" style="margin-top:18px">
-      ${O.sacked?'':`<button class="btn primary" onclick="G.offseason.step='contracts'; UI.render()">Stay at ${esc(myTeam().nick)} — continue to contracts</button>`}
+      ${O.sacked?'':`<button class="btn primary" onclick="G.offseason.step='development'; UI.render()">Continue to squad development →</button>`}
     </div>`;
   },
   takeJob(id){
@@ -70,6 +71,79 @@ Object.assign(UI, {
     UI.toast(`Appointed at the ${myTeam().nick}.`);
     UI.render();
   },
+  osDevReview(){
+    const O = G.offseason;
+    const t = myTeam();
+    const dev = O.devSummary || {improvers:[], decliners:[]};
+
+    const playerDevCard = (entry, isGood) => {
+      const p = G.players[entry.id];
+      if(!p) return '';
+      const delta = entry.delta;
+      const color = isGood ? 'var(--green)' : 'var(--red)';
+      const sign = delta > 0 ? '+' : '';
+      return `<div class="card click" onclick="UI.playerModal(${p.id})" style="display:flex;align-items:center;gap:12px;padding:10px 14px">
+        ${playerAvatar(p, 44)}
+        <div style="flex:1;min-width:0">
+          <b>${esc(p.name)}</b>
+          <p style="margin:2px 0;font-size:12px;color:var(--muted)">${POS_NAME[p.pos]||p.pos} · ${p.age}yo</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--disp);font-size:28px;font-weight:900;color:${color};line-height:1">${sign}${delta}</div>
+          <div style="font-size:11px;color:var(--muted)">OVR now ${p.ovr}</div>
+        </div>
+      </div>`;
+    };
+
+    // All coached-squad players with any change
+    const allChanges = t.players.map(id => {
+      const p = G.players[id]; if(!p || p.seasonStartOvr == null) return null;
+      const delta = p.ovr - p.seasonStartOvr;
+      return {id, delta, ovr: p.ovr, name: p.name, pos: p.pos, age: p.age};
+    }).filter(Boolean).filter(x => x.delta !== 0).sort((a,b) => b.delta - a.delta);
+
+    const allRows = allChanges.map(x => {
+      const p = G.players[x.id]; if(!p) return '';
+      const color = x.delta > 0 ? 'var(--green)' : 'var(--red)';
+      return `<tr class="click" onclick="UI.playerModal(${x.id})">
+        <td><div class="player-cell">${playerAvatar(p, 30)}<div><b>${esc(p.name)}</b><br><span class="pmeta">${POS_NAME[p.pos]||p.pos} · ${p.age}yo</span></div></div></td>
+        <td class="num"><span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span></td>
+        <td class="num" style="font-size:14px;font-weight:700;color:${color}">${x.delta > 0 ? '+' : ''}${x.delta}</td>
+      </tr>`;
+    }).join('');
+
+    const noChange = t.players.length - allChanges.length;
+
+    return `<h1 class="page">Offseason Development — ${G.year}</h1>
+    <p class="page-sub">Offseason training complete. Here's how your squad developed.</p>
+    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Improved</span>
+        <div style="font-size:28px;font-weight:700;font-family:var(--disp);color:var(--green)">${allChanges.filter(x=>x.delta>0).length}</div>
+      </div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Declined</span>
+        <div style="font-size:28px;font-weight:700;font-family:var(--disp);color:var(--red)">${allChanges.filter(x=>x.delta<0).length}</div>
+      </div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Unchanged</span>
+        <div style="font-size:28px;font-weight:700;font-family:var(--disp);color:var(--muted)">${noChange}</div>
+      </div>
+    </div>
+    ${dev.improvers.length ? `<h2 class="sec">Breakout improvers (+2 OVR or more)</h2>
+    <div class="grid3" style="margin-bottom:16px">${dev.improvers.map(e => playerDevCard(e, true)).join('')}</div>` : ''}
+    ${dev.decliners.length ? `<h2 class="sec">Veteran decline (−2 OVR or more)</h2>
+    <div class="grid3" style="margin-bottom:16px">${dev.decliners.map(e => playerDevCard(e, false)).join('')}</div>` : ''}
+    ${allChanges.length ? `<h2 class="sec">All changes</h2>
+    <div class="card" style="padding:6px;overflow-x:auto">
+      <table><thead><tr><th class="noclick">Player</th><th class="noclick num">OVR</th><th class="noclick num">Change</th></tr></thead>
+      <tbody>${allRows}</tbody></table>
+    </div>` : `<div class="card"><p style="color:var(--muted)">No OVR changes recorded for this squad. Development data populates after completing a full season.</p></div>`}
+    <div class="btnrow" style="margin-top:18px">
+      <button class="btn primary" onclick="G.offseason.step='contracts'; UI.render()">Continue to contracts →</button>
+    </div>`;
+  },
+
   osContracts(){
     const O = G.offseason;
     const t = myTeam();
