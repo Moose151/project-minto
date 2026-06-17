@@ -233,7 +233,13 @@ function nationalityChip(p){
 }
 function playerRepLine(p){
   if(!p) return '';
-  const bits = [nationalityChip(p), repChip(p.repTeam), stateRepChip(p.stateRep)].filter(Boolean);
+  const bits = [
+    nationalityChip(p),
+    repChip(p.repTeam),
+    stateRepChip(p.stateRep),
+    p.indigenous ? stateRepChip('Indigenous All Stars') : '',
+    p.maori ? stateRepChip('Maori All Stars') : '',
+  ].filter(Boolean);
   return bits.length ? `<div class="rep-row">${bits.join('')}</div>` : '';
 }
 function playerAvatar(p, size){

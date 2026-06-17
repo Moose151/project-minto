@@ -245,10 +245,27 @@ function playerTier(ovr){
   return QUALITY_TIERS[0];
 }
 
+/* ---------- birth towns by nationality / state ---------- */
+const BIRTH_TOWNS = {
+  'Australia': {
+    'Queensland':        ['Brisbane','Townsville','Cairns','Rockhampton','Mackay','Toowoomba','Gold Coast','Bundaberg','Ipswich','Sunshine Coast','Mount Isa','Charters Towers','Hervey Bay','Gladstone','Emerald','Maryborough','Warwick'],
+    'New South Wales':   ['Sydney','Newcastle','Wollongong','Gosford','Parramatta','Penrith','Campbelltown','Orange','Wagga Wagga','Dubbo','Tamworth','Coffs Harbour','Lismore','Bathurst','Albury','Armidale','Goulburn','Broken Hill'],
+  },
+  'New Zealand':     ['Auckland','Wellington','Christchurch','Hamilton','Dunedin','Tauranga','Palmerston North','Rotorua','Napier','New Plymouth','Gisborne','Nelson','Invercargill'],
+  'Tonga':           ["Nuku'alofa",'Neiafu','Pangai','Ohonua','Tofoa','Haveluloto','Pea','Lapaha'],
+  'Samoa':           ['Apia','Faleolo','Salelologa','Mulifanua','Faleasiu','Siusega','Vaitele','Fagalii'],
+  'Papua New Guinea':['Port Moresby','Lae','Mount Hagen','Goroka','Madang','Wewak','Kimbe','Kokopo','Popondetta','Mendi'],
+  'England':         ['Leeds','Hull','Wigan','Warrington','St Helens','Bradford','Castleford','Featherstone','Leigh','Widnes','Salford','Dewsbury','Wakefield','Halifax','Batley','Oldham'],
+  'Fiji':            ['Suva','Nadi','Lautoka','Labasa','Ba','Sigatoka','Korovou','Savusavu'],
+  'Cook Islands':    ['Avarua','Arorangi','Matavera','Ngatangiia','Titikaveka','Arutanga'],
+  'Lebanon':         ['Beirut','Tripoli','Sidon','Zahle','Baalbek','Jounieh','Byblos','Tyre'],
+};
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 /* ---------- nationalities ---------- */
 const NATIONALITY_POOL = [
-  {country:'Australia',       weight:50, repTeam:'Kangaroos',       stateReps:['Queensland','New South Wales','Indigenous All Stars']},
-  {country:'New Zealand',     weight:20, repTeam:'Kiwis',           stateReps:['Maori All Stars']},
+  {country:'Australia',       weight:50, repTeam:'Kangaroos',       stateReps:['Queensland','New South Wales']},
+  {country:'New Zealand',     weight:20, repTeam:'Kiwis'},
   {country:'Tonga',           weight:8,  repTeam:"Mate Ma'a Tonga"},
   {country:'Samoa',           weight:7,  repTeam:'Toa Samoa'},
   {country:'Papua New Guinea',weight:5,  repTeam:'PNG Kumuls'},

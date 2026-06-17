@@ -6,6 +6,16 @@ function genPlayerName(nationality){
   const pool = NAME_POOLS[nationality] || NAME_POOLS['Australia'];
   return pick(pool.first) + ' ' + pick(pool.last);
 }
+function pickBirthTown(p){
+  const nat = p.nationality || 'Australia';
+  const towns = BIRTH_TOWNS[nat];
+  if(!towns) return '';
+  const id = Number(p.id || 1);
+  if(Array.isArray(towns)) return towns[Math.abs(id * 7919 + 42) % towns.length];
+  const state = p.stateRep || 'New South Wales';
+  const list = towns[state] || towns['New South Wales'] || towns['Queensland'] || [];
+  return list[Math.abs(id * 7919 + 42) % list.length] || '';
+}
 function genPlayer(pos, age, quality){ // quality ~ league tier centre, e.g. 60
   // Pick nationality first so name pool can match
   let natR = rnd()*100, natTotal=0;
@@ -55,6 +65,13 @@ function genPlayer(pos, age, quality){ // quality ~ league tier centre, e.g. 60
   p.nationality = nationality;
   p.repTeam = repTeam;
   p.stateRep = stateRep;
+  p.indigenous = nationality === 'Australia' && rnd() < 0.18;
+  p.maori = nationality === 'New Zealand' && rnd() < 0.30;
+  const curYear = (typeof G !== 'undefined' && G && G.year) ? G.year : 2026;
+  p.dobYear = curYear - age;
+  p.dobMonth = ri(1, 12);
+  p.dobDay = ri(1, 28);
+  p.birthTown = pickBirthTown(p);
   p.face = genPlayerFace(p);
   resetSeasonStats(p);
   return p;
@@ -396,6 +413,26 @@ function migratePlayerAttrs(p){
     p.nationality = nat.country;
     p.repTeam = nat.repTeam;
     p.stateRep = nat.stateReps ? nat.stateReps[Number(p.id||1) % nat.stateReps.length] : null;
+  }
+  // Migrate stateRep: Indigenous All Stars → indigenous flag + a state
+  if(p.stateRep === 'Indigenous All Stars'){
+    p.indigenous = true;
+    p.stateRep = Number(p.id||1) % 2 === 0 ? 'Queensland' : 'New South Wales';
+  }
+  // Migrate stateRep: Maori All Stars → maori flag + no state
+  if(p.stateRep === 'Maori All Stars'){
+    p.maori = true;
+    p.stateRep = null;
+  }
+  if(p.indigenous === undefined) p.indigenous = false;
+  if(p.maori === undefined) p.maori = false;
+  // Backfill birth town and date of birth
+  if(!p.birthTown) p.birthTown = pickBirthTown(p);
+  if(!p.dobYear){
+    const seed = Number(p.id || 1);
+    p.dobYear = (typeof G !== 'undefined' && G && G.year ? G.year : 2026) - (p.age || 25);
+    p.dobMonth = (seed * 7) % 12 + 1;
+    p.dobDay = (seed * 31) % 28 + 1;
   }
   if(!p.face) p.face = genPlayerFace(p);
 }

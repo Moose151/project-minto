@@ -130,7 +130,7 @@ Object.assign(UI, {
         <p class="page-sub">${c.runs||0} carries · ${c.m||0}m · ${c.ks||0} kicks · ${c.km||0}m · ${c.k4020||0} 40/20 · ${c.fdo||0} FDO</p>
         <p class="page-sub">${c.err||0} errors · ${c.inf||0} infringements · ${c.fpts||0} FP · ${c.votes||0} votes · ${c.mins||0} mins</p>
       </div>
-      <div class="card"><h2 class="sec" style="margin-top:0">Profile</h2><p class="bigline">${ATTR_LABEL.professionalism}: ${p.attrs.professionalism}</p><p class="page-sub">Form ${formText(p)} · Ambition ${p.ambition} · Loyalty ${p.loyalty} · Durability ${p.attrs.injury} · Training ${INDIVIDUAL_TRAINING[p.training||'balanced']}</p></div>
+      <div class="card"><h2 class="sec" style="margin-top:0">Profile</h2>${p.dobYear?`<p class="page-sub" style="margin-bottom:6px">Born ${p.dobDay} ${MONTHS_SHORT[(p.dobMonth||1)-1]} ${p.dobYear}${p.birthTown?' · '+esc(p.birthTown):''}</p>`:''}<p class="bigline">${ATTR_LABEL.professionalism}: ${p.attrs.professionalism}</p><p class="page-sub">Form ${formText(p)} · Ambition ${p.ambition} · Loyalty ${p.loyalty} · Durability ${p.attrs.injury} · Training ${INDIVIDUAL_TRAINING[p.training||'balanced']}</p></div>
     </div>
     <div class="player-attrs">
       ${attrBlock('Offensive', ATTR_GROUPS.offensive)}
