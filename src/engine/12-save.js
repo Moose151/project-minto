@@ -23,6 +23,7 @@ function migrateSave(G){
       if(p.s.ks    === undefined) p.s.ks    = 0;
       if(p.s.km    === undefined) p.s.km    = 0;
       if(p.s.inf   === undefined) p.s.inf   = 0;
+      if(p.s.fdo   === undefined) p.s.fdo   = 0;
     }
     if(p.seasonStartOvr === undefined) p.seasonStartOvr = p.ovr;
     if(p.seasonStartPot === undefined) p.seasonStartPot = p.pot;
@@ -31,6 +32,8 @@ function migrateSave(G){
     if(!p.history) p.history = [];
     if(!p.awards) p.awards = [];
     if(!p.injuries) p.injuries = [];
+    ensurePlayerCareerStats(p);
+    ensurePlayerClubStats(p);
     if(p.form === undefined) p.form = clamp(Math.round(p.morale == null ? 50 : p.morale), 15, 95);
     if(!Array.isArray(p.contractSchedule)) p.contractSchedule = p.years > 0 ? Array(Math.max(0, p.years || 0)).fill(p.salary || salaryFor(p)) : [];
     if(!p.contractType) p.contractType = 'flat';

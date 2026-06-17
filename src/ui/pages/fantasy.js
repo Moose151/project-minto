@@ -9,7 +9,7 @@ Object.assign(UI, {
     const positions = ['all','FB','WG','CE','FE','HB','PR','HK','SR','LK'];
     const sortOptions = [
       ['fpts','Total FP'],['avg','Avg FP'],['g','Games'],['t','Tries'],['ta','Try assists'],
-      ['k4020','40/20s'],['runs','Runs'],['tk','Tackles'],['m','Run metres'],['name','Name']
+      ['k4020','40/20s'],['fdo','Forced drop-outs'],['runs','Runs'],['tk','Tackles'],['m','Run metres'],['name','Name']
     ];
     const all = Object.values(G.players).filter(p=>p.s.g > 0);
     const fantasyVal = p => {
@@ -50,7 +50,7 @@ Object.assign(UI, {
         <table><thead><tr>
           <th class="noclick"></th><th class="noclick">Player</th><th class="noclick">Club</th>
           <th class="noclick num">T</th><th class="noclick num">TA</th><th class="noclick num">G/A</th>
-          <th class="noclick num">FG</th><th class="noclick num">40/20</th><th class="noclick num">Runs</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">Err</th>
+          <th class="noclick num">FG</th><th class="noclick num">40/20</th><th class="noclick num">FDO</th><th class="noclick num">Runs</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">Err</th>
           <th class="noclick num">FP</th>
         </tr></thead><tbody>
         ${top10.map(({p,line},i)=>{
@@ -60,7 +60,7 @@ Object.assign(UI, {
             <td><div class="player-cell">${playerAvatar(p,34)}<div><b>${nationalityFlag(p.nationality)} ${esc(p.name)}</b> <span class="pos-tag">${p.pos}</span><br><span class="pmeta" style="font-size:10px;color:var(--muted)">${p.repTeam?esc(p.repTeam):''}</span></div></div></td>
             <td>${t?`<span class="team-spine" style="background:${t.c1}"></span>${esc(t.nick)}`:'—'}</td>
             <td class="num">${line.t}</td><td class="num">${line.ta}</td><td class="num">${line.ga?line.gl+'/'+line.ga:line.gl}</td>
-            <td class="num">${line.fg||0}</td><td class="num">${line.k4020||0}</td><td class="num">${line.runs||0}</td><td class="num">${line.tk}</td><td class="num">${line.m}</td><td class="num">${line.err}</td>
+            <td class="num">${line.fg||0}</td><td class="num">${line.k4020||0}</td><td class="num">${line.fdo||0}</td><td class="num">${line.runs||0}</td><td class="num">${line.tk}</td><td class="num">${line.m}</td><td class="num">${line.err}</td>
             <td class="num"><b>${line.fp}</b></td>
           </tr>`;
         }).join('')}
@@ -70,7 +70,7 @@ Object.assign(UI, {
     }
 
     return `<h1 class="page">Fantasy</h1>
-    <p class="page-sub">${G.year} · Scoring: Try 4pts · Try assist 2pts · Goal 2pts · Field goal 2pts · 40/20 3pts · 10 tackles 1pt · 25m 1pt · 8 runs 1pt · Error −2pts</p>
+    <p class="page-sub">${G.year} · Scoring: Try 4pts · Try assist 2pts · Goal 2pts · Field goal 2pts · 40/20 3pts · Forced drop-out 2pts · 10 tackles 1pt · 25m 1pt · 8 runs 1pt · Error −2pts</p>
     ${totrHtml}
     <div class="card" style="padding:6px">
       <h2 class="sec" style="margin-top:0">Season Leaders</h2>

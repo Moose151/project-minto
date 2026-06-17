@@ -52,6 +52,7 @@ cd api && node server.js
 | `src/ui/pages/club-management.js` | Board standing, revenue/wages breakdown, salary cap overview, facility upgrades |
 | `src/ui/pages/history.js` | Expandable year rows: awards, GF score, ladder snapshot, search/filter/sort controls |
 | `src/ui/pages/hall-of-fame.js` | Retired-player Hall of Fame with induction cards, search, and sort |
+| `src/ui/pages/records.js` | Records page: league career records, single-season records, and club-scoped player records |
 | `src/ui/pages/clubs.js` | All-clubs browser; sort by ladder/OVR/name; head coach shown |
 | `src/ui/pages/recruitment.js` | Approach limit (3/season), scroll preserved, free agent modal |
 | `src/ui/pages/contracts.js` | Full contract ledger, year/salary filters, early extensions, flat/front/back-loaded deals |
@@ -83,6 +84,10 @@ cd api && node server.js
 - Clickable player links everywhere (history, awards, offseason review, predictions).
 - Scouting confidence: own team = exact, shortlisted = high, others = med/low.
 - **Player form/confidence — first slice**: every player now has `p.form` (migrated for old saves), seeded at generation, regressed toward neutral between seasons, and updated after every match from rating, result, tries/assists/field goals/40-20s, errors, and injuries. Form gives modest match-day power/execution effects, influences auto-pick selection, affects cohesion through the selected starters' average form, and appears in squad, player profile, team sheet, contracts, and recruitment.
+- **Forced drop-outs — first slice**: kickers can now force drop-outs from repeat-set pressure in `simTerritoryKicks`; tracked as `fdo` in match lines, season stats, player season history, stat leaders, player profile, fantasy scoring (2pts), fantasy table/sort, round-results summaries, and live match feed events. FDOs also add to the player rating formula. Old saves migrate `p.s.fdo = 0`.
+- **Expanded career totals — first slice**: `p.career` now stores expanded totals for goals attempted, field goals, try assists, tackles, metres, runs, errors, fantasy points, 40/20s, forced drop-outs, minutes, missed tackles, line breaks, LB assists, kicks, kick metres, infringements, rating sum, and votes. Match sim, field goals, votes, and infringements update them live; old saves backfill from season history where available; player profiles show expanded career totals.
+- **Club-by-club player totals — first slice**: every player now has `p.clubStats`, keyed by club/team ID, tracking games and all expanded stat totals for each club they play for. Match sim (via `addLineToStatBucket`/`playerClubStatBucket`), field goals, votes, infringements, and premierships all update club buckets live. Old saves backfill club totals from season history where possible. Player profiles show a Club Career Totals table.
+- **Records page — first slice**: added a Records page under Club & Career showing league-wide career records, single-season records from player history, and club-scoped player records. Club scope can be switched between all clubs and an individual club.
 
 #### OVR / POT Display
 - Single number for all OVR/POT displays; colour-coded by scouting confidence.
@@ -413,6 +418,21 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Interactive penalty/field goal choice during live watch mode.
 - First slice complete: weather and crowd effects influence scoring/kicking/home advantage.
 
+#### Match Engine — Rugby League Logic Depth **[NEW]**
+- Add true tackle-count logic: track tackles 0-5 during each set and have AI choose hit-ups, shifts, kicks, field goals, or other play types based on tackle count, field position, score, weather, and team tactics.
+- Live match view should show the game clock, field position, possession team, and current tackle count.
+- Each play should update field position, tackle count, possession, fatigue, ruck speed, errors, scoring chances, and event feed output.
+- Add goal-line drop-outs: if a player is tackled in their own in-goal or grounds/plants the ball in their own in-goal, restart with a drop-out.
+- Add forced drop-outs as a team/player stat and generate them from strong attacking kicks, repeat-set pressure, and defensive in-goal outcomes. ✅ First slice implemented through repeat-set kicking pressure; defensive in-goal outcomes should deepen once the set-by-set engine exists.
+- Add 20m taps: if a team kicks the ball dead, the opposition receives a 20m tap and a 7-tackle set (display as "p-6" or equivalent set-start state).
+- Late-game decision logic: teams losing with little time remaining become more erratic/aggressive, taking higher-risk plays, short kick-offs, short drop-outs, early shifts, and attacking kicks when appropriate.
+- Field-goal logic: teams leading by 6 with little time left should seek a field goal to create a two-possession lead; this should also affect penalty-goal decisions when leading by 6-10.
+- Add scrums after dropped balls/knock-ons, with the feeding team winning roughly 98% of feeds.
+- Add richer kick restart logic, including short kick-offs and short drop-outs for trailing teams or strategic late-game situations.
+- Model ruck speed as a major match factor. High ruck speed plus possession should tire opponents faster and create attacking momentum.
+- Add "win the wrestle" contests at the tackle/ruck: attacker strength/stamina/body type can increase ruck speed, defender strength/stamina/tackling/marker defence can slow it down.
+- Ruck speed should affect defensive fatigue, retreat distance, line speed, penalties/six-agains if added later, completion rate, and attacking play success.
+
 #### Team Sheet Layout & Display — First Slice Complete **[NEW]**
 - ✅ Colour-name text labels removed from pitch cards (green/orange etc.) — fit quality shown by card outline only.
 - ✅ OVR displayed with proper colour coding (elite/good/avg/poor) in pitch sub-text.
@@ -498,6 +518,24 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
   5. **Convert to app with bundled assets**: Moving to Electron/Tauri or a React app would allow importing actual image files (PNG/WebP/SVG) from the file system rather than base64-encoding everything.
 - **Recommended path**: For the field, use SVG filters for turf texture. For logos, add more shape variety and gradient fills. For avatars, switch to a pixel-art sprite approach or bold cartoon (option 3 above from avatar section). For a serious long-term improvement, consider step 5 (app conversion).
 
+#### Contract Payouts on Release / Sacking **[NEW]**
+- When a player is released early (before their contract expires), the club should pay out the remaining contract value unless the player requested the release themselves.
+- Same rule for head coaches and staff: sacking mid-contract costs the club a payout; coaches/staff who request release forfeit their remaining salary.
+- Payout amount = remaining years × current salary (or remaining schedule sum for loaded contracts).
+- Club funds must cover the payout at the moment of release; show a confirmation dialog with the payout cost.
+- For players who request release (`p.wantsOut`, `promiseConcern` escalation), the release is free — no payout required.
+- Display outstanding payout liability in Club Management and on the Contracts page.
+
+#### Staff Screen — Hire Button Layout Bug **[BUG]**
+- On the Staff page, hire buttons are overlapping text in their rows. Layout needs fixing so buttons sit in their own column/row and don't collide with staff name/role/ability text.
+
+#### Coach Contract Negotiation & Extension **[NEW]**
+- Coach Profile should allow the user to view their own contract (salary, years remaining) and initiate negotiations to extend or resign.
+- Extension window should open when the coach has 1 year or fewer remaining; offer screens show year length, salary ask (based on coach rep/performance), and bonuses.
+- Board approves/rejects based on coach rep, recent results, and financial headroom.
+- Coaching contract payout applies if the board sacks the coach (see Contract Payouts above).
+- AI head-coach contracts should also be tracked and paid out when AI clubs sack their coaches (simplification: deduct from a notional AI club fund or just log it as a news event).
+
 #### App Conversion — Architecture Discussion **[NOTE — FUTURE PLAN]**
 - **Decision**: App conversion will happen as a **full rebuild in an appropriate engine** once the HTML game is in a complete state and the feature list is exhausted. There is no intermediate Electron wrapper step — it will be a clean rebuild.
 - This means all current development continues in the plain HTML/JS/CSS format. When the time comes, the game engine logic (`01-rng.js` through `12-save.js`) can be ported directly as it is pure JS with no DOM dependencies — only the UI layer needs rebuilding.
@@ -518,19 +556,63 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Player modal "This season" card updated to show all new stats across 5 lines.
 - Old saves: migration in `12-save.js` sets all new fields to 0 if missing.
 - Still to do: fantasy scoring adjustments for new stats; per-80-min rate columns in stat leaders.
+- Forced drop-outs are now tracked as `fdo`; still to do: team-level aggregate display and richer attribution from the future set-by-set engine.
+- Games played, expanded career totals, and separate club totals per player are now tracked. Still to do: representative-team totals and richer club split pages/records.
+- Career total stats first slice implemented: `p.career` now stores expanded totals for the main stat fields, match sim updates them live, old saves migrate missing fields, and player profiles show expanded career totals. Still to do: dedicated career-total tables and club/rep splits.
+- Records page first slice implemented for league-wide player career records, single-season records, and club-scoped player records. Still to do: persistent retired-player archives, richer team/club records, record notifications, and historical record holders after players retire/delete.
 
-#### Post-Match Analysis & Match Reports **[NEW]**
-- Improve post-match analysis screen/report after every fixture, especially the coached-club match.
-- Full scoring timeline: every try, conversion, penalty goal, field goal, miss, and key score change should include minute, scorer/kicker, assist where relevant, team, running score, and conversion result.
-- Include errors and infringements in the timeline: handling errors, missed opportunities, penalties, sin bins, send-offs, reportable offences, tribunal notes, injuries, and momentum-changing events.
-- Detailed player stats post game for both teams: tries, goals kicked/attempted, try assists, line breaks if added, tackles, missed tackles if added, total runs, run metres, kick metres, kicks, 40/20s, field goals, errors, fantasy points, minutes, rating, form movement, and injury/suspension outcomes.
-- Add team-level post-match stats: possession, completion rate, sets, run metres, tackle count, errors, penalties conceded, kicking metres, territory, red-zone efficiency, weather/crowd impact, and scoring by half.
-- Add sorting/filtering in the post-match stats table by team, position, rating, fantasy, attack, defence, kicking, and discipline.
-- Save match reports with fixtures so old results can be reopened from Fixtures, Match Day, History, team pages, and player histories.
-- Make post-match report links deep-linkable: clicking a try scorer, kicker, assister, infringing player, team, or award/vote should open the relevant profile/detail view.
+#### Development, Aging & Career Arcs **[NEW — FIRST SLICE COMPLETE]**
+- **Age-banded weekly growth implemented** in `developPlayer` (`08-progression.js`): 16–17: 38%, 18–19: 30%, 20–21: 23%, 22–23: 16%, 24–25: 9%, 26–27: 5.5%, 28–30: 2.5%. Chance is then multiplied by professionalism, game time (gamesProxy), morale, injury status, and devMod (coaching/facility).
+- **Veteran mental growth implemented**: players aged 28–36 have a weekly chance (scaling from 3.6% to 6%) to improve a mental attribute (composure, leadership, vision, decisionMaking, discipline, professionalism, workRate), capped at 92. Not applied during injuries.
+- **Physical decline implemented** with age bands: starts at 29 (1.2%/week), accelerates at 31, 33, and 36+. High professionalism (≥75) slows decline by 18%.
+- **Technical skill decline implemented** from age 35+: chance rises with each year. Affects ball skills, tackling, and game-awareness attributes.
+- **Offseason development pass implemented** (`applyOffseasonDevelopment` in `11-offseason.js`): called at the start of each offseason, simulates ~8 weeks of training using Poisson-distributed gains (capped at 3 per player), plus veteran mental growth (2 chances) and physical/technical decline (~2 weeks' worth). Generates a news summary listing the coached club's biggest improvers (≥+2 OVR) and decliners (≤−2 OVR). Immortal cap is enforced during offseason gains.
+- `PHYSICAL_ATTRS`, `TECHNICAL_ATTRS`, and `MENTAL_ATTRS` defined as constants in `08-progression.js` and reused in offseason.
+- Still to do: show OVR history graphs, offseason development review screen with breakout prospects and veteran decline summary, position-group camp allocation in preseason, development projection screen.
+
+#### Daily Calendar, Deadlines & Fatigue Management **[NEW]**
+- Change time progression from week-by-week to day-by-day simulation.
+- Show the current date prominently in the top bar/header.
+- Let the user choose how many days to simulate at a time rather than only advancing a full week.
+- Simulation should automatically stop when a user decision is required.
+- Stop for judiciary decisions, including whether to accept or refute a charge.
+- Stop for training schedule review: set team training focus, set training intensity, bulk-select players, and individually reduce/alter training for fatigued players.
+- Require match-day squad confirmation by Tuesday afternoon.
+- Add building fatigue across matches and training. Players may still be fatigued from the previous game; low-fitness players should have increased injury risk if selected or trained too hard.
+- Add a Calendar view showing upcoming matches, training days, judiciary/training/team-selection deadlines, travel, recovery days, and other important events.
+
+#### Weather Events & Tactical Adjustment **[NEW]**
+- Expand weather events beyond the current first slice and make weather a stronger tactical factor.
+- Weather should affect errors, handling, completion rate, kick metres, kick accuracy, goal kicking, injuries/fatigue, and crowd attendance where appropriate.
+- Coaches should be able to adjust tactics on the fly to suit conditions, choosing more expansive play or a safer/territory-focused approach.
+- AI coaches should also adapt tactics to weather, match situation, squad strengths, and fatigue.
+
+#### Inbox & Staff Communication **[NEW]**
+- Implement an Inbox / Mail page as a central place for club communication.
+- Receive post-match analysis mail after fixtures, especially coached-club games.
+- Receive assistant coach recommendations about tactics, selection, training, fatigue, player form, and development.
+- Receive scout emails when missions progress, prospects are found, or a scout has a recommendation.
+- Receive player emails/messages when players want something done, including role concerns, contract issues, fatigue complaints, transfer requests, captaincy requests, playing-time concerns, or morale issues.
+- Inbox items should link directly to relevant pages, players, matches, training controls, contract screens, or scouting results.
+
+#### Offseason Training Boosts & Growth Visuals **[NEW]**
+- Players should gain or lose meaningful OVR through offseason training, aging, development, injuries, morale, potential, facilities, and coaching.
+- Offseason growth should feel more substantial than ordinary week-to-week changes, especially for young players.
+- Show player growth/decline with graphs, including OVR history and key attribute changes over time.
+- Add offseason development review screens summarising biggest improvers, biggest decliners, breakout prospects, veteran declines, and training-camp effects.
+
+#### Post-Match Analysis & Match Reports **[NEW — FIRST SLICE COMPLETE]**
+- **Scoring timeline implemented** in `03-match-view.js`: try events (scorer, assist, conversion result, running score), penalty goal events, and field goal events are sorted by minute and rendered as a colour-coded timeline with minute badge, score after each event, and team attribution. Tries green-bordered for coached team, red for opposition.
+- **Both-team player performance grids implemented**: top 5 performers for coached team and top 3 for opposition are shown side-by-side with clickable player links, key stats (T/TA/Goals/FG/40-20/FDO), and rating.
+- **Team match stats comparison table implemented**: tries, goals (made/attempted), field goals, tackles, missed tackles, run metres, 40/20s, forced drop-outs, errors, and infringements — with green highlight on the better side per category (lower is better for errors/missed tackles/infringements).
+- **Match context header**: venue, weather, crowd, and half-time score shown in a single summary line below the result banner.
+- **Injuries and citations** listed at the bottom of the post-match card.
+- **`injMin` stored per player in match lines** (`07-match.js`): each injured player now has a stored `injMin` (minute they left the field). Live match feed in `matchday.js` uses this to suppress try/40-20/FDO events occurring after a player's injury minute. Injury events use the stored minute rather than a random value.
+- Still to do: save full match report objects with fixtures for historical reopening, sorting/filtering in the post-match player stats table, possession/completion rate/territory team stats, richer half-by-half scoring breakdown, and deep-link from every name in the report.
 
 #### Match Engine — On-Field Tracking, Substitutions & HIA **[NEW]**
-- Bug/example to fix: live feed can currently show a player leaving injured and then producing later events. Example snippet: `15' Injury: Sam Doyle (Barracudas) leaves the field with Hamstring strain.` followed by `22' Sam Doyle (Barracudas) finds touch with a pinpoint 40/20 kick!`
+- **Injury-minute bug fixed**: `l.injMin` is now stored on each player's match line (random minute between 10–72). The live match feed in `matchday.js` uses an `injMins` lookup map to cap try minutes, 40/20 minutes, and FDO minutes to before the player's injury minute, and injury event itself uses the stored minute. This prevents "player scores after leaving the field" events.
+- Remaining: the match engine still doesn't track who is on-field vs off-field minute-by-minute for the full event pool. The injury fix above prevents the worst visible bugs but the stat allocations (tackles, runs, metres) for benched/injured players are still generated at full-game length.
 - Match engine must track who is on-field/off-field minute-by-minute, including starters, bench, named reserves, injuries, sin bins, send-offs, HIA assessments, and tactical substitutions.
 - Substitutions need to be implemented in the sim engine, not only the UI: bench players should enter, replaced players should leave, injured players should be unavailable for later events, and event selection pools must only include players currently on the field.
 - Live match feed should show substitutions for both teams, including minute, player off, player on, reason (tactical, fatigue, injury, HIA, sin bin return), and remaining interchange context if tracked.
@@ -556,3 +638,4 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 | Predictions page → dashboard | Added `predictions.js` to `index.html` script order |
 | Staff salary from coach personal cash | Staff wages now from `G.club.funds` via `payClubWeekly` |
 | `++(_staffId||0)` syntax error in `02-data.js` | Changed to `++_staffId` |
+| Player scores/kicks after leaving injured | `injMin` stored per player line in `simTeamStats`; live feed caps try/40-20/FDO events to before that minute |

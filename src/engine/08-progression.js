@@ -255,6 +255,10 @@ function positionalCoachMultiplier(pos){
     .sort((a,b) => b.ability - a.ability)[0];
   return coach ? 1 + coach.ability / 170 : 1;
 }
+const PHYSICAL_ATTRS = ['speed','acceleration','agility','stamina','strength','ballRunning'];
+const TECHNICAL_ATTRS = ['ballRunning','finishing','shortPass','longPass','tackling','defRead','bigHit','lastDitch','markerDef','catching','ballSecurity'];
+const MENTAL_ATTRS = ['composure','leadership','vision','decisionMaking','discipline','professionalism','workRate'];
+
 function developPlayer(p, t){
   const isMine = t.id===G.coach.teamId;
   handleIndividualTraining(p, t);
@@ -278,45 +282,91 @@ function developPlayer(p, t){
   const focusBoost = individualBoost.length ? individualBoost : (isMine ? teamFocusBoost : []);
   const facilityDev = isMine ? (0.92 + facilityLevel('training')*.035 + (p.age<=21 ? facilityLevel('academy')*.025 : 0)) : 1;
   const devMod = ((isMine && G.coach.attrs) ? (0.7 + 0.6*(G.coach.attrs.development/100)) : 1) * facilityDev;
-  // dev squad players use a games proxy simulating reserve-grade activity
   const gamesProxy = p.squad==='dev' ? Math.min(p.s.g + 8, 20) : p.s.g;
-  if(p.age <= 23 || p.ovr < p.pot){
-    let chance = p.age<=20 ? .30 : p.age<=23 ? .22 : p.age<=26 ? .10 : .04;
-    chance *= (0.6 + p.prof/200) * (0.7 + gamesProxy/26) * devMod;
-    if(t.focus==='youth' && p.age<=21 && isMine) chance *= 1.5;
-    if(rnd() < chance && p.ovr < p.pot){
-      const pool = focusBoost.length && rnd()<.5 ? focusBoost : ATTRS;
-      const a = pick(pool);
-      const staffBonus = isMine ? staffMultiplier(a, p.pos) : 1;
-      const gain = staffBonus > 1.15 && rnd() < (staffBonus - 1) ? 2 : 1;
-      p.attrs[a] = clamp(p.attrs[a]+gain, 20, 99);
-      const prevOvr = p.ovr;
-      p.ovr = calcOvr(p);
-      // Immortal cap: at most 3 active Immortal-tier players league-wide (OVR 92+)
-      if(p.ovr >= 92 && prevOvr < 92){
-        const immortalCount = Object.values(G.players).filter(x => x && x.id !== p.id && x.ovr >= 92).length;
-        if(immortalCount >= 3){
-          p.attrs[a] = clamp(p.attrs[a] - gain, 20, 99);
-          p.ovr = calcOvr(p);
-        } else {
-          const t2 = G.teams ? G.teams.find(tm => tm.players && tm.players.includes(p.id)) : null;
-          addNews(`${esc(p.name)} (${p.pos}, ${t2?esc(t2.nick):'Free Agent'}) has ascended to Immortal status — one of just ${immortalCount+1} players ever to reach this level.`,
-            {title:'Immortal Player', type:'development', tone:'good', playerId:p.id, teamId:t2?t2.id:null, tag:'Development'});
-        }
+  const profMod = clamp(0.6 + (p.attrs.professionalism || 50) / 200, 0.6, 1.05);
+  const gameTimeMod = clamp(0.5 + gamesProxy / 20, 0.5, 1.0);
+  const moraleMod = clamp(0.78 + (p.morale || 50) / 230, 0.78, 1.07);
+  const injuryMod = p.injury ? 0.45 : 1.0;
+
+  // ── GROWTH ───────────────────────────────────────────────────────────────
+  // Age-banded weekly growth chance; peaks at 16-18, fades through the 20s
+  let growChance = 0;
+  if(p.age <= 17)       growChance = 0.38;
+  else if(p.age <= 19)  growChance = 0.30;
+  else if(p.age <= 21)  growChance = 0.23;
+  else if(p.age <= 23)  growChance = 0.16;
+  else if(p.age <= 25)  growChance = 0.09;
+  else if(p.age <= 27)  growChance = 0.055;
+  else if(p.age <= 30)  growChance = 0.025;
+
+  growChance *= profMod * gameTimeMod * moraleMod * injuryMod * devMod;
+  if(t.focus==='youth' && p.age<=21 && isMine) growChance *= 1.5;
+
+  if(growChance > 0 && rnd() < growChance && p.ovr < p.pot){
+    const pool = focusBoost.length && rnd()<.5 ? focusBoost : ATTRS;
+    const a = pick(pool);
+    const staffBonus = isMine ? staffMultiplier(a, p.pos) : 1;
+    const gain = staffBonus > 1.15 && rnd() < (staffBonus - 1) ? 2 : 1;
+    p.attrs[a] = clamp(p.attrs[a]+gain, 20, 99);
+    const prevOvr = p.ovr;
+    p.ovr = calcOvr(p);
+    // Immortal cap: at most 3 active Immortal-tier players league-wide (OVR 92+)
+    if(p.ovr >= 92 && prevOvr < 92){
+      const immortalCount = Object.values(G.players).filter(x => x && x.id !== p.id && x.ovr >= 92).length;
+      if(immortalCount >= 3){
+        p.attrs[a] = clamp(p.attrs[a] - gain, 20, 99);
+        p.ovr = calcOvr(p);
+      } else {
+        const t2 = G.teams ? G.teams.find(tm => tm.players && tm.players.includes(p.id)) : null;
+        addNews(`${esc(p.name)} (${p.pos}, ${t2?esc(t2.nick):'Free Agent'}) has ascended to Immortal status — one of just ${immortalCount+1} players ever to reach this level.`,
+          {title:'Immortal Player', type:'development', tone:'good', playerId:p.id, teamId:t2?t2.id:null, tag:'Development'});
       }
-      if(isMine && p.squad==='dev' && prevOvr < 60 && p.ovr >= 60){
-        addNews(`Development: ${p.name} (${p.pos}, ${p.age}yo) has reached OVR ${p.ovr} and may be ready for top-squad promotion.`, {
-          title: 'Pathway Player Ready',
-          type: 'development',
-          tone: 'good',
-          playerId: p.id,
-          tag: 'Development',
-        });
+    }
+    if(isMine && p.squad==='dev' && prevOvr < 60 && p.ovr >= 60){
+      addNews(`Development: ${p.name} (${p.pos}, ${p.age}yo) has reached OVR ${p.ovr} and may be ready for top-squad promotion.`, {
+        title: 'Pathway Player Ready',
+        type: 'development',
+        tone: 'good',
+        playerId: p.id,
+        tag: 'Development',
+      });
+    }
+  }
+
+  // ── VETERAN MENTAL GROWTH (ages 28–36) ──────────────────────────────────
+  // Experienced players can still improve composure, leadership, vision etc.
+  // even as physical skills begin to fade.
+  if(p.age >= 28 && p.age <= 36 && !p.injury && gamesProxy >= 10){
+    const mentalChance = clamp(0.036 + (p.age - 28) * 0.003, 0.036, 0.060) * moraleMod * devMod;
+    if(rnd() < mentalChance){
+      const a = pick(MENTAL_ATTRS);
+      if(p.attrs[a] < 92){
+        p.attrs[a] = clamp(p.attrs[a]+1, 20, 99);
+        p.ovr = calcOvr(p);
       }
     }
   }
-  if(p.age>=31 && rnd() < (p.age-29)*.025){
-    const a = pick(['speed','acceleration','agility','stamina','strength','ballRunning']);
+
+  // ── PHYSICAL DECLINE ─────────────────────────────────────────────────────
+  // Gradual from age 29, accelerating sharply from 33+
+  let physDecline = 0;
+  if(p.age >= 36)       physDecline = 0.17 + (p.age - 36) * 0.025;
+  else if(p.age >= 33)  physDecline = 0.07 + (p.age - 33) * 0.033;
+  else if(p.age >= 31)  physDecline = 0.03 + (p.age - 31) * 0.020;
+  else if(p.age >= 29)  physDecline = 0.012;
+  // High professionalism slows decline slightly
+  if(physDecline > 0 && (p.attrs.professionalism || 50) >= 75) physDecline *= 0.82;
+
+  if(physDecline > 0 && rnd() < physDecline){
+    const a = pick(PHYSICAL_ATTRS);
+    p.attrs[a] = clamp(p.attrs[a]-1, 20, 99);
+    p.ovr = calcOvr(p);
+  }
+
+  // ── TECHNICAL SKILL DECLINE (ages 35+) ──────────────────────────────────
+  // Ball skills, tackling technique, and game awareness erode in the late career
+  if(p.age >= 35 && rnd() < 0.020 + (p.age - 35) * 0.009){
+    const a = pick(TECHNICAL_ATTRS);
     p.attrs[a] = clamp(p.attrs[a]-1, 20, 99);
     p.ovr = calcOvr(p);
   }

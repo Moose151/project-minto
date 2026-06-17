@@ -143,6 +143,15 @@ Object.assign(UI, {
     const tryDesc = pos => pick(TRY_DESC[pos] || TRY_DESC.BE);
     const ASSIST_VERBS = ['provides the scoring pass for','fires the ball to','puts','threads a perfect ball to'];
 
+    // Build injury-minute lookup so events after a player's injury are suppressed for that player
+    const injMins = {};
+    for(const [sKey, sObj] of [['h', m.det.h], ['a', m.det.a]]){
+      for(const [id, l] of Object.entries(sObj)){
+        if(l && typeof l === 'object' && !Array.isArray(l) && l.injMin) injMins[sKey+':'+id] = l.injMin;
+      }
+    }
+    const playerInjMin = (id, side) => injMins[side+':'+id] || null;
+
     // Collect all try events sorted by time
     const tryEvs = [
       ...(m.det.h._tryEvents||[]).map(ev=>({...ev, side:'h'})),
@@ -170,7 +179,10 @@ Object.assign(UI, {
       const convTxt = ev.converted
         ? (kicker && kicker.id!==scorer.id ? ` ${kicker.name} converts.` : ' Conversion good.')
         : ' Conversion missed.';
-      all.push({min:ev.min, txt:`TRY — ${team.nick}:${assistTxt} ${scorer.name} ${tryDesc(scorer.pos)}.${convTxt} (${sH}–${sA})`});
+      // Cap try minute to before the scorer's injury so the player doesn't score after leaving the field
+      const sInjMin = playerInjMin(ev.scorerId, ev.side);
+      const tryMin = sInjMin ? Math.min(ev.min, Math.max(1, sInjMin - 1)) : ev.min;
+      all.push({min:tryMin, txt:`TRY — ${team.nick}:${assistTxt} ${scorer.name} ${tryDesc(scorer.pos)}.${convTxt} (${sH}–${sA})`});
     }
 
     // Penalty goal events with running score
@@ -190,12 +202,16 @@ Object.assign(UI, {
       all.push(ev);
     }
 
-    // Injuries and 40/20s from per-player lines
-    for(const [side, team] of [[m.det.h,h],[m.det.a,a]]){
+    // Injuries, 40/20s and forced drop-outs from per-player lines
+    for(const [side, team, sKey] of [[m.det.h,h,'h'],[m.det.a,a,'a']]){
       for(const [id,l] of Object.entries(side)){
         const p = G.players[+id]; if(!p || typeof l!=='object' || !l || Array.isArray(l)) continue;
-        if(l.inj) all.push({min:ri(10,75), txt:`Injury: ${p.name} (${team.nick}) leaves the field with ${l.inj}.`});
-        if(l.k4020) for(let i=0;i<l.k4020;i++) all.push({min:ri(8,72), txt:`${p.name} (${team.nick}) finds touch with a pinpoint 40/20 kick!`});
+        const injMin = l.injMin || null;
+        if(l.inj) all.push({min: injMin || ri(10,75), txt:`Injury: ${p.name} (${team.nick}) leaves the field with ${l.inj}.`});
+        // 40/20s and FDOs must occur before the player was injured
+        const maxKickMin = injMin ? Math.max(8, injMin - 1) : 72;
+        if(l.k4020) for(let i=0;i<l.k4020;i++) all.push({min:ri(8, maxKickMin), txt:`${p.name} (${team.nick}) finds touch with a pinpoint 40/20 kick!`});
+        if(l.fdo) for(let i=0;i<l.fdo;i++) all.push({min:ri(8, maxKickMin), txt:`${p.name} (${team.nick}) pins the opposition in-goal and forces a drop-out.`});
       }
     }
 

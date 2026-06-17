@@ -155,8 +155,11 @@ function _declareChampion(F){
   F.premier = _w(F.gf);
   const pt = G.teams[F.premier];
   for(const id of pt.players){
-    G.players[id].career.premierships++;
-    addPlayerAward(G.players[id], 'Premiership', G.year, teamName(pt));
+    const p = G.players[id];
+    ensurePlayerCareerStats(p);
+    p.career.premierships++;
+    playerClubStatBucket(p, pt).premierships++;
+    addPlayerAward(p, 'Premiership', G.year, teamName(pt));
   }
   if(F.premier === G.coach.teamId){ G.coach.rep = clamp(G.coach.rep+10,1,99); G.coach.conf = 95; G.coach.prems++; }
   addNews(`${teamName(pt)} are the ${G.year} premiers! Defeated ${teamName(G.teams[_l(F.gf)])} ${Math.max(F.gf.hs,F.gf.as)}–${Math.min(F.gf.hs,F.gf.as)}.`);

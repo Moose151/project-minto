@@ -8,7 +8,7 @@ Object.assign(UI, {
     const cats = [
       ['t','Tries'],['ta','Try assists'],['lb','Line breaks'],['lba','LB assists'],
       ['tk','Tackles'],['mt','Missed tackles'],['runs','Carries'],['m','Run metres'],
-      ['ks','Kicks'],['km','Kick metres'],['k4020','40/20s'],
+      ['ks','Kicks'],['km','Kick metres'],['k4020','40/20s'],['fdo','Forced drop-outs'],
       ['gl','Goals'],['gkp','Goal %'],['fg','Field goals'],['pts','Points'],
       ['mins','Minutes'],['inf','Infringements'],['votes','Medal votes'],['avg','Avg rating'],
     ];

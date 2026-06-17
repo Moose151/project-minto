@@ -22,6 +22,8 @@ Object.assign(UI, {
     const alreadyApproached = p.approachTeam === G.coach.teamId;
     const ovrGain = (p.seasonStartOvr != null) ? p.ovr - p.seasonStartOvr : 0;
     const statAvg = p.s.g ? (p.s.rSum/p.s.g).toFixed(1) : '-';
+    const c = p.career || {};
+    const careerAvg = c.games ? ((c.rSum || 0) / c.games).toFixed(1) : '-';
 
     // Quality tier
     const displayOvr = isMyTeam ? p.ovr : scoutedOvr(p).mid;
@@ -66,7 +68,18 @@ Object.assign(UI, {
     const historyRows = (p.history || [])
       .filter(h=>!histQuery || `${h.year} ${h.team} ${h.pos}`.toLowerCase().includes(histQuery))
       .sort((a,b)=>histVal(a)-histVal(b));
-    const history = historyRows.map(h=>`<tr><td>${h.year}</td><td>${esc(h.team)}</td><td>${h.age}</td><td><span class="pos-tag">${h.pos}</span></td><td class="num">${h.ovr}</td><td class="num">${h.g}</td><td class="num">${h.t}</td><td class="num">${h.runs||0}</td><td class="num">${h.ta}</td><td class="num">${h.gl}/${h.ga||0}</td><td class="num">${h.fg||0}</td><td class="num">${h.tk}</td><td class="num">${h.m}</td><td class="num">${h.k4020||0}</td><td class="num">${h.fpts}</td><td class="num">${h.avg||'-'}</td><td class="num">${h.votes}</td></tr>`).join('');
+    const history = historyRows.map(h=>`<tr><td>${h.year}</td><td>${esc(h.team)}</td><td>${h.age}</td><td><span class="pos-tag">${h.pos}</span></td><td class="num">${h.ovr}</td><td class="num">${h.g}</td><td class="num">${h.t}</td><td class="num">${h.runs||0}</td><td class="num">${h.ta}</td><td class="num">${h.gl}/${h.ga||0}</td><td class="num">${h.fg||0}</td><td class="num">${h.tk}</td><td class="num">${h.m}</td><td class="num">${h.k4020||0}</td><td class="num">${h.fdo||0}</td><td class="num">${h.fpts}</td><td class="num">${h.avg||'-'}</td><td class="num">${h.votes}</td></tr>`).join('');
+    const clubRows = Object.values(p.clubStats || {})
+      .filter(x=>x && x.games)
+      .sort((a,b)=>(b.games||0)-(a.games||0) || String(a.teamName||'').localeCompare(String(b.teamName||'')))
+      .map(x=>{
+        const avg = x.games ? ((x.rSum || 0) / x.games).toFixed(1) : '-';
+        const team = x.teamId != null ? G.teams[x.teamId] : null;
+        const teamCell = team
+          ? `<span class="team-spine" style="background:${team.c1}"></span><span onclick="UI.teamModal(${team.id})" style="cursor:pointer;text-decoration:underline">${esc(team.nick)}</span>`
+          : esc(x.teamName || 'Unknown');
+        return `<tr><td>${teamCell}</td><td class="num">${x.games||0}</td><td class="num">${x.tries||0}</td><td class="num">${x.ta||0}</td><td class="num">${x.goals||0}/${x.ga||0}</td><td class="num">${x.fg||0}</td><td class="num">${x.tk||0}</td><td class="num">${x.m||0}</td><td class="num">${x.k4020||0}</td><td class="num">${x.fdo||0}</td><td class="num">${x.points||0}</td><td class="num">${avg}</td></tr>`;
+      }).join('');
 
     const natLine = playerRepLine(p);
 
@@ -107,10 +120,16 @@ Object.assign(UI, {
         <p class="bigline">${p.s.g} games · ${p.s.mins||0} mins · avg rating ${statAvg}</p>
         <p class="page-sub">${p.s.t} tries · ${p.s.ta} try assists · ${p.s.lb||0} line breaks · ${p.s.lba||0} LB assists</p>
         <p class="page-sub">${p.s.tk} tackles · ${p.s.mt||0} missed · ${p.s.runs||0} carries · ${p.s.m}m</p>
-        <p class="page-sub">${p.s.ks||0} kicks · ${p.s.km||0}m · ${p.s.k4020||0} 40/20 · ${p.s.err} errors · ${p.s.inf||0} infringements</p>
+        <p class="page-sub">${p.s.ks||0} kicks · ${p.s.km||0}m · ${p.s.k4020||0} 40/20 · ${p.s.fdo||0} forced drop-outs · ${p.s.err} errors · ${p.s.inf||0} infringements</p>
         <p class="page-sub">${p.s.gl}/${p.s.ga||0} goals · ${p.s.fg||0} FG · ${p.s.fpts||0} FP · ${p.s.votes} votes</p>
       </div>
-      <div class="card"><h2 class="sec" style="margin-top:0">Career</h2><p class="bigline">${p.career.games} games · ${p.career.tries} tries · ${p.career.points} pts</p><p class="page-sub">${p.career.seasons} seasons · ${p.career.goals} goals · ${p.career.premierships} premierships</p></div>
+      <div class="card"><h2 class="sec" style="margin-top:0">Career</h2>
+        <p class="bigline">${c.games||0} games · ${c.tries||0} tries · ${c.points||0} pts · avg ${careerAvg}</p>
+        <p class="page-sub">${c.seasons||0} seasons · ${c.goals||0}/${c.ga||0} goals · ${c.fg||0} FG · ${c.premierships||0} premierships</p>
+        <p class="page-sub">${c.ta||0} TA · ${c.lb||0} LB · ${c.lba||0} LBA · ${c.tk||0} tackles · ${c.mt||0} missed</p>
+        <p class="page-sub">${c.runs||0} carries · ${c.m||0}m · ${c.ks||0} kicks · ${c.km||0}m · ${c.k4020||0} 40/20 · ${c.fdo||0} FDO</p>
+        <p class="page-sub">${c.err||0} errors · ${c.inf||0} infringements · ${c.fpts||0} FP · ${c.votes||0} votes · ${c.mins||0} mins</p>
+      </div>
       <div class="card"><h2 class="sec" style="margin-top:0">Profile</h2><p class="bigline">${ATTR_LABEL.professionalism}: ${p.attrs.professionalism}</p><p class="page-sub">Form ${formText(p)} · Ambition ${p.ambition} · Loyalty ${p.loyalty} · Durability ${p.attrs.injury} · Training ${INDIVIDUAL_TRAINING[p.training||'balanced']}</p></div>
     </div>
     <div class="player-attrs">
@@ -123,6 +142,10 @@ Object.assign(UI, {
       <div class="card" style="padding:6px;overflow-x:auto"><h2 class="sec" style="margin:8px 10px">Awards</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Award</th><th class="noclick">Detail</th></tr></thead><tbody>${awards||'<tr><td colspan="3" style="color:var(--muted)">No awards yet.</td></tr>'}</tbody></table></div>
       <div class="card" style="padding:6px;overflow-x:auto"><h2 class="sec" style="margin:8px 10px">Injury History</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Round</th><th class="noclick">Injury</th><th class="noclick num">Time</th></tr></thead><tbody>${injuries||'<tr><td colspan="4" style="color:var(--muted)">No recorded injuries.</td></tr>'}</tbody></table></div>
     </div>
+    <div class="card" style="padding:6px;overflow-x:auto;margin-top:16px"><h2 class="sec" style="margin:8px 10px">Club Career Totals</h2>
+      <table><thead><tr><th class="noclick">Club</th><th class="noclick num">G</th><th class="noclick num">T</th><th class="noclick num">TA</th><th class="noclick num">Goals</th><th class="noclick num">FG</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">40/20</th><th class="noclick num">FDO</th><th class="noclick num">Pts</th><th class="noclick num">Avg</th></tr></thead>
+      <tbody>${clubRows||'<tr><td colspan="12" style="color:var(--muted)">Club totals will appear after this player completes matches.</td></tr>'}</tbody></table>
+    </div>
     <div class="card" style="padding:6px;overflow-x:auto;margin-top:16px"><h2 class="sec" style="margin:8px 10px">Season History</h2>
       <div class="history-controls player-history-controls">
         <div class="field"><label>Search seasons</label><input type="search" value="${esc(UI._playerHistSearch||'')}" placeholder="Year, club, position..." oninput="UI._playerHistSearch=this.value;UI.render()"></div>
@@ -133,7 +156,7 @@ Object.assign(UI, {
         </select></div>
         <button class="btn sm" onclick="UI._playerHistSearch='';UI._playerHistSort='newest';UI.render()">Clear</button>
       </div>
-      <table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick">Age</th><th class="noclick">Pos</th><th class="noclick num">OVR</th><th class="noclick num">G</th><th class="noclick num">T</th><th class="noclick num">Runs</th><th class="noclick num">TA</th><th class="noclick num">Goals</th><th class="noclick num">FG</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">40/20</th><th class="noclick num">FP</th><th class="noclick num">Avg</th><th class="noclick num">Votes</th></tr></thead><tbody>${history||'<tr><td colspan="17" style="color:var(--muted)">Completed seasons will appear here.</td></tr>'}</tbody></table>
+      <table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick">Age</th><th class="noclick">Pos</th><th class="noclick num">OVR</th><th class="noclick num">G</th><th class="noclick num">T</th><th class="noclick num">Runs</th><th class="noclick num">TA</th><th class="noclick num">Goals</th><th class="noclick num">FG</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">40/20</th><th class="noclick num">FDO</th><th class="noclick num">FP</th><th class="noclick num">Avg</th><th class="noclick num">Votes</th></tr></thead><tbody>${history||'<tr><td colspan="18" style="color:var(--muted)">Completed seasons will appear here.</td></tr>'}</tbody></table>
     </div>`;
   },
 

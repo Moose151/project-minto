@@ -62,6 +62,8 @@ function startOffseason(){
     advanceContractSchedule(p);
     p.career.seasons++;
   }
+  // offseason development pass (simulates ~8 weeks of training for all players)
+  applyOffseasonDevelopment();
   // expiring at my club
   const mt = myTeam();
   G.offseason.expiring = mt.players.filter(id=>G.players[id].years<=0);
@@ -196,8 +198,92 @@ function promoteAssistantToHeadCoach(t){
   };
   return {name:s.name, roleLabel:role.label || s.role, rep};
 }
+function applyOffseasonDevelopment(){
+  const OFFSEASON_WEEKS = 8;
+  const improvers = [], decliners = [];
+  for(const id in G.players){
+    const p = G.players[id]; if(!p) continue;
+    const t = G.teams.find(tm => tm.players.includes(p.id));
+    const isMine = t && t.id === G.coach.teamId;
+    const facilityDev = isMine ? (0.92 + facilityLevel('training')*.035 + (p.age<=21 ? facilityLevel('academy')*.025 : 0)) : 1;
+    const devMod = ((isMine && G.coach.attrs) ? (0.7 + 0.6*(G.coach.attrs.development/100)) : 1) * facilityDev;
+    const profMod = clamp(0.6 + (p.attrs.professionalism || 50) / 200, 0.6, 1.05);
+    const moraleMod = clamp(0.78 + (p.morale || 50) / 230, 0.78, 1.07);
+    const prevOvr = p.ovr;
+
+    // Growth: mirror weekly rates × offseason weeks, Poisson-distributed
+    let baseWeeklyChance = 0;
+    if(p.age <= 17)       baseWeeklyChance = 0.38;
+    else if(p.age <= 19)  baseWeeklyChance = 0.30;
+    else if(p.age <= 21)  baseWeeklyChance = 0.23;
+    else if(p.age <= 23)  baseWeeklyChance = 0.16;
+    else if(p.age <= 25)  baseWeeklyChance = 0.09;
+    else if(p.age <= 27)  baseWeeklyChance = 0.055;
+    else if(p.age <= 30)  baseWeeklyChance = 0.025;
+    const growProb = baseWeeklyChance * profMod * moraleMod * devMod;
+    let gains = Math.min(poisson(growProb * OFFSEASON_WEEKS), 3);
+    for(let g = 0; g < gains && p.ovr < p.pot; g++){
+      const a = pick(ATTRS);
+      const staffBonus = isMine ? staffMultiplier(a, p.pos) : 1;
+      const gain = staffBonus > 1.15 && rnd() < (staffBonus - 1) ? 2 : 1;
+      p.attrs[a] = clamp(p.attrs[a]+gain, 20, 99);
+      p.ovr = calcOvr(p);
+      if(p.ovr >= 92){
+        const immortalCount = Object.values(G.players).filter(x => x && x.id !== p.id && x.ovr >= 92).length;
+        if(immortalCount >= 3){ p.attrs[a] = clamp(p.attrs[a]-gain, 20, 99); p.ovr = calcOvr(p); }
+        else if(prevOvr < 92){
+          addNews(`${esc(p.name)} (${p.pos}, ${t?esc(t.nick):'Free Agent'}) has ascended to Immortal status during the offseason.`,
+            {title:'Immortal Player', type:'development', tone:'good', playerId:p.id, teamId:t?t.id:null, tag:'Development'});
+        }
+      }
+    }
+
+    // Veteran mental growth (2 chances during offseason)
+    if(p.age >= 28 && p.age <= 36){
+      const mentalChance = clamp(0.036 + (p.age - 28) * 0.003, 0.036, 0.060) * moraleMod * devMod * 2;
+      if(rnd() < mentalChance){
+        const a = pick(MENTAL_ATTRS);
+        if(p.attrs[a] < 92){ p.attrs[a] = clamp(p.attrs[a]+1, 20, 99); p.ovr = calcOvr(p); }
+      }
+    }
+
+    // Physical decline (~2 weeks' worth)
+    let physDecline = 0;
+    if(p.age >= 36)       physDecline = (0.17 + (p.age - 36) * 0.025) * 2;
+    else if(p.age >= 33)  physDecline = (0.07 + (p.age - 33) * 0.033) * 2;
+    else if(p.age >= 31)  physDecline = (0.03 + (p.age - 31) * 0.020) * 2;
+    else if(p.age >= 29)  physDecline = 0.024;
+    if(physDecline > 0 && (p.attrs.professionalism || 50) >= 75) physDecline *= 0.82;
+    if(physDecline > 0 && rnd() < physDecline){
+      const a = pick(PHYSICAL_ATTRS); p.attrs[a] = clamp(p.attrs[a]-1, 20, 99); p.ovr = calcOvr(p);
+    }
+    // Technical skill decline for late-career players
+    if(p.age >= 35 && rnd() < (0.020 + (p.age - 35) * 0.009) * 2){
+      const a = pick(TECHNICAL_ATTRS); p.attrs[a] = clamp(p.attrs[a]-1, 20, 99); p.ovr = calcOvr(p);
+    }
+
+    p.pot = Math.max(p.pot, p.ovr);
+    if(isMine){
+      const delta = p.ovr - prevOvr;
+      if(delta >= 2) improvers.push({p, delta});
+      else if(delta <= -2) decliners.push({p, delta});
+    }
+  }
+  // News summary for coached club
+  const parts = [];
+  if(improvers.length) parts.push(`Biggest improvers: ${improvers.sort((a,b)=>b.delta-a.delta).slice(0,3).map(x=>`${x.p.name} +${x.delta}`).join(', ')}.`);
+  if(decliners.length) parts.push(`Declines: ${decliners.sort((a,b)=>a.delta-b.delta).slice(0,2).map(x=>`${x.p.name} ${x.delta}`).join(', ')}.`);
+  if(parts.length){
+    addNews(`Offseason training complete. ${parts.join(' ')}`, {
+      title:'Offseason Development', type:'development',
+      tone: improvers.length >= decliners.length ? 'good' : 'neutral',
+      teamId: G.coach.teamId, tag:'Development',
+    });
+  }
+}
 function recordPlayerSeason(p){
   if(!p || !p.s) return;
+  ensurePlayerCareerStats(p);
   p.history = p.history || [];
   const t = G.teams.find(t=>t.players.includes(p.id));
   p.history.unshift({
@@ -218,6 +304,14 @@ function recordPlayerSeason(p){
     m:p.s.m,
     err:p.s.err,
     k4020:p.s.k4020||0,
+    fdo:p.s.fdo||0,
+    mins:p.s.mins||0,
+    mt:p.s.mt||0,
+    lb:p.s.lb||0,
+    lba:p.s.lba||0,
+    ks:p.s.ks||0,
+    km:p.s.km||0,
+    inf:p.s.inf||0,
     fpts:p.s.fpts||0,
     avg:p.s.g ? +(p.s.rSum/p.s.g).toFixed(1) : 0,
     votes:p.s.votes,

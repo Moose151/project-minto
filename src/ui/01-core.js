@@ -8,7 +8,7 @@ const UI = {
 
   nav(){
     if(UI.inWizard && UI.inWizard()){ document.getElementById('nav').innerHTML = ''; return; }
-    const items = [['dashboard','Dashboard'],['squad','Squad'],['teamsheet','Team Sheet'],['injuryward','Injury Ward'],['matchday','Match Day'],['tactics','Tactics'],['training','Training'],['SEP','Competition'],['fixtures','Fixtures'],['ladder','Ladder'],['stats','Stat Leaders'],['fantasy','Fantasy'],['teams','Clubs'],['predictions','Predictions'],['SEP','Club & Career'],['recruitment','Recruitment'],['contracts','Contracts'],['staff','Staff'],['scouting','Scouting'],['coach','Coach Profile'],['club-management','Club Management'],['achievements','Achievements'],['halloffame','Hall of Fame'],['history','History'],['options','Options']];
+    const items = [['dashboard','Dashboard'],['squad','Squad'],['teamsheet','Team Sheet'],['injuryward','Injury Ward'],['matchday','Match Day'],['tactics','Tactics'],['training','Training'],['SEP','Competition'],['fixtures','Fixtures'],['ladder','Ladder'],['stats','Stat Leaders'],['fantasy','Fantasy'],['teams','Clubs'],['predictions','Predictions'],['SEP','Club & Career'],['recruitment','Recruitment'],['contracts','Contracts'],['staff','Staff'],['scouting','Scouting'],['coach','Coach Profile'],['club-management','Club Management'],['achievements','Achievements'],['halloffame','Hall of Fame'],['records','Records'],['history','History'],['options','Options']];
     document.getElementById('nav').innerHTML = items.map(([k,l])=> k==='SEP'
       ? `<div class="navsep">${l}</div>`
       : `<button class="navbtn ${UI.page===k?'active':''}" onclick="UI.go('${k}')">${l}</button>`).join('');
@@ -57,7 +57,7 @@ const UI = {
     }
     UI.nav(); UI.topbar();
     const m = document.getElementById('main');
-    if(G.phase==='offseason' && !['offseason','options','history','halloffame','coach','stats','ladder','teams','squad','fixtures','fantasy','recruitment','player','tactics','matchday','injuryward','predictions','staff','contracts','scouting','club-management','achievements'].includes(UI.page)) UI.page='offseason';
+    if(G.phase==='offseason' && !['offseason','options','history','halloffame','records','coach','stats','ladder','teams','squad','fixtures','fantasy','recruitment','player','tactics','matchday','injuryward','predictions','staff','contracts','scouting','club-management','achievements'].includes(UI.page)) UI.page='offseason';
     const samePage = UI._lastPage === UI.page;
     const prevTop = (samePage && !UI._forceTop) ? m.scrollTop : 0;
     const fn = UI['p_'+UI.page] || UI.p_dashboard;

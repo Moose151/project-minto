@@ -190,10 +190,32 @@ function simTeamStats(t, tries, out, kickSkill){
     line.ks = Math.max(0, Math.round(ksBase * rf(0.6, 1.4)));
     const avgKickM = clamp(30 + (x.p.attrs.kickPower*0.25 + x.p.attrs.kickAccuracy*0.15), 30, 70);
     line.km = Math.max(0, Math.round(line.ks * avgKickM * rf(0.8, 1.2)));
-    line.r = clamp(5 + line.t*1.6 + line.ta*1.1 + line.gl*.25 + line.fg*.35 + line.tk/14 + line.m/65 + line.runs/18 + line.k4020*.45 - line.err*.8 + (x.p.attrs.lastDitch-55)/90 + formAdj*.55 + gauss(0,.7), 1, 10);
-    line.fp = line.t*4 + line.ta*2 + line.gl*2 + line.fg*2 + line.k4020*3 + Math.floor(line.tk/10) + Math.floor(line.m/25) + Math.floor(line.runs/8) - line.err*2;
-    const s = x.p.s; s.g++; s.t+=line.t; s.runs+=(line.runs||0); s.gl+=line.gl; s.ga+=(line.ga||0); s.fg+=(line.fg||0); s.ta+=line.ta; s.tk+=line.tk; s.m+=line.m; s.err+=line.err; s.k4020+=(line.k4020||0); s.rSum+=line.r; s.fpts+=(line.fp||0); s.mins=(s.mins||0)+mins; s.mt=(s.mt||0)+line.mt; s.lb=(s.lb||0)+line.lb; s.lba=(s.lba||0)+line.lba; s.ks=(s.ks||0)+line.ks; s.km=(s.km||0)+line.km;
-    x.p.career.games++; x.p.career.tries+=line.t; x.p.career.goals+=line.gl; x.p.career.points += line.t*4+line.gl*2+(line.fg||0);
+    line.r = clamp(5 + line.t*1.6 + line.ta*1.1 + line.gl*.25 + line.fg*.35 + line.tk/14 + line.m/65 + line.runs/18 + line.k4020*.45 + (line.fdo||0)*.35 - line.err*.8 + (x.p.attrs.lastDitch-55)/90 + formAdj*.55 + gauss(0,.7), 1, 10);
+    line.fp = line.t*4 + line.ta*2 + line.gl*2 + line.fg*2 + line.k4020*3 + (line.fdo||0)*2 + Math.floor(line.tk/10) + Math.floor(line.m/25) + Math.floor(line.runs/8) - line.err*2;
+    const s = x.p.s; s.g++; s.t+=line.t; s.runs+=(line.runs||0); s.gl+=line.gl; s.ga+=(line.ga||0); s.fg+=(line.fg||0); s.ta+=line.ta; s.tk+=line.tk; s.m+=line.m; s.err+=line.err; s.k4020+=(line.k4020||0); s.fdo=(s.fdo||0)+(line.fdo||0); s.rSum+=line.r; s.fpts+=(line.fp||0); s.mins=(s.mins||0)+mins; s.mt=(s.mt||0)+line.mt; s.lb=(s.lb||0)+line.lb; s.lba=(s.lba||0)+line.lba; s.ks=(s.ks||0)+line.ks; s.km=(s.km||0)+line.km;
+    ensurePlayerCareerStats(x.p);
+    x.p.career.games++;
+    x.p.career.tries += line.t;
+    x.p.career.goals += line.gl;
+    x.p.career.points += line.t*4 + line.gl*2 + (line.fg||0);
+    x.p.career.ga += line.ga || 0;
+    x.p.career.fg += line.fg || 0;
+    x.p.career.ta += line.ta || 0;
+    x.p.career.tk += line.tk || 0;
+    x.p.career.m += line.m || 0;
+    x.p.career.runs += line.runs || 0;
+    x.p.career.err += line.err || 0;
+    x.p.career.fpts += line.fp || 0;
+    x.p.career.k4020 += line.k4020 || 0;
+    x.p.career.fdo += line.fdo || 0;
+    x.p.career.mins += mins;
+    x.p.career.mt += line.mt || 0;
+    x.p.career.lb += line.lb || 0;
+    x.p.career.lba += line.lba || 0;
+    x.p.career.ks += line.ks || 0;
+    x.p.career.km += line.km || 0;
+    x.p.career.rSum += line.r || 0;
+    addLineToStatBucket(playerClubStatBucket(x.p, t), line);
     x.p.cond = clamp(x.p.cond - (26 - x.p.attrs.stamina/6) * mins/80, 20, 100);
     const carrying = x.p.injury && x.p.playInjured;
     const injChance = .035 * (1 + (100 - x.p.attrs.injury)/70) * (x.p.cond<55 ? 1.5 : 1) * (carrying ? 3.2 : 1);
@@ -205,6 +227,7 @@ function simTeamStats(t, tries, out, kickSkill){
       x.p.injuries.unshift({y:G.year, r:G.round+1, n:inj.n, weeks:x.p.injury.weeks});
       if(x.p.injury.weeks >= 4) x.p.attrs.injury = clamp(x.p.attrs.injury - ri(1,3), 20, 99);
       line.inj = inj.n;
+      line.injMin = ri(10, 72);
     }
   }
   return goals;
@@ -215,9 +238,24 @@ function awardFieldGoal(t, out, events){
   if(!kicker) return;
   out[kicker.id] = out[kicker.id] || mkLine();
   out[kicker.id].fg++;
+  out[kicker.id].fp = (out[kicker.id].fp || 0) + 2;
+  out[kicker.id].r = clamp((out[kicker.id].r || 5) + .35, 1, 10);
   if(events) events.push({min:ri(68,80), team:t.id, pts:1, txt:`${kicker.name} snaps a field goal for ${t.nick}!`});
-  if(kicker.s) kicker.s.fg = (kicker.s.fg||0) + 1;
-  if(kicker.career) kicker.career.points += 1;
+  if(kicker.s){
+    kicker.s.fg = (kicker.s.fg||0) + 1;
+    kicker.s.fpts = (kicker.s.fpts||0) + 2;
+    kicker.s.rSum = (kicker.s.rSum||0) + .35;
+  }
+  ensurePlayerCareerStats(kicker);
+  kicker.career.points += 1;
+  kicker.career.fg += 1;
+  kicker.career.fpts += 2;
+  kicker.career.rSum += .35;
+  const clubBucket = playerClubStatBucket(kicker, t);
+  clubBucket.points += 1;
+  clubBucket.fg += 1;
+  clubBucket.fpts += 2;
+  clubBucket.rSum += .35;
 }
 function rolePlayer(t, key, pool, scoreRole){
   pool = pool || t.lineup.slice(0,17).map(id=>G.players[id]).filter(Boolean);
@@ -238,15 +276,28 @@ function simTerritoryKicks(t, players, out){
     if(rnd() < attempts * clamp((skill-68)/420, .002, .028)){
       out[k.id]=out[k.id]||mkLine(); out[k.id].k4020++;
     }
+    const repeatSetPressure = attempts * clamp((skill-58)/150, .015, .24);
+    if(rnd() < repeatSetPressure){
+      out[k.id]=out[k.id]||mkLine();
+      out[k.id].fdo++;
+    }
   }
 }
-function mkLine(){ return {t:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,runs:0,err:0,min:0,r:0,fp:0,k4020:0,mt:0,lb:0,lba:0,ks:0,km:0}; }
+function mkLine(){ return {t:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,runs:0,err:0,min:0,r:0,fp:0,k4020:0,fdo:0,mt:0,lb:0,lba:0,ks:0,km:0}; }
 function awardVotes(th, ta, det){
   const all = [];
   for(const id in det.h) if(det.h[id] && det.h[id].r) all.push({id:+id, r:det.h[id].r});
   for(const id in det.a) if(det.a[id] && det.a[id].r) all.push({id:+id, r:det.a[id].r});
   all.sort((a,b)=>b.r-a.r);
-  [3,2,1].forEach((v,i)=>{ if(all[i]) G.players[all[i].id].s.votes += v; });
+  [3,2,1].forEach((v,i)=>{
+    if(!all[i]) return;
+    const p = G.players[all[i].id];
+    p.s.votes += v;
+    ensurePlayerCareerStats(p);
+    p.career.votes += v;
+    const t = G.teams.find(t=>t.players.includes(p.id));
+    if(t) playerClubStatBucket(p, t).votes += v;
+  });
 }
 function postMatch(t, pf, pa, lines){
   const won = pf>pa;
@@ -275,7 +326,7 @@ function updatePlayerForm(p, line, won, inTeam){
   if(line && line.r){
     delta += line.r >= 8.2 ? 5 : line.r >= 7.2 ? 3 : line.r >= 6.4 ? 1 : line.r < 4.6 ? -5 : line.r < 5.4 ? -3 : -1;
     delta += won ? 1 : -1;
-    if(line.t || line.ta || line.fg || line.k4020) delta += 1;
+    if(line.t || line.ta || line.fg || line.k4020 || line.fdo) delta += 1;
     if(line.err >= 2) delta -= 1;
     if(line.inj) delta -= 3;
   } else if(inTeam){
@@ -297,6 +348,9 @@ function genInfringements(t, det){
     const min = ri(3, 78);
     const isMinor = rnd() < 0.62;
     if(p.s) p.s.inf = (p.s.inf||0) + 1;
+    ensurePlayerCareerStats(p);
+    p.career.inf += 1;
+    playerClubStatBucket(p, t).inf += 1;
     if(isMinor){
       const inf = pick(INFRINGEMENT_MINOR);
       det.events.push({min, txt:`Penalty — ${p.name} (${t.nick}) penalised for ${inf.label.toLowerCase()}.`});

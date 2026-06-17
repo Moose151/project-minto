@@ -46,7 +46,8 @@ function genPlayer(pos, age, quality){ // quality ~ league tier centre, e.g. 60
   p.seasonStartGames = 0;
   p.morale = ri(55,80); p.form = ri(48,62); p.cond = 100; p.injury = null;
   p.salary = salaryFor(p); p.years = ri(1,3); p.contractType = 'flat'; p.contractSchedule = Array(p.years).fill(p.salary);
-  p.career = {seasons:0, games:0, tries:0, goals:0, points:0, premierships:0};
+  p.career = {seasons:0, games:0, tries:0, goals:0, points:0, premierships:0, ga:0, fg:0, ta:0, tk:0, m:0, runs:0, err:0, fpts:0, k4020:0, fdo:0, mins:0, mt:0, lb:0, lba:0, ks:0, km:0, inf:0, rSum:0, votes:0};
+  p.clubStats = {};
   p.history = [];
   p.awards = [];
   p.injuries = [];
@@ -216,7 +217,126 @@ function salaryFor(p){
   const jitter = 0.9 + (((Number(p.id) * 31) % 100) / 455);
   return Math.round(clamp(base*posMod*expMod*ageMod*formMod*durabilityMod*awardMod*tierMod*jitter, 85000, 1600000)/5000)*5000;
 }
-function resetSeasonStats(p){ p.s = {g:0,t:0,runs:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,err:0,votes:0,rSum:0,fpts:0,k4020:0,mins:0,mt:0,lb:0,lba:0,ks:0,km:0,inf:0}; }
+function resetSeasonStats(p){ p.s = {g:0,t:0,runs:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,err:0,votes:0,rSum:0,fpts:0,k4020:0,fdo:0,mins:0,mt:0,lb:0,lba:0,ks:0,km:0,inf:0}; }
+const CAREER_STAT_KEYS = ['ga','fg','ta','tk','m','runs','err','fpts','k4020','fdo','mins','mt','lb','lba','ks','km','inf','rSum','votes'];
+const STAT_BUCKET_KEYS = ['games','tries','goals','points','premierships'].concat(CAREER_STAT_KEYS);
+function ensureStatBucket(b){
+  for(const key of STAT_BUCKET_KEYS) if(b[key] === undefined) b[key] = 0;
+  return b;
+}
+function ensurePlayerCareerStats(p){
+  p.career = p.career || {seasons:0, games:0, tries:0, goals:0, points:0, premierships:0};
+  if(p.career.points === undefined) p.career.points = (p.career.tries||0)*4 + (p.career.goals||0)*2 + (p.career.fg||0);
+  ensureStatBucket(p.career);
+  if((p.history || []).length && !p.career._expandedStats){
+    const totals = {games:0, tries:0, goals:0, points:0};
+    for(const key of CAREER_STAT_KEYS) totals[key] = 0;
+    for(const h of p.history || []){
+      totals.games += h.g || 0;
+      totals.tries += h.t || 0;
+      totals.goals += h.gl || 0;
+      totals.ga += h.ga || 0;
+      totals.fg += h.fg || 0;
+      totals.ta += h.ta || 0;
+      totals.tk += h.tk || 0;
+      totals.m += h.m || 0;
+      totals.runs += h.runs || 0;
+      totals.err += h.err || 0;
+      totals.fpts += h.fpts || 0;
+      totals.k4020 += h.k4020 || 0;
+      totals.fdo += h.fdo || 0;
+      totals.mins += h.mins || 0;
+      totals.mt += h.mt || 0;
+      totals.lb += h.lb || 0;
+      totals.lba += h.lba || 0;
+      totals.ks += h.ks || 0;
+      totals.km += h.km || 0;
+      totals.inf += h.inf || 0;
+      totals.votes += h.votes || 0;
+      if(h.avg && h.g) totals.rSum += Number(h.avg) * h.g;
+      totals.points += (h.t || 0)*4 + (h.gl || 0)*2 + (h.fg || 0);
+    }
+    for(const key of Object.keys(totals)){
+      if((p.career[key] || 0) < totals[key]) p.career[key] = Math.round(totals[key]);
+    }
+    p.career._expandedStats = true;
+  }
+}
+function ensurePlayerClubStats(p){
+  p.clubStats = p.clubStats || {};
+  for(const key of Object.keys(p.clubStats)){
+    const b = ensureStatBucket(p.clubStats[key]);
+    if(!b.teamName) b.teamName = key;
+  }
+  if((p.history || []).length && !p._clubStatsBackfilled){
+    for(const h of p.history || []){
+      const key = 'hist:' + (h.team || 'Unknown');
+      const b = p.clubStats[key] || (p.clubStats[key] = ensureStatBucket({teamId:null, teamName:h.team || 'Unknown'}));
+      b.games += h.g || 0;
+      b.tries += h.t || 0;
+      b.goals += h.gl || 0;
+      b.ga += h.ga || 0;
+      b.fg += h.fg || 0;
+      b.ta += h.ta || 0;
+      b.tk += h.tk || 0;
+      b.m += h.m || 0;
+      b.runs += h.runs || 0;
+      b.err += h.err || 0;
+      b.fpts += h.fpts || 0;
+      b.k4020 += h.k4020 || 0;
+      b.fdo += h.fdo || 0;
+      b.mins += h.mins || 0;
+      b.mt += h.mt || 0;
+      b.lb += h.lb || 0;
+      b.lba += h.lba || 0;
+      b.ks += h.ks || 0;
+      b.km += h.km || 0;
+      b.inf += h.inf || 0;
+      b.votes += h.votes || 0;
+      if(h.avg && h.g) b.rSum += Number(h.avg) * h.g;
+      b.points += (h.t || 0)*4 + (h.gl || 0)*2 + (h.fg || 0);
+    }
+    p._clubStatsBackfilled = true;
+  }
+}
+function playerClubStatBucket(p, t){
+  ensurePlayerClubStats(p);
+  const key = t && t.id != null ? String(t.id) : 'unknown';
+  if(t && !p.clubStats[key]){
+    const histKey = 'hist:' + t.nick;
+    if(p.clubStats[histKey]){
+      p.clubStats[key] = p.clubStats[histKey];
+      delete p.clubStats[histKey];
+    }
+  }
+  const b = p.clubStats[key] || (p.clubStats[key] = ensureStatBucket({teamId:t ? t.id : null, teamName:t ? t.nick : 'Unknown'}));
+  if(t) b.teamId = t.id;
+  b.teamName = t ? t.nick : b.teamName || 'Unknown';
+  return ensureStatBucket(b);
+}
+function addLineToStatBucket(b, line){
+  b.games++;
+  b.tries += line.t || 0;
+  b.goals += line.gl || 0;
+  b.points += (line.t || 0)*4 + (line.gl || 0)*2 + (line.fg || 0);
+  b.ga += line.ga || 0;
+  b.fg += line.fg || 0;
+  b.ta += line.ta || 0;
+  b.tk += line.tk || 0;
+  b.m += line.m || 0;
+  b.runs += line.runs || 0;
+  b.err += line.err || 0;
+  b.fpts += line.fp || 0;
+  b.k4020 += line.k4020 || 0;
+  b.fdo += line.fdo || 0;
+  b.mins += line.min || 0;
+  b.mt += line.mt || 0;
+  b.lb += line.lb || 0;
+  b.lba += line.lba || 0;
+  b.ks += line.ks || 0;
+  b.km += line.km || 0;
+  b.rSum += line.r || 0;
+}
 function attrAvg(p, keys, fallback){
   const vals = keys.map(k=>p.attrs && p.attrs[k]).filter(v=>v != null);
   return Math.round(vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : fallback);
