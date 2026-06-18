@@ -122,7 +122,7 @@ td.num,th.num{text-align:right}
 .team-sheet-layout{display:grid; grid-template-columns:minmax(380px,700px) minmax(320px,1fr); gap:16px; align-items:start}
 .pitch-card{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px}
 /* NRL field: solid alternating green stripes */
-.rl-pitch{position:relative; aspect-ratio:2/3; min-height:820px; max-height:calc(100vh - 200px); margin:0 auto; overflow:visible;
+.rl-pitch{position:relative; aspect-ratio:2/3; min-height:860px; max-height:calc(100vh - 200px); margin:0 auto; overflow:visible;
   border:5px solid rgba(255,255,255,.9); border-radius:4px;
   background:linear-gradient(180deg,#0A7A42 0%,#0A7A42 10%,#0D8F4D 10%,#0D8F4D 20%,#0A7A42 20%,#0A7A42 30%,#0D8F4D 30%,#0D8F4D 40%,#0A7A42 40%,#0A7A42 50%,#0D8F4D 50%,#0D8F4D 60%,#0A7A42 60%,#0A7A42 70%,#0D8F4D 70%,#0D8F4D 80%,#0A7A42 80%,#0A7A42 90%,#0D8F4D 90%,#0D8F4D 100%)}
 /* in-goal zones */
@@ -139,7 +139,7 @@ td.num,th.num{text-align:right}
 .goal-post.top{top:-28px}.goal-post.bottom{bottom:-28px}
 .goal-post svg{display:block; margin:0 auto}
 /* pitch player cards */
-.pitch-player{position:absolute; transform:translate(-50%,-50%); width:124px; border:0; background:rgba(14,18,24,.86); backdrop-filter:blur(2px); color:var(--ink); border-radius:9px; padding:5px 6px 8px; box-shadow:0 3px 12px rgba(0,0,0,.55); z-index:3; text-align:center; cursor:pointer}
+.pitch-player{position:absolute; transform:translate(-50%,-50%); width:110px; border:0; background:rgba(14,18,24,.86); backdrop-filter:blur(2px); color:var(--ink); border-radius:9px; padding:5px 6px 8px; box-shadow:0 3px 12px rgba(0,0,0,.55); z-index:3; text-align:center; cursor:pointer}
 .pitch-player .status-stack{position:absolute; top:-8px; right:-3px; display:flex; gap:2px}
 .pitch-avatar{display:block; margin:0 auto 3px}
 .pitch-num{width:22px; height:24px; font-size:12px; border-radius:4px 4px 5px 5px; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; margin-right:3px; flex-shrink:0}
@@ -150,7 +150,7 @@ td.num,th.num{text-align:right}
 .pitch-player.fit-red{box-shadow:0 0 0 2px rgba(200,90,79,.95),0 3px 12px rgba(0,0,0,.55)}
 .pitch-player.fit-empty{box-shadow:0 0 0 1px rgba(180,180,180,.3),0 3px 10px rgba(0,0,0,.4)}
 .pitch-jersey{width:32px; height:35px; margin:0 auto 2px; display:block}
-.pitch-name{display:flex; align-items:center; justify-content:center; gap:0; font-weight:800; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.01em; line-height:1.2; max-width:100%}
+.pitch-name{display:flex; align-items:center; justify-content:center; gap:0; font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.01em; line-height:1.2; max-width:100%}
 .pitch-sub{display:flex; align-items:center; justify-content:center; gap:5px; margin-top:4px}
 .ovr-xs{font-size:17px; font-weight:900; font-family:var(--disp)}
 .ovr-xs.ovr-elite{color:#E8C84A}

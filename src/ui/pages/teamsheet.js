@@ -3,11 +3,11 @@
 /* Team sheet — pitch layout plus bench/reserves */
 const FIELD_SLOT_POS = {
   0:{x:50,y:90},                              // 1 FB — fullback
-  1:{x:82,y:80}, 4:{x:18,y:80},              // 2 WG right, 5 WG left — wide
-  2:{x:68,y:72}, 3:{x:32,y:72},              // 3 CE right, 4 CE left
-  5:{x:60,y:60}, 6:{x:44,y:60},              // 6 FE, 7 HB — halves staggered at same depth
-  9:{x:68,y:44}, 7:{x:32,y:44}, 8:{x:50,y:44}, // 10 PR, 8 PR, 9 HK — front row
-  11:{x:66,y:30}, 10:{x:34,y:30},            // 12 SR, 11 SR — second row
+  1:{x:85,y:80}, 4:{x:15,y:80},              // 2 WG right, 5 WG left — wide
+  2:{x:70,y:71}, 3:{x:30,y:71},              // 3 CE right, 4 CE left
+  5:{x:63,y:59}, 6:{x:37,y:59},              // 6 FE, 7 HB — halves spread wide (was 60/44, now 26% gap)
+  9:{x:74,y:44}, 7:{x:26,y:44}, 8:{x:50,y:44}, // 10 PR, 8 PR, 9 HK — front row spread (was 68/32, now 24% gap)
+  11:{x:68,y:30}, 10:{x:32,y:30},            // 12 SR, 11 SR — second row
   12:{x:50,y:18}                              // 13 LK — lock
 };
 const COH_LINKS = [[0,1],[0,4],[1,2],[2,5],[3,4],[3,6],[5,6],[5,11],[6,10],[7,8],[8,9],[7,10],[9,11],[10,12],[11,12]];
@@ -51,7 +51,7 @@ Object.assign(UI, {
       return `<button class="pitch-player fit-${fit}" style="left:${pos.x}%;top:${pos.y}%" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})" ${p?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})"`:''}>
         <span class="status-stack">${p?playerStatusIcons(p):''}</span>
         ${p
-          ? `<span class="pitch-avatar">${playerAvatar(p,34)}</span>
+          ? `<span class="pitch-avatar">${playerAvatar(p,30)}</span>
              <span class="pitch-name"><span class="jersey pitch-num" style="background:${jerseyBg};color:${contrastText(jerseyBg)}">${s.n}</span>${esc(p.name.split(' ').slice(-1)[0])}</span>
              <span class="pitch-sub"><span class="pitch-pos">${p.pos}</span><b class="ovr-xs ovr-${ovrCls(p.ovr)}">${p.ovr}</b></span>`
           : `<span class="jersey pitch-jersey" style="background:${jerseyBg};color:${contrastText(jerseyBg)}">${s.n}</span>
