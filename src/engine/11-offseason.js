@@ -22,7 +22,18 @@ function startOffseason(){
   else if(myPos <= E.minPos){ verdict=`Finished ${ord(myPos)} — expectations met.`; G.coach.conf=clamp(G.coach.conf+10,0,100); G.coach.rep=clamp(G.coach.rep+2,1,99); }
   else if(myPos <= E.minPos+2){ verdict=`Finished ${ord(myPos)} — just short of expectations. The board wants improvement.`; G.coach.conf=clamp(G.coach.conf-8,0,100); }
   else { verdict=`Finished ${ord(myPos)} — well below expectations.`; G.coach.conf=clamp(G.coach.conf-22,0,100); G.coach.rep=clamp(G.coach.rep-3,1,99); }
-  if(G.coach.conf < 18){ G.offseason.sacked = true; verdict += ` ${G.coach.name} has been sacked.`; }
+  if(G.coach.conf < 18){
+    G.offseason.sacked = true;
+    const sackedPayoutYears = Math.max(0, (G.coach.contractYears || 0) - 1);
+    const sackedPayout = sackedPayoutYears * (G.coach.salary || 0);
+    if(sackedPayout > 0 && G.club){
+      G.club.funds = (G.club.funds || 0) - sackedPayout;
+      G.offseason.sackedPayout = sackedPayout;
+      verdict += ` ${G.coach.name} has been sacked. Contract payout: ${money(sackedPayout)}.`;
+    } else {
+      verdict += ` ${G.coach.name} has been sacked.`;
+    }
+  }
   G.offseason.verdict = verdict;
   G.offseason.finalPos = myPos;
   addNews(verdict);

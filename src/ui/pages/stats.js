@@ -46,18 +46,22 @@ Object.assign(UI, {
         <th class="noclick">Club</th>
         <th class="noclick num">G</th>
         <th class="noclick num">${catLabel}</th>
+        ${showPer80 ? `<th class="noclick num" style="color:var(--dim);font-size:10px" title="Per 80 minutes played">per 80</th>` : ''}
       </tr></thead><tbody>
     ${rows.map((p,i)=>{
       const t = G.teams.find(t=>t.players.includes(p.id));
+      const p80 = showPer80 ? per80(p) : null;
+      const p80Html = p80 != null ? `<td class="num" style="color:var(--dim);font-size:11px">${p80.toFixed(1)}</td>` : (showPer80 ? `<td class="num" style="color:var(--dim)">—</td>` : '');
       return `<tr class="click" onclick="UI.playerModal(${p.id})">
         <td class="lpos">${i+1}</td>
         <td><div class="player-cell">${playerAvatar(p,34)}<div><b>${playerTierBadge(p,true)} ${nationalityFlag(p.nationality)} ${esc(p.name)}</b> <span class="pos-tag">${p.pos}</span><br><span class="pmeta" style="font-size:10px;color:var(--muted)">${p.repTeam?esc(p.repTeam):''}</span></div></div></td>
         <td>${t?`${clubPrestigeBadge(t,true)} <span class="team-spine" style="background:${t.c1}"></span><span onclick="event.stopPropagation();UI.teamModal(${t.id})" style="cursor:pointer;text-decoration:underline">${esc(t.nick)}</span>`:'—'}</td>
         <td class="num">${p.s.g}</td>
         <td class="num"><b>${fmt(v(p))}</b></td>
+        ${p80Html}
       </tr>`;
     }).join('')}
-    ${rows.length===0?'<tr><td colspan="5" style="color:var(--muted)">No players match this filter.</td></tr>':''}
+    ${rows.length===0?`<tr><td colspan="${showPer80?6:5}" style="color:var(--muted)">No players match this filter.</td></tr>`:''}
     </tbody></table>
     </div>`;
   },

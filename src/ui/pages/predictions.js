@@ -115,6 +115,35 @@ Object.assign(UI, {
     };
   },
 
+  /* ---- form/hot players ---- */
+  _formWatchHtml(){
+    const allP = Object.values(G.players).filter(p => p.s && p.s.g >= 2);
+    if(!allP.length) return '';
+    const hot  = allP.filter(p => (p.form||50) >= 72).sort((a,b) => (b.form||50)-(a.form||50)).slice(0,5);
+    const cold = allP.filter(p => (p.form||50) < 40).sort((a,b) => (a.form||50)-(b.form||50)).slice(0,5);
+    if(!hot.length && !cold.length) return '';
+    const formRow = p => {
+      const t = G.teams.find(t => t.players.includes(p.id));
+      const fv = Math.round(p.form || 50);
+      const label = fv >= 72 ? 'Hot 🔥' : fv < 40 ? 'Cold ❄' : 'Steady';
+      const col = fv >= 72 ? 'var(--green)' : fv < 40 ? 'var(--red)' : 'var(--muted)';
+      const avg = p.s.g ? (p.s.rSum / p.s.g).toFixed(1) : '—';
+      return `<tr class="click" onclick="UI.playerModal(${p.id})">
+        <td><b>${esc(p.name)}</b> <span class="pos-tag">${p.pos}</span></td>
+        <td>${t ? `<span class="team-spine" style="background:${t.c1}"></span>${esc(t.nick)}` : '—'}</td>
+        <td class="num" style="color:${col};font-weight:700">${fv}</td>
+        <td class="num" style="font-size:11px;color:var(--muted)">${avg} avg</td>
+      </tr>`;
+    };
+    const tbl = rows => `<table><thead><tr><th class="noclick">Player</th><th class="noclick">Club</th><th class="noclick num">Form</th><th class="noclick num">Avg</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<h2 class="sec">Form Watch</h2>
+    <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Players running hot or cold heading into this round. Form affects match-day performance and auto-pick selection.</p>
+    <div class="grid2">
+      ${hot.length ? `<div class="card"><h2 class="sec" style="margin-top:0;color:var(--green)">Hot Form 🔥</h2><p style="font-size:11px;color:var(--muted);margin:-4px 0 8px">Top confidence players this week</p>${tbl(hot.map(formRow).join(''))}</div>` : ''}
+      ${cold.length ? `<div class="card"><h2 class="sec" style="margin-top:0;color:var(--red)">Cold Streak ❄</h2><p style="font-size:11px;color:var(--muted);margin:-4px 0 8px">Players struggling for confidence</p>${tbl(cold.map(formRow).join(''))}</div>` : ''}
+    </div>`;
+  },
+
   p_predictions(){
     const lad = ladder();
     const t = myTeam();
@@ -148,6 +177,8 @@ Object.assign(UI, {
     // Award frontrunners
     const awards = G.round > 0 ? UI._awardFrontrunners() : null;
 
+    const formWatch = G.round > 0 ? UI._formWatchHtml() : '';
+
     return `<h1 class="page">Predictions</h1><p class="page-sub">Bookie odds, season projections and award frontrunners. Updated each round.</p>
     ${oddsBlock}
     ${roundOddsHtml}
@@ -156,6 +187,7 @@ Object.assign(UI, {
       <table><thead><tr><th class="noclick lpos">#</th><th class="noclick">Club</th><th class="noclick num">Current pts</th><th class="noclick num" style="color:var(--brass)">Projected pts</th><th class="noclick num">Est. win%</th></tr></thead><tbody>${projRows}</tbody></table>
       <p style="color:var(--dim);font-size:11px;padding:6px 8px 0">Projection uses squad strength and current points. Does not account for schedule difficulty or injuries.</p>
     </div>
+    ${formWatch}
     ${awards ? `
     <h2 class="sec">Award frontrunners</h2>
     <div class="grid2">
