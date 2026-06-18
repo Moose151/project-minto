@@ -1,100 +1,144 @@
 # Project Minto — Rugby League Manager
 
-A browser-based rugby league management sim. Plain HTML/CSS/JavaScript — **no build step, no dependencies, no server required.**
+> A browser-based rugby league management simulation. No build step, no server, no dependencies — just open a file and play.
 
-## Running it
+Project Minto is a single-player career manager where you take charge of a rugby league club, select your lineup, simulate matches, manage player contracts, develop your squad through an off-season, and compete for the premiership.
 
-Just open `index.html` in a browser (double-click it, or drag it into a tab).
+---
 
-If you're in VSCodium and want live-reload while editing, install the **Live Server** extension, right-click `index.html` → *Open with Live Server*. (Any static server works; you do **not** need one to play.)
+## Running the game
 
-## How it's wired
+Open `index.html` in any modern browser — double-click it, drag it into a tab, or use a local file server.
 
-The scripts are plain `<script>` tags loaded in order by `index.html`. There's no module system, so everything shares one global scope: the engine exposes plain functions and a single game-state object `G`; the UI lives on one global object `UI`. Load order matters — engine first, then the UI core, then the UI page modules that extend it, then the boot file last.
+That is all. No install, no build, no npm.
+
+If you want live-reload while editing, use the **Live Server** extension in VS Code (or any equivalent static server): right-click `index.html` → *Open with Live Server*. A static server is not required to play.
+
+---
+
+## Saving
+
+Saves are **export-to-file only** via the Options page. Nothing is written to the browser automatically — export your save before closing if you want to continue a career later. Import a `.json` save file from the same page to resume.
+
+---
+
+## Features
+
+- Full 16-team competition with fixtures, ladder, and a top-4 finals series
+- Player generation with detailed rugby-league attributes (offensive, defensive, physical, mental)
+- Positional overall ratings and hidden true potential
+- Squad management: contracts, salary cap, free agency, and recruitment
+- Team sheet and lineup selection with auto-pick
+- Tactics page: captain, goal kicker, kicking roles, playmakers, position roles, and zone plans
+- Match day: live match feed or sim-to-result, weather and crowd, coach preferences, auto-subs
+- Per-player match stat lines (tries, assists, tackles, errors, runs, field goals, fantasy points)
+- Weekly player development, form, injuries, and recovery
+- Media stories and dashboard news feed
+- Off-season: awards, retirements, contract negotiations, and job offers
+- Coach contract, coach cash, and attribute upgrades
+- Fantasy points and player ratings
+- Leaderboard stats: tryscorers, top performers, team stats
+- Player history, injury records, and career awards
+- Export and import save files (JSON)
+
+---
+
+## Project structure
 
 ```
 minto/
-├── index.html              Shell + markup + ordered <script> tags
+├── index.html              Shell markup and ordered <script> tags
 ├── styles.css              All styling (dark "Friday night footy" theme)
-├── README.md
 └── src/
-    ├── engine/             Pure game logic — no DOM, fully testable on its own
-    │   ├── 01-rng.js          Seeded RNG + number/format helpers
-    │   ├── 02-data.js         Names, club identities, positions, attributes, injuries
+    ├── engine/             Pure game logic — no DOM, testable standalone
+    │   ├── 01-rng.js          Seeded RNG and number/format helpers
+    │   ├── 02-data.js         Names, clubs, positions, attributes, injuries
     │   ├── 03-players.js      Player generation, overall rating, salary, familiarity
     │   ├── 04-teams.js        Squad building, salary-cap fitting, fixture generation
-    │   ├── 05-game.js         Game state `G`, startNewGame, expectations
-    │   ├── 06-selection.js    Auto-pick, lineup validation
-    │   ├── 07-match.js        Match simulation, per-player stat lines, injuries, votes
-    │   ├── 08-progression.js  Weekly recovery, player development, coach record, weekly media
+    │   ├── 05-game.js         Game state (G), startNewGame, expectations
+    │   ├── 06-selection.js    Auto-pick and lineup validation
+    │   ├── 07-match.js        Match simulation, stat lines, injuries, votes
+    │   ├── 08-progression.js  Weekly recovery, player development, coach record, media
     │   ├── 09-ladder.js       Ladder computation
     │   ├── 10-finals.js       Top-4 finals series
     │   ├── 11-offseason.js    Awards, retirements, contracts, free agency, job offers
     │   └── 12-save.js         Export / import save files (JSON)
     └── ui/                 Everything that touches the DOM
-        ├── 01-core.js         The `UI` object: nav, top bar, router, modal, toasts
-        ├── 02-wizard.js       New-career setup + club picker
-        ├── 03-match-view.js   Advance button + round-result screen
-        ├── 04-offseason-view.js  Off-season review + contract negotiation screens
-        ├── 05-helpers.js      Small view helpers (rating colour, jersey text contrast)
-        ├── 06-boot.js         Kicks off the first render (must load last)
-        └── pages/             One file per screen — each extends UI via Object.assign
+        ├── 01-core.js         UI object: nav, top bar, router, modal, toasts
+        ├── 02-wizard.js       New career setup and club picker
+        ├── 03-match-view.js   Advance button and round-result screen
+        ├── 04-offseason-view.js  Off-season review and contract negotiation screens
+        ├── 05-helpers.js      View helpers (rating colour, jersey contrast)
+        ├── 06-boot.js         First render — must load last
+        └── pages/             One file per screen
             ├── dashboard.js
-            ├── squad.js          (+ playerRow, sort helpers)
-            ├── player-modal.js   shared player detail popup
-            ├── teamsheet.js      (+ pickSlot, assignSlot)
+            ├── squad.js
+            ├── player-modal.js
+            ├── teamsheet.js
             ├── training.js
             ├── fixtures.js
             ├── ladder.js
             ├── stats.js
             ├── fantasy.js
             ├── recruitment.js
-            ├── clubs.js          (+ teamModal)
+            ├── clubs.js
             ├── coach.js
             ├── history.js
             ├── options.js
             └── contracts.js
 ```
 
-### Adding a new page
+### How it is wired
+
+Scripts are loaded as plain `<script>` tags in `index.html` — no module system. Everything shares one global scope: the engine exposes functions and the game state object `G`; the UI lives on a single global object `UI`. Load order matters — engine first, then UI core, then the UI page modules, then the boot file last.
+
+---
+
+## Adding a screen
+
 1. Create `src/ui/pages/myscreen.js`:
    ```js
    'use strict';
    Object.assign(UI, {
-     p_myscreen(){ return `<h1 class="page">My Screen</h1>…`; }
+     p_myscreen() { return `<h1 class="page">My Screen</h1>`; }
    });
    ```
    Any method named `p_<key>` is reachable as a route via `UI.go('<key>')`.
-2. Add a `<script src="src/ui/pages/myscreen.js"></script>` line in `index.html`
-   (anywhere after `01-core.js` and before `06-boot.js`).
-3. Add a nav entry in `src/ui/01-core.js` → the `items` array in `nav()`:
-   `['myscreen','My Screen']`.
 
-That's the whole loop — no build, no imports to update.
+2. Add a `<script src="src/ui/pages/myscreen.js"></script>` tag in `index.html` after `01-core.js` and before `06-boot.js`.
 
-### Where to look first
-- **Tuning match results** → `src/engine/07-match.js` (try expectation, home advantage, scoring).
-- **Player growth / decline** → `src/engine/08-progression.js`.
-- **Hidden true potential / scouting ranges** → true potential is `p.pot`, but UI should display `potText(p)` / `potHtml(p)` from `src/ui/05-helpers.js`.
-- **Busts, diamonds, Rookie of the Year** → `src/engine/11-offseason.js` handles end-of-season potential reassessment and awards.
-- **Detailed player attributes / profile page** → player clicks route through `UI.playerModal(id)` to the full `p_player()` profile in `src/ui/pages/player-modal.js`. Attribute groups and positional OVR weights live in `src/engine/02-data.js`.
-- **Tactics, specialists and kicking roles** → `src/ui/pages/tactics.js` lets the coach select captain, goal kicker, primary/secondary kickers, primary/secondary playmakers, position roles, and field-zone plans. Match effects are in `src/engine/07-match.js`.
-- **Match Day page** → `src/ui/pages/matchday.js` shows lineups, venue/weather/crowd, coach penalty/field-goal preferences, auto-subs toggle, sim-to-result and watch-feed options.
-- **Recruitment / contracts** → `src/ui/pages/recruitment.js` supports mid-season free-agent cover signings and pre-contract approaches. `src/ui/pages/contracts.js` allows current-team re-signing for players in the final year.
-- **Coach contract and cash** → coach salary, contract years and cash live on `G.coach`; cash can be spent on attribute upgrades from `src/ui/pages/coach.js`.
-- **Dashboard/media stories** → `src/ui/pages/dashboard.js` for display and `src/engine/08-progression.js` for weekly story generation.
-- **Adding or changing a screen** → the matching file in `src/ui/pages/` (e.g. `squad.js`).
-- **Clubs, names, attributes** → `src/engine/02-data.js`.
+3. Add a nav entry in `src/ui/01-core.js` → the `items` array in `nav()`: `['myscreen', 'My Screen']`.
 
-## Notes
-- Saves are **export-to-file** only (Options page). Nothing is written to the browser automatically, so export before closing if you want to keep a career.
-- News stories are stored in `G.news` as typed media cards (`title`, `body`, `type`, `tone`, optional `playerId`/`teamId`). Old text-only saves are migrated automatically.
-- Player potential is intentionally uncertain in the UI. Keep `p.pot` as hidden true potential for the engine and display estimated ranges through the scouting helpers. Future staff/scouting attributes should feed into `scoutingAbility()`.
-- Player attributes are detailed rugby-league skills grouped as offensive, defensive, physical, and mental. New attributes should be added to `ATTR_GROUPS`, `ATTR_LABEL`, and relevant `POS_PROFILE` weights so they actually affect OVR and simulation.
-- Kicking is split into `kickPower`, `kickAccuracy`, `placeKick` (goal kicking), and `fieldGoal`. Fresh team generation deliberately limits strong goal kickers to one or two realistic specialists per squad.
-- 40/20s and 20/40s are pooled together as `k4020`. Player stats also track `runs`, goal attempts (`ga`), field goals (`fg`), and fantasy points/rating include runs and 40/20s.
-- Teams store tactical settings on `t.roles`, `t.positionRoles`, and `t.zoneTactics`. Auto-pick assigns sensible defaults, but the user can override them from the Tactics page.
-- Opposition player OVR should be displayed via `ovrText(p)` / `scoutedOvr(p)`, not exact `p.ovr`, unless the player is on the user's club.
-- Player history, injuries, and awards live on each player as `p.history`, `p.injuries`, and `p.awards`. Awards currently include Team of the Week, Team of the Year, Player of the Year, Rookie of the Year, Top Tryscorer, and Premiership.
-- UI methods are split across files using `Object.assign(UI, { … })` so each screen is its own readable file while staying one object at runtime.
-- The engine has no DOM dependencies, so any `src/engine/*.js` file can be loaded into Node for headless testing.
+No build step, no imports to update.
+
+---
+
+## Where to look for common changes
+
+| Change | File |
+|---|---|
+| Match result tuning (home advantage, scoring) | `src/engine/07-match.js` |
+| Player growth and decline | `src/engine/08-progression.js` |
+| Scouting and potential display | `src/ui/05-helpers.js` (`potText`, `potHtml`) |
+| Awards, retirements, potential reassessment | `src/engine/11-offseason.js` |
+| Player attributes, positions, OVR weights | `src/engine/02-data.js` |
+| Tactics and kicking roles | `src/ui/pages/tactics.js` + `src/engine/07-match.js` |
+| Match day page | `src/ui/pages/matchday.js` |
+| Recruitment and contracts | `src/ui/pages/recruitment.js`, `src/ui/pages/contracts.js` |
+| Coach salary, cash, upgrades | `src/ui/pages/coach.js` |
+| Dashboard and media stories | `src/ui/pages/dashboard.js` + `src/engine/08-progression.js` |
+| Any other screen | The matching file in `src/ui/pages/` |
+
+---
+
+## Notes for contributors
+
+- Player potential (`p.pot`) is the hidden engine value. The UI should always display the estimated range via `potText(p)` / `potHtml(p)` from `src/ui/05-helpers.js` — never expose `p.pot` directly to the user.
+- Opposition player ratings should display via `ovrText(p)` / `scoutedOvr(p)`, not `p.ovr`, unless the player is on the user's club.
+- Kicking is split into `kickPower`, `kickAccuracy`, `placeKick` (goal kicking), and `fieldGoal`. Fresh squads are generated with only one or two realistic goal-kicking specialists.
+- 40/20s and 20/40s are pooled as `k4020`. Player stats also track `runs`, goal attempts (`ga`), field goals (`fg`), and fantasy points.
+- News stories are stored in `G.news` as typed media cards (`title`, `body`, `type`, `tone`, optional `playerId`/`teamId`). Old text-only saves are migrated automatically on load.
+- New player attributes should be added to `ATTR_GROUPS`, `ATTR_LABEL`, and relevant `POS_PROFILE` weights in `src/engine/02-data.js` so they affect overall ratings and match simulation.
+- Tactical settings live on `t.roles`, `t.positionRoles`, and `t.zoneTactics`. Auto-pick assigns sensible defaults; the user can override from the Tactics page.
+- Player history, injuries, and awards live on each player as `p.history`, `p.injuries`, and `p.awards`.
+- The engine has no DOM dependencies — any `src/engine/*.js` file can be loaded into Node for headless testing.
