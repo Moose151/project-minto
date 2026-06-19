@@ -94,6 +94,7 @@ Object.assign(UI, {
           <b class="click" onclick="UI.playerModal(${p.id})" style="text-decoration:underline;cursor:pointer">${esc(p.name)}</b>
           <p style="margin:2px 0;font-size:12px;color:var(--muted)">${POS_NAME[p.pos]||p.pos} · ${p.age}yo · OVR ${p.ovr} · POT ~${p.pot}</p>
           <p style="margin:2px 0;font-size:11px;color:var(--dim)">Found in ${region?esc(region.label):pr.region} (${pr.foundYear})</p>
+          ${p.backstory ? `<p style="margin:2px 0;font-size:11px;color:var(--muted);font-style:italic">"${esc(p.backstory)}"</p>` : ''}
           <p style="font-size:11px;color:var(--muted)">Youth squad offer: ${money(cost)} · salary cap exempt</p>
           ${!canJoinYouthSquad(p) ? `<p style="font-size:11px;color:var(--red)">⚠ Youth squad is only for under-21 players who have never been in the main squad.</p>` : youthRoom <= 0 ? `<p style="font-size:11px;color:var(--red)">⚠ Youth squad is full (${YOUTH_SQUAD_CAP} max)</p>` : ''}
         </div>

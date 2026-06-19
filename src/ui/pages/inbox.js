@@ -58,6 +58,16 @@ Object.assign(UI, {
       const teamLink = n.teamId != null && UI.teamModal
         ? `<button class="btn sm" style="margin-top:6px" onclick="event.stopPropagation();UI.teamModal(${n.teamId})">View club</button>`
         : '';
+      const actionBtn = {
+        injury:        `<button class="btn sm" onclick="event.stopPropagation();UI.go('injuryward')">Injury Ward →</button>`,
+        contract:      `<button class="btn sm" onclick="event.stopPropagation();UI.go('contracts')">Contracts →</button>`,
+        recommendation:`<button class="btn sm" onclick="event.stopPropagation();UI.go('teamsheet')">Team Sheet →</button>`,
+        scouting:      `<button class="btn sm" onclick="event.stopPropagation();UI.go('scouting')">Scouting →</button>`,
+        recruitment:   `<button class="btn sm" onclick="event.stopPropagation();UI.go('recruitment')">Recruitment →</button>`,
+        form:          `<button class="btn sm" onclick="event.stopPropagation();UI.go('squad')">Squad →</button>`,
+        board:         `<button class="btn sm" onclick="event.stopPropagation();UI.go('club-management')">Club Management →</button>`,
+        finance:       `<button class="btn sm" onclick="event.stopPropagation();UI.go('club-management')">Club Management →</button>`,
+      }[n.type] || '';
       return `<div class="inbox-item${exp?' expanded':''}${isUnread?' unread':''}" onclick="UI._markRead(\`${key}\`);UI._inboxExpanded=(UI._inboxExpanded===\`${key}\`?null:\`${key}\`);UI.render()">
         <div class="inbox-header">
           <span class="inbox-tone" style="color:${toneColor(n.tone)}">${toneIcon(n.tone)}</span>
@@ -66,7 +76,7 @@ Object.assign(UI, {
           <span class="inbox-meta" style="margin-left:auto">R${n.r||'?'} · ${n.y||G.year}</span>
         </div>
         ${exp
-          ? `<div class="inbox-body">${preview}<div class="btnrow" style="margin-top:8px">${playerLink}${teamLink}</div></div>`
+          ? `<div class="inbox-body">${preview}<div class="btnrow" style="margin-top:8px">${playerLink}${teamLink}${actionBtn}</div></div>`
           : `<div class="inbox-preview" style="${isUnread?'color:var(--ink)':''}">${preview.length > 120 ? preview.slice(0,120)+'…' : preview}</div>`}
       </div>`;
     };

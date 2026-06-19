@@ -926,8 +926,20 @@ function advanceScouting(){
       if(nat){ p.nationality = nat.country; p.repTeam = nat.repTeam||null; p.name = genPlayerName(nat.country); }
     }
     G.scouting.prospects = G.scouting.prospects||[];
+    const BACKSTORIES = [
+      `stands out in regional competition and has been turning heads with his physicality`,
+      `was recommended by a local contact and fits our positional needs perfectly`,
+      `was playing semi-professional football but has the tools to step up to the top level`,
+      `comes from a strong rugby league family and has been developing rapidly`,
+      `was spotted at a grassroots carnival — raw but with obvious upside`,
+      `is coming off an impressive junior season and is seen as one of the brightest young talents in the region`,
+      `has been training with the local NRL feeder club and caught our scout's eye immediately`,
+      `is physically ahead of his age group and has the mental attributes to develop further`,
+    ];
+    const backstory = pick(BACKSTORIES);
+    p.backstory = backstory;
     G.scouting.prospects.push({ playerId:p.id, scoutId:mission.scoutId, region:mission.region, foundYear:G.year, foundRound:G.round });
-    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo).`, {title:'Scout Report', type:'scouting', tone:'good', playerId:p.id, tag:'Scouting'});
+    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo) — ${backstory}.`, {title:'Scout Report', type:'scouting', tone:'good', playerId:p.id, tag:'Scouting'});
   }
   G.scouting.missions = G.scouting.missions.filter(m=>!done.includes(m));
 }
