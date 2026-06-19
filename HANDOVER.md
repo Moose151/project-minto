@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Watch Game full-time siren — full-time now triggers a short SIREN overlay in the match header with win/draw/loss colouring, alongside the existing banner flash and win confetti.
 - NRL Standard preset corrected — wizard now advertises and generates 17 NRL clubs with a 27-round regular season, $10.2M cap, and existing top-8 finals.
 - Inbox player messages — added direct player-message generation for low morale, youth pathway, and hot-form situations, with cooldowns, player links, and a dedicated Inbox filter.
 - Scouting region probabilities — regional scouting now weights positions by local specialities instead of uniform random pools, and region rows show the top likely positions before dispatch.
@@ -284,7 +285,7 @@ cd api && node server.js
 #### Match View — Pause & Full-Time Graphic
 - Half-time team talk is implemented (auto-pause + 4 options + form effect). ✅
 - Pause button during the live second half so subs can be made mid-game (requires in-game sub system).
-- Full-time: clear animated moment (siren graphic, score banner pulse, confetti for wins) so it's immediately obvious the match is over before the post-match screen appears.
+- Full-time: clear animated moment (siren graphic, score banner pulse, confetti for wins) so it's immediately obvious the match is over before the post-match screen appears. ✅
 
 #### Match View — In-Game Substitutions
 - Pause/sub screen should allow the coach to make substitutions during the match from the bench.

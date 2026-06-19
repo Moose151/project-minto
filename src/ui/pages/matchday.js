@@ -279,6 +279,7 @@ Object.assign(UI, {
         const flashColor = won ? 'rgba(76,175,125,.18)' : drew ? 'rgba(144,151,162,.12)' : 'rgba(200,90,79,.14)';
         header.style.transition = 'background .25s';
         header.style.background = flashColor;
+        UI._showFullTimeSiren(header, won, drew);
         setTimeout(()=>{ if(header) header.style.background = ''; }, 900);
       }
       if(won) UI._spawnConfetti();
@@ -290,6 +291,20 @@ Object.assign(UI, {
       }
     }
     setTimeout(()=>UI._revealFeedPage(events, i+1, myM), Math.max(80, 800/(UI._watchSpeed||2)));
+  },
+
+  _showFullTimeSiren(header, won, drew){
+    if(!header) return;
+    let siren = document.getElementById('wg-siren');
+    if(!siren){
+      siren = document.createElement('div');
+      siren.id = 'wg-siren';
+      header.style.position = 'relative';
+      header.appendChild(siren);
+    }
+    siren.className = won ? 'win' : drew ? 'draw' : 'loss';
+    siren.innerHTML = `<div>SIREN</div><span>${won?'FULL TIME WIN':drew?'FULL TIME DRAW':'FULL TIME'}</span>`;
+    setTimeout(()=>{ if(siren && siren.parentNode) siren.parentNode.removeChild(siren); }, 1800);
   },
 
   _spawnConfetti(){
