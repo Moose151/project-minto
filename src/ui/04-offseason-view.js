@@ -158,10 +158,14 @@ Object.assign(UI, {
       const approached = p.approachTeam===G.coach.teamId ? `<span style="color:var(--green);font-size:11px;margin-left:4px">pre-contract ✓</span>` : '';
       return `<tr><td class="click" onclick="UI.playerModal(${p.id})">${starred}<b>${esc(p.name)}</b> <span class="pos-tag">${p.pos}</span>${approached}</td>
       <td class="num">${p.age}</td><td class="num"><span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span></td><td class="num">${potHtml(p)}</td><td class="num">${money(demandFor(p, myTeam()))}</td>
-      <td><div class="btnrow" style="margin:0"><button class="btn sm primary" onclick="UI.offerModal(${p.id})">${kind==='exp'?'Re-sign':'Sign'}</button>${kind==='exp'?`<button class="btn sm danger" onclick="releasePlayer(myTeam(),${p.id});UI.toast('Released to the open market.');UI.render()">Let go</button>`:''}</div></td></tr>`;
+      <td><div class="btnrow" style="margin:0">
+        <button class="btn sm primary" onclick="UI.offerModal(${p.id})">${kind==='exp'?'Re-sign':'Sign'}</button>
+        ${kind==='fa'?`<button class="btn sm" onclick="UI.signTrialContract(${p.id})">T&T</button>`:''}
+        ${kind==='exp'?`<button class="btn sm danger" onclick="releasePlayer(myTeam(),${p.id});UI.toast('Released to the open market.');UI.render()">Let go</button>`:''}
+      </div></td></tr>`;
     };
     return `<h1 class="page">Off-Season — Contracts</h1>
-    <p class="page-sub">Payroll ${money(totalSal)} · cap ${money(G.config.cap)} · <span style="color:${room<0?'var(--red)':'var(--green)'}">${money(Math.abs(room))} ${room<0?'OVER':'free'}</span> · squad ${t.players.length}</p>
+    <p class="page-sub">Payroll ${money(totalSal)} · cap ${money(G.config.cap)} · <span style="color:${room<0?'var(--red)':'var(--green)'}">${money(Math.abs(room))} ${room<0?'OVER':'free'}</span> · main squad ${squadCount(t, 'top')}/${TOP_SQUAD_CAP}</p>
     <h2 class="sec">Your off-contract players</h2>
     <div class="card" style="padding:6px"><table><thead><tr><th class="noclick">Player</th><th class="noclick num">Age</th><th class="noclick num">OVR</th><th class="noclick num">Est. POT</th><th class="noclick num">Demand</th><th class="noclick"></th></tr></thead><tbody>
     ${exp.map(p=>row(p,'exp')).join('')||'<tr><td colspan="6" style="color:var(--muted)">Everyone is signed.</td></tr>'}</tbody></table></div>
@@ -189,7 +193,8 @@ Object.assign(UI, {
     const isMine = myTeam().players.includes(o.pid);
     const schedule = contractScheduleFor(o.salary, o.years, o.promises.contractType);
     const firstYear = schedule[0] || o.salary;
-    const room = G.config.cap - teamSalary(myTeam()) + (isMine ? currentSalary(p) : 0);
+    const existingSal = isMine && salaryCountsForCap(p) ? currentSalary(p) : 0;
+    const room = G.config.cap - teamSalary(myTeam()) + existingSal;
     const chance = contractSignChance(p, o.salary, o.years, myTeam(), o.promises);
     const pct = Math.round(chance.prob*100);
     const promiseBtn = (role,label) => `<button class="btn sm ${o.promises.role===role?'primary':''}" onclick="UI._offer.promises.role='${role}';UI.renderOffer(${demand})">${label}</button>`;
@@ -215,11 +220,17 @@ Object.assign(UI, {
     const o = UI._offer; const p = G.players[o.pid];
     const isMine = myTeam().players.includes(o.pid);
     const firstYear = contractScheduleFor(o.salary, o.years, o.promises.contractType)[0] || o.salary;
-    const room = G.config.cap - teamSalary(myTeam()) + (isMine ? currentSalary(p) : 0);
+    const existingSal = isMine && salaryCountsForCap(p) ? currentSalary(p) : 0;
+    const room = G.config.cap - teamSalary(myTeam()) + existingSal;
+    if(!isMine && squadCount(myTeam(), 'top') >= TOP_SQUAD_CAP){ UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max).`); return; }
     if(firstYear > room){ UI.toast('That offer busts the salary cap.'); return; }
     p._att = (p._att||0)+1;
     const res = offerContract(p, o.salary, o.years, myTeam(), o.promises);
     if(res.ok){
+      p.squad = 'top';
+      p.everTopSquad = true;
+      p.trialGames = undefined;
+      p.trialBreakout = false;
       if(!isMine){ myTeam().players.push(p.id); G.offseason.freeAgents = G.offseason.freeAgents.filter(id=>id!==p.id); }
       G.offseason.expiring = G.offseason.expiring.filter(id=>id!==p.id);
       addNews(`${p.name} signs with the ${myTeam().nick} on a ${contractTypeLabel(p.contractType).toLowerCase()} deal averaging ${money(contractAvg(p))} for ${o.years} year${o.years>1?'s':''}. Promises: ${promiseSummary(p)}.`);

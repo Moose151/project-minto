@@ -583,9 +583,10 @@ function aiUseFreeAgents(){
   const market = () => (G.freeAgents || []).map(id=>G.players[id]).filter(p=>p && !G.teams.some(t=>t.players.includes(p.id)));
   for(const t of G.teams){
     if(t.id === G.coach.teamId) continue;
-    const top = t.players.map(id=>G.players[id]).filter(p=>p && (p.squad==='top' || !p.squad));
+    const top = t.players.map(id=>G.players[id]).filter(p=>p && isTopSquadPlayer(p));
     const fit = top.filter(p=>!p.injury);
     const injuries = top.length - fit.length;
+    if(top.length >= TOP_SQUAD_CAP) continue;
     if(top.length >= 25 && injuries < 4 && rnd() > .08) continue;
     const needPos = POS.slice().sort((a,b)=>fit.filter(p=>p.pos===a||p.pos2===a).length - fit.filter(p=>p.pos===b||p.pos2===b).length)[0];
     const room = G.config.cap - teamSalary(t);
@@ -594,6 +595,7 @@ function aiUseFreeAgents(){
     const p = cands[Math.floor(rnd()*Math.min(3,cands.length))];
     setPlayerContract(p, Math.min(p.salary || salaryFor(p), Math.max(65000, room)), 1, 'flat');
     p.squad = 'top';
+    p.everTopSquad = true;
     t.players.push(p.id);
     G.freeAgents = G.freeAgents.filter(id=>id!==p.id);
     addNews(`${p.name} has signed with the ${t.nick} as a mid-season free agent to cover ${needPos} depth.`, {title:'Free Agent Move', type:'recruitment', tone:'neutral', playerId:p.id, teamId:t.id, tag:'Market'});

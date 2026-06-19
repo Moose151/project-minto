@@ -199,7 +199,24 @@ function simTeamStats(t, tries, out, kickSkill){
     line.r = clamp(baseline + line.t*1.05 + line.ta*.75 + line.gl*.08 + line.fg*.28 + line.tk/30 + line.m/115 + line.runs/38 + line.lb*.35 + line.lba*.22 + line.k4020*.35 + (line.fdo||0)*.22 - line.err*1.05 - line.mt*.16 + (x.p.attrs.lastDitch-55)/150 + formAdj*.35 + gauss(0,.55), 1, 10);
     line.fp = line.t*4 + line.ta*2 + line.gl*2 + line.fg*2 + line.k4020*3 + (line.fdo||0)*2 + Math.floor(line.tk/10) + Math.floor(line.m/25) + Math.floor(line.runs/8) - line.err*2;
     const s = x.p.s; s.g++; s.t+=line.t; s.runs+=(line.runs||0); s.gl+=line.gl; s.ga+=(line.ga||0); s.fg+=(line.fg||0); s.ta+=line.ta; s.tk+=line.tk; s.m+=line.m; s.err+=line.err; s.k4020+=(line.k4020||0); s.fdo=(s.fdo||0)+(line.fdo||0); s.rSum+=line.r; s.fpts+=(line.fp||0); s.mins=(s.mins||0)+mins; s.mt=(s.mt||0)+line.mt; s.lb=(s.lb||0)+line.lb; s.lba=(s.lba||0)+line.lba; s.ks=(s.ks||0)+line.ks; s.km=(s.km||0)+line.km;
-    if(x.p.squad === 'trial') x.p.trialGames = (x.p.trialGames || 0) + 1;
+    if(x.p.squad === 'trial'){
+      x.p.trialGames = (x.p.trialGames || 0) + 1;
+      if(!x.p.trialBreakout && x.p.trialGames >= 2){
+        const breakoutChance = (line.r >= 7.2 ? .055 : .018) + (x.p.age <= 24 ? .012 : 0);
+        if(rnd() < breakoutChance){
+          x.p.trialBreakout = true;
+          const potGain = ri(6, 14);
+          x.p.pot = clamp(Math.max(x.p.pot || x.p.ovr, x.p.ovr) + potGain, x.p.ovr, 97);
+          for(const a of shuffle(['professionalism','workRate','composure','ballRunning','tackling','speed']).slice(0, ri(1,3))){
+            if(x.p.attrs[a] != null) x.p.attrs[a] = clamp(x.p.attrs[a] + 1, 20, 99);
+          }
+          x.p.ovr = calcOvr(x.p);
+          const club = G.teams.find(tm=>tm.players.includes(x.p.id));
+          addNews(`${x.p.name} has had a train-and-trial breakout. Coaches now see a much higher ceiling after a sharp first-grade cameo.`,
+            {title:'Train & Trial Breakout', type:'development', tone:'good', playerId:x.p.id, teamId:club?club.id:null, tag:'Development'});
+        }
+      }
+    }
     ensurePlayerCareerStats(x.p);
     x.p.career.games++;
     x.p.career.tries += line.t;

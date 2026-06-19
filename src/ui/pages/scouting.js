@@ -86,19 +86,19 @@ Object.assign(UI, {
       if(!p) return '';
       const region = SCOUT_REGIONS.find(r=>r.key===pr.region);
       const myT = myTeam();
-      const capRoom = G.config.cap - teamSalary(myT);
       const cost = Math.round(clamp(salaryFor(p)*0.55, 65000, 180000)/5000)*5000;
-      const canSign = capRoom >= cost;
+      const youthRoom = Math.max(0, YOUTH_SQUAD_CAP - squadCount(myT, 'dev'));
+      const canSign = youthRoom > 0 && canJoinYouthSquad(p);
       return `<div class="card" style="display:flex;gap:12px;align-items:flex-start">
         <div style="flex:1">
           <b class="click" onclick="UI.playerModal(${p.id})" style="text-decoration:underline;cursor:pointer">${esc(p.name)}</b>
           <p style="margin:2px 0;font-size:12px;color:var(--muted)">${POS_NAME[p.pos]||p.pos} · ${p.age}yo · OVR ${p.ovr} · POT ~${p.pot}</p>
           <p style="margin:2px 0;font-size:11px;color:var(--dim)">Found in ${region?esc(region.label):pr.region} (${pr.foundYear})</p>
-          <p style="font-size:11px;color:var(--muted)">Dev squad offer: ${money(cost)}</p>
-          ${!canSign ? `<p style="font-size:11px;color:var(--red)">⚠ Not enough cap room (${money(capRoom)} available)</p>` : ''}
+          <p style="font-size:11px;color:var(--muted)">Youth squad offer: ${money(cost)} · salary cap exempt</p>
+          ${!canJoinYouthSquad(p) ? `<p style="font-size:11px;color:var(--red)">⚠ Youth squad is only for under-21 players who have never been in the main squad.</p>` : youthRoom <= 0 ? `<p style="font-size:11px;color:var(--red)">⚠ Youth squad is full (${YOUTH_SQUAD_CAP} max)</p>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn sm primary" ${canSign?'':'disabled'} onclick="UI.signProspect(${pr.playerId})">Sign to dev squad</button>
+          <button class="btn sm primary" ${canSign?'':'disabled'} onclick="UI.signProspect(${pr.playerId})">Sign to youth squad</button>
           <button class="btn sm" onclick="UI.dismissProspect(${pr.playerId})">Dismiss</button>
         </div>
       </div>`;
@@ -126,7 +126,7 @@ Object.assign(UI, {
     const totalScoutCost = scouts.reduce((s,x)=>s+(x.salary||0),0);
 
     return `<h1 class="page">Scouting</h1>
-    <p class="page-sub">Dispatch scouts to find young talent for the development squad. Scout ability determines prospect quality.</p>
+    <p class="page-sub">Dispatch scouts to find young talent for the youth squad. Scout ability determines prospect quality.</p>
     <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
       <div class="card" style="padding:10px 16px;flex:1;min-width:130px"><span style="font-size:11px;color:var(--muted)">Scouts employed</span><div style="font-size:22px;font-weight:700;font-family:var(--disp)">${scouts.length}</div></div>
       <div class="card" style="padding:10px 16px;flex:1;min-width:130px"><span style="font-size:11px;color:var(--muted)">Active missions</span><div style="font-size:22px;font-weight:700;font-family:var(--disp)">${missions.length}</div></div>
@@ -189,12 +189,13 @@ Object.assign(UI, {
     if(!p) return;
     const t = myTeam();
     const cost = Math.round(clamp(salaryFor(p)*0.55, 65000, 180000)/5000)*5000;
-    if(teamSalary(t) + cost > G.config.cap){ UI.toast('Not enough cap room to sign this prospect.'); return; }
-    setPlayerContract(p, cost, 2, 'flat'); p.squad = 'dev'; p.fromScouting = true;
+    if(!canJoinYouthSquad(p)){ UI.toast('Youth squad is only for under-21 players who have never been in the main squad.'); return; }
+    if(squadCount(t, 'dev') >= YOUTH_SQUAD_CAP){ UI.toast(`Youth squad is full (${YOUTH_SQUAD_CAP} max).`); return; }
+    setPlayerContract(p, cost, 2, 'flat'); p.squad = 'dev'; p.everTopSquad = false; p.fromScouting = true;
     t.players.push(p.id);
     sc.prospects = sc.prospects.filter(x=>x.playerId!==playerId);
-    UI.toast(`${p.name} signed to the development squad.`);
-    addNews(`${p.name} (${p.pos}, ${p.age}yo) signs with the ${t.nick} development squad from the scouting pipeline.`, {title:'Dev Squad Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Scouting'});
+    UI.toast(`${p.name} signed to the youth squad.`);
+    addNews(`${p.name} (${p.pos}, ${p.age}yo) signs with the ${t.nick} youth squad from the scouting pipeline.`, {title:'Youth Squad Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Scouting'});
     UI.render();
   },
 

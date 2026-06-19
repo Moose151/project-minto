@@ -43,6 +43,7 @@ Object.assign(UI, {
     const futureRows = [0,1,2,3,4].map(i=>{
       const cap = t.players.reduce((s,id)=>{
         const p = G.players[id];
+        if(!salaryCountsForCap(p)) return s;
         if(!p || !p.contractSchedule || !p.contractSchedule[i]) return s;
         return s + p.contractSchedule[i];
       }, 0);
@@ -103,7 +104,8 @@ Object.assign(UI, {
     const chance = contractSignChance(p, o.salary, o.years, t, o.promises, o.demand);
     const schedule = contractScheduleFor(o.salary, o.years, o.promises.contractType);
     const firstYear = schedule[0] || o.salary;
-    const afterCap = G.config.cap - teamSalary(t) + currentSalary(p) - firstYear;
+    const existingSal = salaryCountsForCap(p) ? currentSalary(p) : 0;
+    const afterCap = G.config.cap - teamSalary(t) + existingSal - firstYear;
     const pct = Math.round(chance.prob*100);
     const setRole = role => { o.promises.role = role; UI.renderContractOffer(); };
     const promiseBtn = (role,label) => `<button class="btn sm ${o.promises.role===role?'primary':''}" onclick="UI._contractOffer.promises.role='${role}';UI.renderContractOffer()">${label}</button>`;
@@ -152,9 +154,16 @@ Object.assign(UI, {
   submitContractOffer(){
     const o = UI._contractOffer, p = G.players[o.pid], t = myTeam();
     const firstYear = contractScheduleFor(o.salary, o.years, o.promises.contractType)[0] || o.salary;
-    if(teamSalary(t) - currentSalary(p) + firstYear > G.config.cap){ UI.toast('That re-signing would exceed the cap.'); return; }
+    const existingSal = salaryCountsForCap(p) ? currentSalary(p) : 0;
+    const addingToMain = !salaryCountsForCap(p);
+    if(addingToMain && squadCount(t, 'top') >= TOP_SQUAD_CAP){ UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max).`); return; }
+    if(teamSalary(t) - existingSal + firstYear > G.config.cap){ UI.toast('That re-signing would exceed the cap.'); return; }
     const res = offerContract(p, o.salary, o.years, t, o.promises, o.demand);
     if(res.ok){
+      p.squad = 'top';
+      p.everTopSquad = true;
+      p.trialGames = undefined;
+      p.trialBreakout = false;
       UI.toast(`${p.name} re-signed on a ${contractTypeLabel(p.contractType).toLowerCase()} deal.`);
       addNews(`${p.name} re-signs with the ${t.nick} on a ${contractTypeLabel(p.contractType).toLowerCase()} deal averaging ${money(contractAvg(p))}. Promises: ${promiseSummary(p)}.`, {title:'Contract Extension', type:'contract', tone:'good', playerId:p.id, teamId:t.id, tag:'Contracts'});
       UI.closeModal(); UI.render();
@@ -173,7 +182,7 @@ Object.assign(UI, {
     const isFree = !!p.releaseRequest;
     const payoutYears = Math.max(0, (p.years || 0) - 1);
     const payout = isFree ? 0 : payoutYears * (p.salary || 0);
-    const capAfterRelease = G.config.cap - teamSalary(t) + currentSalary(p);
+    const capAfterRelease = G.config.cap - teamSalary(t) + (salaryCountsForCap(p) ? currentSalary(p) : 0);
     const demand = demandFor(p, t);
 
     const payoutSection = isFree
@@ -261,8 +270,14 @@ Object.assign(UI, {
     const p = G.players[id]; if(!p) return;
     const t = myTeam();
     const demand = demandFor(p, t);
-    if(teamSalary(t) - p.salary + demand > G.config.cap){ UI.toast('That re-signing would exceed the cap.'); return; }
+    const existingSal = salaryCountsForCap(p) ? currentSalary(p) : 0;
+    if(!salaryCountsForCap(p) && squadCount(t, 'top') >= TOP_SQUAD_CAP){ UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max).`); return; }
+    if(teamSalary(t) - existingSal + demand > G.config.cap){ UI.toast('That re-signing would exceed the cap.'); return; }
     setPlayerContract(p, demand, p.age<=26 ? 3 : 2, 'flat');
+    p.squad = 'top';
+    p.everTopSquad = true;
+    p.trialGames = undefined;
+    p.trialBreakout = false;
     UI.toast(`${p.name} re-signed for ${money(demand)}.`);
     addNews(`${p.name} re-signs with the ${t.nick}.`, {title:'Contract Extension', type:'contract', tone:'good', playerId:p.id, teamId:t.id, tag:'Contracts'});
     UI.render();

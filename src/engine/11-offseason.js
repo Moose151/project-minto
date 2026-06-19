@@ -73,6 +73,22 @@ function startOffseason(){
     advanceContractSchedule(p);
     p.career.seasons++;
   }
+  for(const t of G.teams){
+    for(const id of t.players.slice()){
+      const p = G.players[id];
+      if(!p || p.squad !== 'dev' || canJoinYouthSquad(p)) continue;
+      t.players = t.players.filter(pid=>pid!==id);
+      t.lineup = (t.lineup||[]).map(pid=>pid===id?null:pid);
+      p.squad = null;
+      if(!G.freeAgents) G.freeAgents = [];
+      if(!G.freeAgents.includes(id)) G.freeAgents.push(id);
+      if(G.offseason && !G.offseason.freeAgents.includes(id)) G.offseason.freeAgents.push(id);
+      if(t.id===G.coach.teamId){
+        addNews(`${p.name} has aged out of the youth squad and was released to the open market. Offer main-squad or train-and-trial terms before season end to retain future youth graduates.`,
+          {title:'Youth Player Aged Out', type:'contract', tone:'neutral', playerId:id, teamId:t.id, tag:'Contracts'});
+      }
+    }
+  }
   // offseason development pass (simulates ~8 weeks of training for all players)
   applyOffseasonDevelopment();
   // expiring at my club
@@ -450,7 +466,28 @@ function reassessPotential(){
 }
 function teamOf(pid){ const t = G.teams.find(t=>t.players.includes(+pid)); return t? t.nick : '—'; }
 function currentSalary(p){ return p ? (p.salary || 0) : 0; }
-function teamSalary(t){ return t.players.reduce((s,id)=>s+(G.players[id]?currentSalary(G.players[id]):0), 0); }
+const TOP_SQUAD_CAP = 30;
+const YOUTH_SQUAD_CAP = 12;
+const TRIAL_SQUAD_CAP = 5;
+const TRIAL_GAME_CAP = 6;
+const TRIAL_SALARY_CAP = 150000;
+function isTopSquadPlayer(p){ return !!(p && (p.squad === 'top' || !p.squad)); }
+function isYouthSquadPlayer(p){ return !!(p && p.squad === 'dev'); }
+function isTrialSquadPlayer(p){ return !!(p && p.squad === 'trial'); }
+function salaryCountsForCap(p){ return isTopSquadPlayer(p); }
+function squadCount(t, squad){
+  return (t.players || []).map(id=>G.players[id]).filter(p=>{
+    if(squad === 'top') return isTopSquadPlayer(p);
+    if(squad === 'dev') return isYouthSquadPlayer(p);
+    if(squad === 'trial') return isTrialSquadPlayer(p);
+    return false;
+  }).length;
+}
+function canJoinYouthSquad(p){ return !!(p && p.age < 21 && !p.everTopSquad); }
+function trialGamesUsed(p){ return Math.max(0, p && p.trialGames || 0); }
+function canTrialPlay(p){ return isTrialSquadPlayer(p) && trialGamesUsed(p) < TRIAL_GAME_CAP; }
+function selectionSquadEligible(p){ return isTopSquadPlayer(p) || canTrialPlay(p); }
+function teamSalary(t){ return (t.players || []).reduce((s,id)=>{ const p=G.players[id]; return s + (p && salaryCountsForCap(p) ? currentSalary(p) : 0); }, 0); }
 function ord(n){ const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
 
 /* re-sign / free agent negotiation */
@@ -631,13 +668,14 @@ function finishContractsPhase(){
   const order = shuffle(G.teams.filter(t=>t.id!==G.coach.teamId));
   for(let pass=0; pass<6; pass++){
     for(const t of order){
-      if(t.players.length>=28) continue;
+      if(squadCount(t, 'top')>=28) continue;
       const room = G.config.cap - teamSalary(t);
       const cands = G.offseason.freeAgents.map(id=>G.players[id]).filter(p=>p && salaryFor(p)<=room).sort((a,b)=>b.ovr-a.ovr);
-      if(cands.length && (t.players.length<26 || rnd()<.6)){
+      if(cands.length && (squadCount(t, 'top')<26 || rnd()<.6)){
         const p = cands[Math.floor(rnd()*Math.min(3,cands.length))];
         setPlayerContract(p, salaryFor(p), ri(1,3), 'flat');
-        if(!p.squad) p.squad = 'top';
+        p.squad = 'top';
+        p.everTopSquad = true;
         t.players.push(p.id);
         G.offseason.freeAgents = G.offseason.freeAgents.filter(id=>id!==p.id);
       }
@@ -656,11 +694,13 @@ function finishContractsPhase(){
   G.offseason.preseason = createPreseasonPlan();
   // rookie intake: every club gets 3 juniors; pad thin squads
   for(const t of G.teams){
-    const n = 3 + Math.max(0, 25 - t.players.length);
+    const youthRoom = Math.max(0, YOUTH_SQUAD_CAP - squadCount(t, 'dev'));
+    const n = Math.min(youthRoom, 3 + Math.max(0, 25 - t.players.length));
     for(let i=0;i<n;i++){
       const pos = pick(SQUAD_TEMPLATE);
       const p = makePlayer(G, pos, ri(17,20), t.rep-6);
       p.squad = 'dev';
+      p.everTopSquad = false;
       setPlayerContract(p, ri(17,24)*5000, ri(2,3), 'flat');
       t.players.push(p.id);
     }

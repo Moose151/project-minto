@@ -25,6 +25,11 @@ Object.assign(UI, {
     const statAvg = p.s.g ? (p.s.rSum/p.s.g).toFixed(1) : '-';
     const c = p.career || {};
     const careerAvg = c.games ? ((c.rSum || 0) / c.games).toFixed(1) : '-';
+    const squadLabel = p.squad === 'dev'
+      ? 'Youth squad'
+      : p.squad === 'trial'
+        ? `T&T ${trialGamesUsed(p)}/${TRIAL_GAME_CAP}g`
+        : 'Main squad';
 
     // Quality tier
     const displayOvr = isMyTeam ? p.ovr : scoutedOvr(p).mid;
@@ -129,7 +134,7 @@ Object.assign(UI, {
       </div>
       <div class="player-score"><span class="lbl">Condition</span><b>${Math.round(p.cond)}%</b><em>${p.injury?esc(p.injury.n)+' · '+p.injury.weeks+'w':'Available'}</em></div>
       <div class="player-score"><span class="lbl">Form</span><b>${formHtml(p)}</b><em>week-to-week confidence</em></div>
-      <div class="player-score"><span class="lbl">Morale</span><b>${Math.round(p.morale)}%</b><em>${p.squad==='dev'?'Dev squad':'Top squad'}</em></div>
+      <div class="player-score"><span class="lbl">Morale</span><b>${Math.round(p.morale)}%</b><em>${squadLabel}</em></div>
       <div class="player-score"><span class="lbl">Contract</span><b>${money(currentSalary(p))}</b><em>${contractTypeLabel(p.contractType)} · ${Math.max(0,p.years)} yr${Math.max(0,p.years)===1?'':'s'} left</em></div>
       <div class="player-score">
         <span class="lbl">Quality</span>
@@ -271,7 +276,7 @@ Object.assign(UI, {
           <div class="field"><label>Age</label><input id="edit_age" type="number" min="16" max="45" value="${p.age}"></div>
           <div class="field"><label>Primary position</label><select id="edit_pos">${POS.map(pos=>`<option value="${pos}" ${p.pos===pos?'selected':''}>${pos}</option>`).join('')}</select></div>
           <div class="field"><label>Secondary position</label><select id="edit_pos2">${POS.map(pos=>`<option value="${pos}" ${p.pos2===pos?'selected':''}>${pos}</option>`).join('')}</select></div>
-          <div class="field"><label>Squad</label><select id="edit_squad"><option value="top" ${(p.squad||'top')==='top'?'selected':''}>Top</option><option value="dev" ${p.squad==='dev'?'selected':''}>Development</option></select></div>
+          <div class="field"><label>Squad</label><select id="edit_squad"><option value="top" ${(p.squad||'top')==='top'?'selected':''}>Main</option><option value="trial" ${p.squad==='trial'?'selected':''}>Train & Trial</option><option value="dev" ${p.squad==='dev'?'selected':''}>Youth</option></select></div>
           <div class="field"><label>Salary</label><input id="edit_salary" type="number" min="0" step="5000" value="${p.salary}"></div>
           <div class="field"><label>Contract years</label><input id="edit_years" type="number" min="0" max="8" value="${p.years}"></div>
           <div class="field"><label>Nationality</label><select id="edit_nat">${NATIONALITY_POOL.map(n=>`<option value="${esc(n.country)}" ${p.nationality===n.country?'selected':''}>${nationalityFlag(n.country)} ${esc(n.country)}</option>`).join('')}</select></div>
@@ -293,7 +298,21 @@ Object.assign(UI, {
     p.age = clamp(+val('edit_age') || p.age, 16, 45);
     p.pos = val('edit_pos');
     p.pos2 = val('edit_pos2');
-    p.squad = val('edit_squad');
+    const nextSquad = val('edit_squad');
+    const owner = G.teams.find(t=>t.players.includes(p.id));
+    if(nextSquad === 'dev' && !canJoinYouthSquad({...p, age:clamp(+val('edit_age') || p.age, 16, 45)})){
+      UI.toast('Youth squad is only for under-21 players who have never been in the main squad.');
+      return;
+    }
+    if(nextSquad === 'dev' && owner && p.squad !== 'dev' && squadCount(owner, 'dev') >= YOUTH_SQUAD_CAP){ UI.toast(`Youth squad is full (${YOUTH_SQUAD_CAP} max).`); return; }
+    if(nextSquad === 'trial' && owner && p.squad !== 'trial' && squadCount(owner, 'trial') >= TRIAL_SQUAD_CAP){ UI.toast(`Train & trial squad is full (${TRIAL_SQUAD_CAP} max).`); return; }
+    if(nextSquad === 'top' && owner && !isTopSquadPlayer(p) && squadCount(owner, 'top') >= TOP_SQUAD_CAP){ UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max).`); return; }
+    p.squad = nextSquad;
+    if(p.squad === 'top') p.everTopSquad = true;
+    if(p.squad === 'trial'){
+      p.trialGames = trialGamesUsed(p);
+      p.trialBreakout = !!p.trialBreakout;
+    }
     setPlayerContract(p, Math.max(0, Math.round((+val('edit_salary') || 0)/5000)*5000), clamp(+val('edit_years') || 0, 0, 8), p.contractType || 'flat');
     p.prefCity = val('edit_prefCity');
     p.hgt = clamp(+val('edit_hgt') || p.hgt || 180, 150, 230);

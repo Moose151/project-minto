@@ -50,7 +50,7 @@ Object.assign(UI, {
     const pos = lad.findIndex(r=>r.id===t.id)+1;
     const capSpend = teamSalary(t);
     const capPct = Math.round(capSpend / G.config.cap * 100);
-    const topCount = t.players.map(id=>G.players[id]).filter(p=>p && p.squad!=='dev').length;
+    const topCount = squadCount(t, 'top');
     const devReady = t.players.map(id=>G.players[id]).filter(p=>p && p.squad==='dev' && p.ovr>=60).length;
     const injured = t.players.map(id=>G.players[id]).filter(p=>p && p.injury).length;
     const suspended = t.players.map(id=>G.players[id]).filter(p=>p && p.suspended && p.suspended.weeks>0).length;
@@ -125,7 +125,7 @@ Object.assign(UI, {
       ${UI._dashStatus('Cohesion', `${Math.round(t.cohesion||50)}%`, 'lineup rhythm', (t.cohesion||50)>=70?'good':(t.cohesion||50)<35?'bad':'')}
       ${(()=>{ const r=teamRatings(t); return UI._dashStatus('Attack', r.atk, 'squad attack rating', r.atk>=72?'good':r.atk<55?'bad':'') + UI._dashStatus('Defence', r.def, 'squad defence rating', r.def>=72?'good':r.def<55?'bad':''); })()}
       ${UI._dashStatus('Cap', `${capPct}%`, `${money(capSpend)} spent`, capPct>98?'bad':capPct<88?'good':'')}
-      ${UI._dashStatus('Squad', `${topCount}/30`, `${injured} injured · ${suspended} suspended`, (injured||suspended)?'bad':devReady?'good':'')}
+      ${UI._dashStatus('Squad', `${topCount}/${TOP_SQUAD_CAP}`, `${injured} injured · ${suspended} suspended`, (injured||suspended)?'bad':devReady?'good':'')}
       ${UI._dashStatus('Shortlist', shortlist, 'targets watched', shortlist?'good':'')}
       ${UI._dashStatus('Club Funds', money(club.funds), `${money(club.seasonRevenue||0)} revenue this season`, clubFundsTone)}
     </div>

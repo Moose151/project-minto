@@ -4,7 +4,7 @@
 function availablePlayers(t){
   return t.players
     .map(id=>G.players[id])
-    .filter(p=>p && !isPlayerUnavailable(p) && p.squad==='top');
+    .filter(p=>p && !isPlayerUnavailable(p) && selectionSquadEligible(p));
 }
 function isPlayerUnavailable(p){
   if(!p) return true;
@@ -95,7 +95,7 @@ function lineupIssues(t){
     const p = G.players[id];
     if(!p){ issues.push(`${label}: selected player no longer exists.`); continue; }
     if(!t.players.includes(id)) issues.push(`${label}: ${p.name} is not contracted to this club.`);
-    if(p.squad && p.squad!=='top') issues.push(`${label}: ${p.name} is in the development squad.`);
+    if(!selectionSquadEligible(p)) issues.push(`${label}: ${p.name} is not eligible for match-day selection.`);
     if(p.injury && !p.playInjured) issues.push(`${label}: ${p.name} is injured (${p.injury.n}, ${p.injury.weeks}w).`);
     if(p.suspended && p.suspended.weeks > 0) issues.push(`${label}: ${p.name} is suspended (${p.suspended.weeks}w).`);
     if(p.repDuty) issues.push(`${label}: ${p.name} is away on representative duty.`);
@@ -110,7 +110,7 @@ function lineupIssues(t){
     const p = G.players[id];
     if(!p){ issues.push(`${label}: selected player no longer exists.`); continue; }
     if(!t.players.includes(id)) issues.push(`${label}: ${p.name} is not contracted to this club.`);
-    if(p.squad && p.squad!=='top') issues.push(`${label}: ${p.name} is in the development squad.`);
+    if(!selectionSquadEligible(p)) issues.push(`${label}: ${p.name} is not eligible for match-day selection.`);
     if(p.injury && !p.playInjured) issues.push(`${label}: ${p.name} is injured (${p.injury.n}, ${p.injury.weeks}w).`);
     if(p.suspended && p.suspended.weeks > 0) issues.push(`${label}: ${p.name} is suspended (${p.suspended.weeks}w).`);
     if(p.repDuty) issues.push(`${label}: ${p.name} is away on representative duty.`);

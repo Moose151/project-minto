@@ -2,10 +2,10 @@
 
 /* ---------- team & league generation ---------- */
 const SQUAD_TEMPLATE = ['FB','FB','WG','WG','WG','WG','CE','CE','CE','CE','FE','FE','HB','HB','HK','HK','PR','PR','PR','PR','PR','SR','SR','SR','SR','LK','LK','HK'];
-function fitCap(G, t){ // scale salaries so squad fits under cap
-  let total = t.players.reduce((s,id)=>s+G.players[id].salary, 0);
+function fitCap(G, t){ // scale salaries so top squad fits under cap
+  let total = teamSalary(t);
   const target = G.config.cap * rf(.88,.99);
-  if(total > target){ const f = target/total; for(const id of t.players){ const p=G.players[id]; p.salary = Math.max(85000, Math.round(p.salary*f/5000)*5000); if(p.contractSchedule && p.contractSchedule.length) p.contractSchedule = p.contractSchedule.map(v=>Math.max(85000, Math.round(v*f/5000)*5000)); } }
+  if(total > target){ const f = target/total; for(const id of t.players){ const p=G.players[id]; if(!salaryCountsForCap(p)) continue; p.salary = Math.max(85000, Math.round(p.salary*f/5000)*5000); if(p.contractSchedule && p.contractSchedule.length) p.contractSchedule = p.contractSchedule.map(v=>Math.max(85000, Math.round(v*f/5000)*5000)); } }
 }
 function genFixtures(teamIds){
   // double round robin, circle method; odd team count → one bye per round

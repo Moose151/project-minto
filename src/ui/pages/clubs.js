@@ -48,7 +48,7 @@ Object.assign(UI, {
     const coachLine = coach ? `<p style="font-size:12px;color:var(--muted);margin:4px 0 0">Head coach: <b>${esc(coach.name)}</b> · Rep ${coach.rep}</p>` : '';
     const godTeam = G.godMode ? `<div class="btnrow" style="margin:8px 0"><button class="btn danger sm" onclick="UI.teamEditModal(${t.id})">Edit team</button></div>` : '';
     const godActions = p => G.godMode ? `<div class="btnrow" style="margin:0;gap:4px">
-      <button class="btn sm" onclick="event.stopPropagation();UI.godToggleSquad(${p.id})">${p.squad==='dev'?'Top':'Dev'}</button>
+      <button class="btn sm" onclick="event.stopPropagation();UI.godToggleSquad(${p.id})">${p.squad==='dev'?'Main':'Youth'}</button>
       <button class="btn sm danger" onclick="event.stopPropagation();UI.godReleasePlayer(${p.id})">Release</button>
     </div>` : '';
     UI.modal(`<h3 style="display:flex;align-items:center;gap:10px">${teamLogo(t,54)}<span>${esc(teamName(t))}</span></h3>
@@ -113,12 +113,19 @@ Object.assign(UI, {
     if(!G.godMode) return;
     const p = G.players[pid]; if(!p) return;
     const t = G.teams.find(t=>t.players.includes(pid));
-    if(p.squad === 'dev') p.squad = 'top';
+    if(p.squad === 'dev'){
+      if(t && squadCount(t, 'top') >= TOP_SQUAD_CAP){ UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max).`); return; }
+      p.squad = 'top';
+      p.everTopSquad = true;
+    }
     else{
+      if(p.everTopSquad || p.squad === 'top' || !p.squad){ UI.toast('Main squad players cannot be moved to the youth squad.'); return; }
+      if(!canJoinYouthSquad(p)){ UI.toast('Youth squad is only for under-21 players who have never been in the main squad.'); return; }
+      if(t && squadCount(t, 'dev') >= YOUTH_SQUAD_CAP){ UI.toast(`Youth squad is full (${YOUTH_SQUAD_CAP} max).`); return; }
       if(t) t.lineup = (t.lineup || []).map(id=>id===pid?null:id);
       p.squad = 'dev';
     }
-    UI.toast(`${p.name} moved to ${p.squad==='dev'?'development':'top'} squad.`);
+    UI.toast(`${p.name} moved to ${p.squad==='dev'?'youth':'main'} squad.`);
     if(t) UI.teamModal(t.id); else UI.render();
   },
   godReleasePlayer(pid){
@@ -131,6 +138,9 @@ Object.assign(UI, {
     t.lineup = (t.lineup || []).map(id=>id===pid?null:id);
     setPlayerContract(p, p.salary || salaryFor(p), 0, 'flat');
     p.squad = 'top';
+    p.everTopSquad = true;
+    p.trialGames = 0;
+    p.trialBreakout = false;
     p.promises = null;
     p.promiseTeam = null;
     if(!G.freeAgents) G.freeAgents = [];

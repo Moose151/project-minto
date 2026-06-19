@@ -1,6 +1,6 @@
 'use strict';
 
-/* Squad list — top squad + development squad, sortable */
+/* Squad list — main, train & trial, and youth squads */
 Object.assign(UI, {
   p_squad(){
     const t = myTeam();
@@ -22,9 +22,9 @@ Object.assign(UI, {
 
     const trialThHead = `<tr>${th('name','Player')}${th('age','Age',1)}${th('pos','Pos')}${th('ovr','OVR',1)}${th('cond','Cond',1)}${th('form','Form',1)}${th('t','T',1)}${th('avg','Avg',1)}${th('sal','Salary',1)}<th class="noclick">Games</th><th class="noclick"></th></tr>`;
     const trialRow = p => {
-      const g = p.trialGames || 0;
-      const atLimit = g >= 8;
-      const bar = `<div style="width:52px;height:5px;background:var(--card2);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:4px"><div style="width:${Math.min(100,g/8*100)}%;height:100%;background:${atLimit?'var(--red)':'var(--brass)'}"></div></div>`;
+      const g = trialGamesUsed(p);
+      const atLimit = g >= TRIAL_GAME_CAP;
+      const bar = `<div style="width:52px;height:5px;background:var(--card2);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:4px"><div style="width:${Math.min(100,g/TRIAL_GAME_CAP*100)}%;height:100%;background:${atLimit?'var(--red)':'var(--brass)'}"></div></div>`;
       return `<tr class="click" onclick="UI.playerModal(${p.id})">
         <td><div class="player-cell">${playerAvatar(p,34)}<div><b>${playerTierBadge(p,true)} ${nationalityFlag(p.nationality)} ${esc(p.name)}</b><br><span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--brass);background:rgba(210,165,62,.18);padding:1px 5px;border-radius:8px">T&T CONTRACT</span></div></div></td>
         <td class="num">${p.age}</td>
@@ -35,7 +35,7 @@ Object.assign(UI, {
         <td class="num">${p.s.t}</td>
         <td class="num">${p.s.g?(p.s.rSum/p.s.g).toFixed(1):'—'}</td>
         <td class="num">${money(p.salary)}</td>
-        <td class="num" style="white-space:nowrap">${g}/8${bar}${atLimit?`<br><span style="color:var(--red);font-size:10px;font-weight:700">MUST UPGRADE</span>`:''}</td>
+        <td class="num" style="white-space:nowrap">${g}/${TRIAL_GAME_CAP}${bar}${atLimit?`<br><span style="color:var(--red);font-size:10px;font-weight:700">MUST UPGRADE</span>`:''}</td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap">
           <div style="display:flex;flex-direction:column;gap:3px">
             <button class="btn sm primary" onclick="UI.upgradeTrialContract(${p.id})">Upgrade</button>
@@ -46,20 +46,20 @@ Object.assign(UI, {
     };
 
     return `<h1 class="page">Squad</h1>
-    <p class="page-sub">${top.length}/30 top squad · ${trial.length} train & trial · ${dev.length} development · salary ${money(totalSal)} of ${money(G.config.cap)} cap <span style="color:${totalSal>G.config.cap?'var(--red)':'var(--green)'}">(${money(G.config.cap-totalSal)} ${totalSal>G.config.cap?'over':'free'})</span></p>
+    <p class="page-sub">${top.length}/${TOP_SQUAD_CAP} main squad · ${trial.length}/${TRIAL_SQUAD_CAP} train & trial · ${dev.length}/${YOUTH_SQUAD_CAP} youth · cap salary ${money(totalSal)} of ${money(G.config.cap)} <span style="color:${totalSal>G.config.cap?'var(--red)':'var(--green)'}">(${money(G.config.cap-totalSal)} ${totalSal>G.config.cap?'over':'free'})</span></p>
     <div class="btnrow"><button class="btn sm" onclick="UI.go('teamsheet')">Team sheet</button><button class="btn sm" onclick="UI.go('injuryward')">Injury ward</button><button class="btn sm" onclick="UI.go('contracts')">Contracts</button><button class="btn sm" onclick="UI.go('recruitment')">Sign T&T →</button></div>
     <div class="card" style="padding:6px;overflow-x:auto">
-      <div class="navsep" style="margin:4px 0 6px">Top Squad (${top.length}/30) ${top.length>=30?`<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:8px">SQUAD FULL — sign new players to T&T</span>`:''}</div>
-      <table><thead>${tableHead}</thead><tbody>${sort(top).map(p=>UI.playerRow(p,'dev')).join('')}</tbody></table>
+      <div class="navsep" style="margin:4px 0 6px">Main Squad (${top.length}/${TOP_SQUAD_CAP}) ${top.length>=TOP_SQUAD_CAP?`<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:8px">SQUAD FULL — sign depth to T&T</span>`:''}</div>
+      <table><thead>${tableHead}</thead><tbody>${sort(top).map(p=>UI.playerRow(p,'none')).join('')}</tbody></table>
     </div>
-    ${trial.length || top.length>=30?`<div class="card" style="padding:6px;overflow-x:auto;margin-top:12px">
-      <div class="navsep" style="margin:4px 0 6px">Train & Trial (${trial.length})</div>
-      <p style="color:var(--muted);font-size:12px;margin:0 0 8px">Short-term cover — 1-year contracts capped at $75k. Can play in the match-day 19. After 8 games their contract <b>must be upgraded</b> to a full deal or they are released. <span class="click" style="color:var(--brass);cursor:pointer" onclick="UI.go('recruitment')">Sign a T&T player →</span></p>
+    ${trial.length || top.length>=TOP_SQUAD_CAP?`<div class="card" style="padding:6px;overflow-x:auto;margin-top:12px">
+      <div class="navsep" style="margin:4px 0 6px">Train & Trial (${trial.length}/${TRIAL_SQUAD_CAP})</div>
+      <p style="color:var(--muted);font-size:12px;margin:0 0 8px">Short-term depth — 1-year contracts capped at ${money(TRIAL_SALARY_CAP)}. They do not count against the salary cap. After ${TRIAL_GAME_CAP} games they <b>must be upgraded</b> to a main-squad deal or released. <span class="click" style="color:var(--brass);cursor:pointer" onclick="UI.go('recruitment')">Sign a T&T player →</span></p>
       ${trial.length?`<table style="overflow-x:auto"><thead>${trialThHead}</thead><tbody>${trial.map(trialRow).join('')}</tbody></table>`:'<p style="color:var(--dim);font-size:12px;padding:6px 0">No train & trial players currently signed.</p>'}
     </div>`:''}
     ${dev.length?`<div class="card" style="padding:6px;overflow-x:auto;margin-top:12px">
-      <div class="navsep" style="margin:4px 0 6px">Development Squad (${dev.length})</div>
-      <p style="color:var(--muted);font-size:12px;margin:0 0 8px">Cannot be selected in the match-day 19 until promoted. OVR gain shown vs season start.</p>
+      <div class="navsep" style="margin:4px 0 6px">Youth Squad (${dev.length}/${YOUTH_SQUAD_CAP})</div>
+      <p style="color:var(--muted);font-size:12px;margin:0 0 8px">Under-21 development group. Cannot be selected until promoted, and once promoted they cannot return to youth. Youth salaries do not count against the cap.</p>
       <table><thead>${tableHead}</thead><tbody>${sort(dev).map(p=>UI.playerRow(p,'top')).join('')}</tbody></table>
     </div>`:''}`;
   },
@@ -67,7 +67,9 @@ Object.assign(UI, {
   playerRow(p, promoteAction){
     const btn = promoteAction==='top'
       ? `<button class="btn sm" onclick="event.stopPropagation();UI.promotePlayer(${p.id})">↑ Promote</button>`
-      : `<button class="btn sm" style="opacity:.7" onclick="event.stopPropagation();UI.demotePlayer(${p.id})">↓ Dev</button>`;
+      : promoteAction==='dev'
+        ? `<button class="btn sm" style="opacity:.7" onclick="event.stopPropagation();UI.demotePlayer(${p.id})">↓ Youth</button>`
+        : '';
     return `<tr class="click" onclick="UI.playerModal(${p.id})">
       <td><div class="player-cell">${playerAvatar(p,34)}<div><b>${playerTierBadge(p,true)} ${nationalityFlag(p.nationality)} ${esc(p.name)}</b><br><span class="pmeta" style="color:var(--muted);font-size:11px">${esc(p.style)}${p.repTeam?` · ${esc(p.repTeam)}`:''}</span>${promiseSummary(p)?`<br><span style="color:var(--brass);font-size:10px">📋 ${esc(promiseSummary(p))}</span>`:''}</div></div></td>
       <td class="num">${p.age}</td>
@@ -93,13 +95,14 @@ Object.assign(UI, {
       const owner = G.teams.find(t=>t.players.includes(pid));
       if(owner) owner.lineup = (owner.lineup || []).map(id=>id===pid?null:id);
       p.squad = 'top';
+      p.everTopSquad = true;
       UI.toast(`${p.name} promoted to top squad.`);
       UI.render();
       return;
     }
-    const topCount = t.players.filter(id=>{ const q=G.players[id]; return q&&(q.squad==='top'||!q.squad); }).length;
-    if(topCount>=30){ UI.toast('Top squad is full (30 max). Demote a player first.'); return; }
+    if(squadCount(t, 'top')>=TOP_SQUAD_CAP){ UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max). Release a player first.`); return; }
     p.squad = 'top';
+    p.everTopSquad = true;
     UI.toast(`${p.name} promoted to top squad.`);
     UI.render();
   },
@@ -107,20 +110,15 @@ Object.assign(UI, {
   demotePlayer(pid){
     const p = G.players[pid]; if(!p) return;
     const t = myTeam();
-    if(G.godMode){
-      const owner = G.teams.find(t=>t.players.includes(pid));
-      if(owner) owner.lineup = (owner.lineup || []).map(id=>id===pid?null:id);
-      p.squad = 'dev';
-      UI.toast(`${p.name} moved to development squad.`);
-      UI.render();
-      return;
-    }
+    if(p.everTopSquad || p.squad === 'top' || !p.squad){ UI.toast('Main squad players cannot be moved to the youth squad.'); return; }
+    if(!canJoinYouthSquad(p)){ UI.toast('Youth squad is only for under-21 players who have never been in the main squad.'); return; }
+    if(squadCount(t, 'dev') >= YOUTH_SQUAD_CAP){ UI.toast(`Youth squad is full (${YOUTH_SQUAD_CAP} max).`); return; }
     if(t.lineup.slice(0,17).includes(pid)){
       UI.toast(`${p.name} is in the current 19 — remove them from the team sheet first.`);
       return;
     }
     p.squad = 'dev';
-    UI.toast(`${p.name} moved to development squad.`);
+    UI.toast(`${p.name} moved to youth squad.`);
     UI.render();
   },
 
@@ -129,8 +127,8 @@ Object.assign(UI, {
   upgradeTrialContract(pid){
     const p = G.players[pid]; if(!p || p.squad !== 'trial') return;
     const t = myTeam();
-    if(t.players.filter(id=>{ const q=G.players[id]; return q&&(q.squad==='top'||!q.squad||q.squad===''); }).length >= 30){
-      UI.toast('Top squad is full (30 max). Release a player first.'); return;
+    if(squadCount(t, 'top') >= TOP_SQUAD_CAP){
+      UI.toast(`Main squad is full (${TOP_SQUAD_CAP} max). Release a player first.`); return;
     }
     // Open a standard free-agent-style offer modal
     const demand = demandFor(p, t);
@@ -156,6 +154,7 @@ Object.assign(UI, {
     t.lineup = t.lineup.map(id => id === pid ? null : id);
     p.squad = null;
     p.trialGames = 0;
+    p.trialBreakout = false;
     if(!G.freeAgents) G.freeAgents = [];
     if(!G.freeAgents.includes(pid)) G.freeAgents.push(pid);
     addNews(`${p.name} released from train & trial contract.`, {type:'contract', tone:'neutral', tag:'Contracts', teamId:G.coach.teamId});

@@ -8,6 +8,10 @@ Updated every session.
 - Added display currency selection (AUD/Pounds) and full-value money formatting; ticket prices now render as actual amounts instead of `$0k`.
 - Moved editable home ticket price into Club Management with typed input; Match Day now shows read-only price/gate context and links back to Club Management.
 - Added Club Management season member price typed input with live member/revenue projection; preseason membership price stays in sync.
+- Added squad model rules: main squad hard-capped at 30, youth squad capped at 12, train & trial squad capped at 5.
+- Updated Train & Trial contracts to 1 year, max $150k, 6-game limit, salary-cap exempt, with small breakout/potential spikes during match play.
+- Youth squad is now under-21 only, salary-cap exempt, and players cannot return to youth once promoted to the main squad.
+- Updated recruitment, contracts, scouting, team sheet, squad page, offseason signing (including T&T offers), AI free-agent signing, player editor, and club God Mode paths to enforce the new squad rules.
 - Added Recruitment > Free Agents tab with sortable columns, typed age/OVR/salary filters, affordable-only toggle, configured age/OVR threshold toggle, and reset filters.
 - Added position-weighted contract demand premiums for spine/key positions plus youth upside scaling.
 - Rebalanced match ratings and fixed a missing `stepSkill` reference that could produce `NaN` ratings.
@@ -54,7 +58,7 @@ cd api && node server.js
 | `src/engine/08-progression.js` | Training, dev, morale, injuries (medical staff/facility bonus), facilities helpers, `payCoachWeekly`, `payClubWeekly`, `advanceScouting` |
 | `src/engine/09-ladder.js` | `ladder()` |
 | `src/engine/10-finals.js` | NRL top-8 finals: QF/EF week 1, Semis week 2, Prelims week 3, GF week 4 |
-| `src/engine/11-offseason.js` | Awards (topTry, coachYear, gfScore), contracts, retirements, rookies, board verdict |
+| `src/engine/11-offseason.js` | Awards (topTry, coachYear, gfScore), contracts, retirements, rookies, board verdict, roster-cap helpers |
 | `src/engine/12-save.js` | `migrateSave` (stadium, headCoach, scouting, club, finals migrations), save/load |
 | `src/ui/01-core.js` | `UI` object, nav (incl. Scouting, Club Management), advance button text (4-week finals) |
 | `src/ui/02-wizard.js` | New game wizard |
@@ -76,7 +80,7 @@ cd api && node server.js
 | `src/ui/pages/clubs.js` | All-clubs browser; sort by ladder/OVR/name; head coach shown |
 | `src/ui/pages/recruitment.js` | Approach limit (3/season), scroll preserved, free agent modal, T&T sign button, free agent filters/sort |
 | `src/ui/pages/contracts.js` | Full contract ledger, year/salary filters, early extensions, flat/front/back-loaded deals |
-| `src/ui/pages/squad.js` | Squad management: top/dev/trial sections, filter/sort, OVR delta badge |
+| `src/ui/pages/squad.js` | Squad management: main/youth/trial sections, filter/sort, OVR delta badge |
 | `src/ui/pages/training.js` | Individual and team training focus |
 | `src/ui/pages/tactics.js` | Match plan, zone tactics, position roles |
 | `src/ui/pages/coach.js` | Coach profile, skills, cash, history |
@@ -111,8 +115,10 @@ cd api && node server.js
 - Drag-and-drop team sheet: NRL field layout, positional fit colours, effective OVR delta
 - Drag highlight: slots colour-coded by fit (green/yellow/orange/red) via CSS data attributes — no re-render required; drag-over white ring on hovered slot
 - Drop is blink-free: synchronous `scrollTop` restore in `render()` prevents flash
-- Train & Trial squad (`squad:'trial'`): 1-year capped contracts ($75k max), 8-game play limit, upgrade/release UI, T&T badge on team sheet, expires at season end, max 6 T&T players
-- Top squad capped at 30; dev squad unrestricted; T&T shown as separate section on squad page
+- Main squad (`squad:'top'`) hard-capped at 30 players; only main-squad salaries count against salary cap
+- Youth squad (`squad:'dev'`) capped at 12 players, under-21 only, salary-cap exempt; once promoted to main squad a player can never return to youth
+- Train & Trial squad (`squad:'trial'`): max 5 players, 1-year contracts capped at $150k, 6-game play limit, salary-cap exempt, upgrade/release UI, T&T badge on team sheet, expires at season end
+- T&T breakout hook: small chance after match appearances for fringe players to gain potential/attributes
 - Season OVR delta badge on squad page (bold +/− below OVR number)
 - NRL position ordering (FB → WG → CE → FE → HB → PR → HK → SR → LK) on squad/clubs/team lists
 
@@ -124,6 +130,8 @@ cd api && node server.js
 - Early contract extensions for open/final-year players; contract intent states
 - Player release payouts deducted from `G.club.funds`; payout shown on Contracts page
 - T&T recruitment: T&T button on free agent rows; no payout on release
+- Offseason free-agent market includes a T&T button, so aged-out youth can be offered main-squad terms, train & trial terms, or left on the market
+- Scouting prospects sign into youth squad only if under 21 and youth room is available; youth wages are cap-exempt
 - Promises system: guaranteed game time, finals selection, development pathway; breach checks each round/finals
 
 #### Staff & Scouting
@@ -302,3 +310,4 @@ cd api && node server.js
 | Drag-and-drop scroll blink on team sheet | Synchronous `m.scrollTop = prevTop` in `render()` before browser paint |
 | T&T salary cap check double-counted player | `submitFreeAgentOffer` subtracts existing T&T salary before cap check on upgrade |
 | Money helper forced `$0k`/`k` display | `money()` now uses selected currency symbol and full locale-formatted values |
+| Old T&T limits/cap accounting | T&T now max 5 players, 6 games, $150k salary cap, and excluded from salary-cap payroll |

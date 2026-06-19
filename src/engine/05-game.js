@@ -34,11 +34,13 @@ function buildTeam(G, identity, id, strength){
     const age = young ? ri(17,21) : ri(20,33);
     const p = makePlayer(G, pos, age, strength);
     p.squad = 'top';
+    p.everTopSquad = true;
     t.players.push(p.id);
   }
   for(const pos of DEV_SQUAD_TEMPLATE){
     const p = makePlayer(G, pos, ri(17,21), strength - 15);
     p.squad = 'dev';
+    p.everTopSquad = false;
     t.players.push(p.id);
   }
   ensureTeamSpecialists(t);
@@ -111,6 +113,7 @@ function addFreeAgents(G, n){
     const q = ri(0,9)<2 ? 52 : ri(0,9)<7 ? 45 : 38;
     const p = makePlayer(G, pos, ri(20,32), q);
     p.squad = 'top';
+    p.everTopSquad = false;
     setPlayerContract(p, Math.round(clamp(salaryFor(p)*0.72, 65000, 280000)/5000)*5000, 0, 'flat');
     G.freeAgents.push(p.id);
   }

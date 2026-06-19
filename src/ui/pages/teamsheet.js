@@ -85,12 +85,12 @@ Object.assign(UI, {
     const squadRow = p => {
       const inIdx = t.lineup.indexOf(p.id);
       const isTrial = p.squad === 'trial';
-      const canDrag = (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && !p.repDuty && (p.squad === 'top' || p.squad === 'trial' || !p.squad);
+      const canDrag = (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && !p.repDuty && selectionSquadEligible(p);
       const trialBadge = isTrial ? `<span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--brass);background:rgba(210,165,62,.18);padding:1px 5px;border-radius:8px;margin-left:3px">T&T</span>` : '';
       return `<div class="squad-drag-row ${canDrag?'':'disabled'}" ${canDrag?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()"`:''} onclick="UI.playerModal(${p.id})">
         <span class="pos-tag">${p.pos}${p.pos2?`/${p.pos2}`:''}</span>
         <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)}${trialBadge}${inIdx>=0?` <span style="color:var(--brass);font-size:11px">#${SLOTS[inIdx].n}</span>`:''}</span>
-        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'dev':isTrial?`T&T ${p.trialGames||0}/8g`:Math.round(p.cond)+'%'}</span>
+        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'youth':isTrial?`T&T ${trialGamesUsed(p)}/${TRIAL_GAME_CAP}g`:Math.round(p.cond)+'%'}</span>
       </div>`;
     };
 
@@ -178,7 +178,7 @@ Object.assign(UI, {
     const isReserve = slotIdx >= 17;
     const cands = t.players
       .map(id=>G.players[id])
-      .filter(p=>p && (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && (p.squad==='top' || p.squad==='trial' || !p.squad))
+      .filter(p=>p && (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && selectionSquadEligible(p))
       .sort((a,b)=> b.ovr*familiarity(b,s.pos)*slotSpecialistFit(b,slotIdx) - a.ovr*familiarity(a,s.pos)*slotSpecialistFit(a,slotIdx));
 
     const currOccupant = t.lineup[slotIdx] != null ? G.players[t.lineup[slotIdx]] : null;
@@ -212,7 +212,7 @@ Object.assign(UI, {
   assignSlot(slotIdx, pid){
     const t = myTeam();
     const p = G.players[pid];
-    if(!p || (p.injury && !p.playInjured) || (p.suspended && p.suspended.weeks>0) || p.repDuty || (p.squad && p.squad !== 'top' && p.squad !== 'trial')){ UI.toast('That player is not available for the match-day squad.'); return; }
+    if(!p || (p.injury && !p.playInjured) || (p.suspended && p.suspended.weeks>0) || p.repDuty || !selectionSquadEligible(p)){ UI.toast('That player is not available for the match-day squad.'); return; }
     const existing = t.lineup.indexOf(pid);
     if(existing>=0) t.lineup[existing] = t.lineup[slotIdx];
     t.lineup[slotIdx] = pid;
