@@ -6,11 +6,18 @@ Object.assign(UI, {
     if(!G || G.phase==='offseason') return;
     const stop = G.phase === 'regular' && typeof calendarStopForDay === 'function' ? calendarStopForDay(ensureCalendar().day) : null;
     const onBye = G.phase === 'regular' && ((G.byes && G.byes[G.round]) || []).includes(G.coach.teamId);
-    const isMatchDay = G.phase !== 'regular' || (stop && stop.key === 'match' && !onBye);
-    const issues = isMatchDay ? lineupIssues(myTeam()) : [];
+    if(stop && stop.key === 'training' && G.calendar.trainingReviewedDay !== G.calendar.day){
+      UI.page = 'training';
+      UI._forceTop = true;
+      UI.render();
+      UI.toast('Review training and recovery before advancing.');
+      return;
+    }
+    const requiresTeamList = G.phase !== 'regular' || (stop && ((stop.key === 'selection' && !onBye) || (stop.key === 'match' && !onBye)));
+    const issues = requiresTeamList ? lineupIssues(myTeam()) : [];
     if(issues.length){
       UI.modal(`<h3>Team Sheet Not Compliant</h3>
-        <p class="page-sub">Fix these issues before advancing to the match.</p>
+        <p class="page-sub">${stop&&stop.key==='selection'?'Team-list Tuesday requires a compliant 19 before you advance.':'Fix these issues before advancing to the match.'}</p>
         <div class="card" style="padding:10px">${issues.map(x=>`<div style="padding:4px 0;color:var(--red)">${esc(x)}</div>`).join('')}</div>
         <div class="btnrow"><button class="btn primary" onclick="UI.closeModal();UI.go('teamsheet')">Fix team sheet</button><button class="btn" onclick="UI.closeModal()">Close</button></div>`);
       return;

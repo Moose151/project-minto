@@ -12,6 +12,7 @@ Object.assign(UI, {
     const t = myTeam();
     const lowCond = t.players.map(id=>G.players[id]).filter(p=>p && isTopSquadPlayer(p) && !p.injury && (p.cond < 72 || (p.load||0) > 62)).sort((a,b)=>(b.load||0)-(a.load||0)).slice(0,5);
     const injured = t.players.map(id=>G.players[id]).filter(p=>p && p.injury).length;
+    const reviewPending = stop && stop.key === 'training' && G.calendar.trainingReviewedDay !== G.calendar.day;
     const eventCard = (day) => {
       const r = calendarRoundForDay(day);
       const dow = calendarDayInWeek(day);
@@ -51,11 +52,11 @@ Object.assign(UI, {
     return `<h1 class="page">Calendar</h1>
     <p class="page-sub">${calendarDateLabel()} · Round ${roundIdx+1} · ${esc(matchLine)}</p>
     <div class="grid3" style="margin-bottom:12px">
-      <div class="card"><div class="navsep" style="margin:0">Current Stop</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px">${esc(stop ? stop.label : 'Training block')}</div><p class="page-sub">${stop && stop.key==='match' ? (bye?'Bye weekend':'Ready for match day') : 'Advance one day at a time.'}</p></div>
+      <div class="card"><div class="navsep" style="margin:0">Current Stop</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px">${esc(stop ? stop.label : 'Training block')}</div><p class="page-sub">${reviewPending?'Training review still pending.':stop && stop.key==='match' ? (bye?'Bye weekend':'Ready for match day') : 'Advance one day at a time.'}</p>${reviewPending?`<button class="btn sm primary" onclick="UI.go('training')">Review training</button>`:''}</div>
       <div class="card"><div class="navsep" style="margin:0">Fatigue Watch</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px;color:${lowCond.length?'var(--brass)':'var(--green)'}">${lowCond.length}</div><p class="page-sub">Main-squad players below 72 condition or above 62 load.</p></div>
       <div class="card"><div class="navsep" style="margin:0">Medical</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px;color:${injured?'var(--red)':'var(--green)'}">${injured}</div><p class="page-sub">Unavailable injured players.</p></div>
     </div>
-    <div class="btnrow"><button class="btn primary" onclick="UI.advance()">${stop&&stop.key==='match'&&!bye?'Play Match Day':'Next Day'}</button><button class="btn" onclick="UI.go('teamsheet')">Team Sheet</button><button class="btn" onclick="UI.go('training')">Training</button><button class="btn" onclick="UI.go('injuryward')">Injury Ward</button></div>
+    <div class="btnrow"><button class="btn primary" onclick="UI.advance()">${stop&&stop.key==='match'&&!bye?'Play Match Day':'Next Day'}</button><button class="btn" onclick="UI.go('teamsheet')">Team Sheet</button><button class="btn" onclick="UI.go('training')">Training</button><button class="btn" onclick="UI.go('injuryward')">Injury Ward</button>${lowCond.length?`<button class="btn" onclick="myTeam().focus='recovery';UI.toast('Team focus set to recovery.');UI.render()">Set recovery focus</button>`:''}</div>
     ${lowCond.length?`<h2 class="sec">Load Watch</h2><div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Player</th><th class="noclick">Pos</th><th class="noclick num">Cond</th><th class="noclick num">Load</th><th class="noclick num">Fatigue</th></tr></thead><tbody>${lowCond.map(p=>`<tr class="click" onclick="UI.playerModal(${p.id})"><td><b>${esc(p.name)}</b></td><td><span class="pos-tag">${p.pos}</span></td><td class="num" style="color:${p.cond<65?'var(--red)':p.cond<78?'var(--brass)':'var(--muted)'}">${Math.round(p.cond)}%</td><td class="num">${Math.round(p.load||0)}</td><td class="num">${Math.round(p.fatigue||0)}</td></tr>`).join('')}</tbody></table></div>`:''}
     <h2 class="sec">Next 14 Days</h2>
     <div class="grid3">${Array.from({length:14},(_,i)=>eventCard(today+i)).join('')}</div>`;

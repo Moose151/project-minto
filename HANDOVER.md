@@ -14,6 +14,7 @@ Updated every session.
 - Updated recruitment, contracts, scouting, team sheet, squad page, offseason signing (including T&T offers), AI free-agent signing, player editor, and club God Mode paths to enforce the new squad rules.
 - Added day-by-day calendar flow: current date in topbar, Next Day advance, Tuesday team-list stop, training/recovery stops, travel day, Saturday match day, and Calendar page.
 - Added player load/fatigue tracking from match workload, daily recovery, and low-condition/high-load injury risk.
+- Tightened calendar stops: Monday training review must be acknowledged, Tuesday team-list deadline requires a compliant 19, and fatigue risk is visible on Training/Team Sheet/Calendar.
 - Added Recruitment > Free Agents tab with sortable columns, typed age/OVR/salary filters, affordable-only toggle, configured age/OVR threshold toggle, and reset filters.
 - Added position-weighted contract demand premiums for spine/key positions plus youth upside scaling.
 - Rebalanced match ratings and fixed a missing `stepSkill` reference that could produce `NaN` ratings.
@@ -194,6 +195,8 @@ cd api && node server.js
 - Auto-stop routing: Monday training review, Tuesday team-list deadline, away travel day, Saturday match/bye, Sunday recovery and judiciary review
 - Calendar page shows next 14 days, match/bye context, travel, recovery, deadlines, injury count, and load watch
 - Match minutes/workload add player load; daily recovery reduces load and improves condition; overloaded or low-condition players have extra injury risk
+- Monday training review gate requires `Mark review complete`; Tuesday team-list gate blocks advancing until the 19-man squad is compliant
+- Team Sheet shows selected-player fatigue risk and player-row fatigue warnings; Training page includes load-management advice and a review-complete control
 
 #### Inbox & News
 - Inbox page: category filter tabs, item counts, expand/collapse, post-match analysis news item, player quick-link

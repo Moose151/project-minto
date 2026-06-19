@@ -41,7 +41,9 @@ Object.assign(UI, {
         ? `Atk ${Math.round((p.attrs.playmaking+p.attrs.ballRunning+p.attrs.finishing)/3)} · Def ${Math.round((p.attrs.tackling+p.attrs.defRead+p.attrs.markerDef)/3)} · Kick ${Math.round((p.attrs.kickPower+p.attrs.kickAccuracy)/2)}`
         : `${p.s.g}g · ${p.s.t}T · ${p.s.runs||0} runs · ${p.s.tk}Tk · avg ${p.s.g?(p.s.rSum/p.s.g).toFixed(1):'-'}`;
       const fitText = fit < .98 ? ` · <span style="color:var(--red)">wrong ${slotSide(slotIdx)} side</span>` : fit > 1.02 ? ` · <span style="color:var(--green)">preferred side</span>` : '';
-      return `${s.pos} · <span class="fit-pill fit-${fitLevel.level}">${fitLevel.label}</span> · <span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span>${deltaHtml} · cond ${Math.round(p.cond)} · form ${formText(p)} · ${specialistLabel(p)} · ${extra}${fam<1?` · ${Math.round(fam*100)}% pos`:''}${fitText}`;
+      const fatigue = Math.round(p.fatigue || ((100-p.cond)*0.72 + (p.load||0)*0.48));
+      const fatigueHtml = fatigue >= 72 || p.cond < 62 || (p.load||0) > 74 ? ` · <span style="color:var(--red)">fatigue ${fatigue}</span>` : fatigue >= 55 ? ` · <span style="color:var(--brass)">fatigue ${fatigue}</span>` : '';
+      return `${s.pos} · <span class="fit-pill fit-${fitLevel.level}">${fitLevel.label}</span> · <span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span>${deltaHtml} · cond ${Math.round(p.cond)}${fatigueHtml} · form ${formText(p)} · ${specialistLabel(p)} · ${extra}${fam<1?` · ${Math.round(fam*100)}% pos`:''}${fitText}`;
     };
     const chip = i => {
       const s = SLOTS[i], p = t.lineup[i] != null ? G.players[t.lineup[i]] : null;
@@ -87,15 +89,18 @@ Object.assign(UI, {
       const isTrial = p.squad === 'trial';
       const canDrag = (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && !p.repDuty && selectionSquadEligible(p);
       const trialBadge = isTrial ? `<span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--brass);background:rgba(210,165,62,.18);padding:1px 5px;border-radius:8px;margin-left:3px">T&T</span>` : '';
+      const fatigue = Math.round(p.fatigue || ((100-p.cond)*0.72 + (p.load||0)*0.48));
+      const fatigueBit = p.squad==='dev' || isTrial ? '' : fatigue >= 72 || p.cond < 62 || (p.load||0) > 74 ? ` · <span style="color:var(--red)">fatigue ${fatigue}</span>` : fatigue >= 55 ? ` · <span style="color:var(--brass)">fatigue ${fatigue}</span>` : '';
       return `<div class="squad-drag-row ${canDrag?'':'disabled'}" ${canDrag?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()"`:''} onclick="UI.playerModal(${p.id})">
         <span class="pos-tag">${p.pos}${p.pos2?`/${p.pos2}`:''}</span>
         <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)}${trialBadge}${inIdx>=0?` <span style="color:var(--brass);font-size:11px">#${SLOTS[inIdx].n}</span>`:''}</span>
-        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'youth':isTrial?`T&T ${trialGamesUsed(p)}/${TRIAL_GAME_CAP}g`:Math.round(p.cond)+'%'}</span>
+        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'youth':isTrial?`T&T ${trialGamesUsed(p)}/${TRIAL_GAME_CAP}g`:Math.round(p.cond)+'%'}${fatigueBit}</span>
       </div>`;
     };
 
     const active = t.lineup.slice(0,17).map(id=>G.players[id]).filter(Boolean);
     const avgCond = active.length ? Math.round(active.reduce((s,p)=>s+p.cond,0)/active.length) : 0;
+    const highFatigue = active.filter(p=>(p.fatigue || ((100-p.cond)*0.72 + (p.load||0)*0.48)) >= 72 || (p.load||0)>74 || p.cond<62).length;
     const avgOvr = active.length ? Math.round(active.reduce((s,p)=>s+p.ovr,0)/active.length) : 0;
     const cap = G.players[t.roles.captain], gk = G.players[t.roles.goalKicker], pk = G.players[t.roles.primaryKicker];
     const bench = Array.from({length:4}, (_,i)=>makeRow(13+i)).join('');
@@ -131,9 +136,10 @@ Object.assign(UI, {
       <span class="fit-pill fit-orange">Can cover</span>
       <span class="fit-pill fit-red">Bad fit</span>
     </div>
-    <div class="dash-strip" style="grid-template-columns:repeat(5,minmax(120px,1fr))">
+    <div class="dash-strip" style="grid-template-columns:repeat(6,minmax(110px,1fr))">
       <div class="dash-status ${avgOvr>=75?'good':avgOvr<60?'bad':''}"><div class="dash-label">Squad OVR</div><div class="dash-value ovr-stat" style="font-size:32px;font-family:var(--disp)">${avgOvr}</div><div class="dash-sub">17-man average</div></div>
       <div class="dash-status ${avgCond<70?'bad':avgCond>=85?'good':''}"><div class="dash-label">Condition</div><div class="dash-value">${avgCond}<span style="font-size:14px">%</span></div><div class="dash-sub"><div style="height:4px;background:var(--line);border-radius:2px;margin:4px 0 2px"><div style="height:4px;width:${avgCond}%;background:${avgCond>=85?'var(--green)':avgCond<70?'var(--red)':'var(--brass)'};border-radius:2px"></div></div>match-day 17</div></div>
+      <div class="dash-status ${highFatigue?'bad':'good'}"><div class="dash-label">Fatigue Risk</div><div class="dash-value">${highFatigue}</div><div class="dash-sub">selected players at high load</div></div>
       <div class="dash-status ${(t.cohesion||50)>=70?'good':(t.cohesion||50)<40?'bad':''}"><div class="dash-label">Cohesion</div><div class="dash-value">${Math.round(t.cohesion||50)}<span style="font-size:14px">%</span></div><div class="dash-sub"><div style="height:4px;background:var(--line);border-radius:2px;margin:4px 0 2px"><div style="height:4px;width:${Math.round(t.cohesion||50)}%;background:${(t.cohesion||50)>=70?'var(--green)':(t.cohesion||50)<40?'var(--red)':'var(--brass)'};border-radius:2px"></div></div>lineup rhythm</div></div>
       <div class="dash-status"><div class="dash-label">Captain</div><div class="dash-value" style="font-size:20px">${cap?esc(cap.name.split(' ').slice(-1)[0]):'-'}</div><div class="dash-sub">${cap?'leadership '+cap.attrs.leadership:'set tactics'}</div></div>
       <div class="dash-status"><div class="dash-label">Kickers</div><div class="dash-value" style="font-size:20px">${gk?esc(gk.name.split(' ').slice(-1)[0]):'-'}</div><div class="dash-sub">${pk?'territory '+esc(pk.name.split(' ').slice(-1)[0]):'set tactics'}</div></div>
