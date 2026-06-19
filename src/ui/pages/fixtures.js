@@ -33,6 +33,9 @@ Object.assign(UI, {
       const crowd = m.played && m.det ? `${m.det.crowd.toLocaleString()} att.` : '';
       const slotLabel = m.slot ? m.slot.label : 'Sat Afternoon';
       const slotWeather = m.played && m.det ? ` · ${m.det.weather}` : '';
+      const reportBtn = mine && m.played && m.det
+        ? `<div style="text-align:center;margin:-2px 0 4px"><button class="btn sm" onclick="G._lastPlayedMatch=G.fixtures[${r}].find(mm=>mm.h===${m.h}&&mm.a===${m.a});UI.go('match-report')" style="font-size:10px;padding:2px 10px">Match report →</button></div>`
+        : '';
       return `<div style="${mine ? 'background:rgba(210,165,62,.06);border-radius:6px;margin:0 -6px;padding:2px 6px;' : ''}">
         <div style="font-size:9px;color:var(--brass);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${esc(slotLabel)}${slotWeather}</div>
         <div class="score-line">
@@ -44,7 +47,8 @@ Object.assign(UI, {
           <span class="t ${m.played && m.as > m.hs ? 'winner' : ''}" style="text-align:right">${esc(ta.nick)}</span>
           ${teamLogo(ta,24)}
         </div>
-        <div style="font-size:10px;color:var(--dim);text-align:center;margin:-4px 0 6px">${esc(venue)}${crowd ? ` · ${crowd}` : ''}</div>
+        <div style="font-size:10px;color:var(--dim);text-align:center;margin:-4px 0 4px">${esc(venue)}${crowd ? ` · ${crowd}` : ''}</div>
+        ${reportBtn}
       </div>`;
     };
 

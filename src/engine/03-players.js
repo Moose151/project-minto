@@ -232,9 +232,13 @@ function salaryFor(p){
   const awardMod = /Player of the Year|Team of the Year/i.test(awardText) ? 1.12
     : /Rookie of the Year|Top Tryscorer/i.test(awardText) ? 1.06 : 1;
   const tierMod = ovr >= 92 ? 1.20 : ovr >= 81 ? 1.12 : ovr >= 76 ? 1.08 : ovr >= 70 ? 1.04 : 1;
+  // Rep status premium — international and state reps command higher market rates
+  const repMod = p.repTeam === 'Kangaroos' && ovr >= 70 ? 1.14
+    : p.repTeam && p.repTeam !== 'Kangaroos' && ovr >= 65 ? 1.08
+    : p.stateRep && ovr >= 70 ? 1.06 : 1;
   // Deterministic jitter from player ID — no RNG so demand stays stable across renders
   const jitter = 0.9 + (((Number(p.id) * 31) % 100) / 455);
-  return Math.round(clamp(base*posMod*expMod*ageMod*formMod*durabilityMod*awardMod*tierMod*jitter, 85000, 1600000)/5000)*5000;
+  return Math.round(clamp(base*posMod*expMod*ageMod*formMod*durabilityMod*awardMod*tierMod*repMod*jitter, 85000, 1600000)/5000)*5000;
 }
 function resetSeasonStats(p){ p.s = {g:0,t:0,runs:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,err:0,votes:0,rSum:0,fpts:0,k4020:0,fdo:0,mins:0,mt:0,lb:0,lba:0,ks:0,km:0,inf:0}; }
 const CAREER_STAT_KEYS = ['ga','fg','ta','tk','m','runs','err','fpts','k4020','fdo','mins','mt','lb','lba','ks','km','inf','rSum','votes'];

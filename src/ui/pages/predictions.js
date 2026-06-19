@@ -54,22 +54,35 @@ Object.assign(UI, {
     const dogPos = lad.findIndex(r=>r.id===dog.id)+1;
     const favRec = lad.find(r=>r.id===fav.id);
     const dogRec = lad.find(r=>r.id===dog.id);
+    const streakStr = rec => {
+      const form = rec ? rec.form.slice().reverse().filter(f=>f==='W'||f==='L') : [];
+      if(form.length < 2) return '';
+      const t0 = form[0]; let count = 0;
+      for(const f of form){ if(f===t0) count++; else break; }
+      if(count < 2) return '';
+      return ` — on a ${count}-game ${t0==='W'?'winning':'losing'} run`;
+    };
     const snippets = [
-      `${esc(fav.nick)} head in as ${o.favoured==='h'?'the home side':'favourites'}, sitting ${ord(favPos)} on the ladder with a ${favRec.w}-${favRec.l} record.`,
-      `${esc(dog.nick)} will need to cause an upset — they're currently ${ord(dogPos)} (${dogRec.w}-${dogRec.l}).`,
+      `${esc(fav.nick)} head in as ${o.favoured==='h'?'the home side':'favourites'}, sitting ${ord(favPos)} on the ladder (${favRec.w}-${favRec.l})${streakStr(favRec)}.`,
+      `${esc(dog.nick)} will need to cause an upset — they're currently ${ord(dogPos)} (${dogRec.w}-${dogRec.l})${streakStr(dogRec)}.`,
     ];
     const myT = myTeam();
     if(m.h===myT.id || m.a===myT.id){
-      const myRec = lad.find(r=>r.id===myT.id);
       const isHome = m.h===myT.id;
+      const weather = m.projWeather;
+      const badWx = weather === 'Heavy rain' || weather === 'Windy';
       if(o.favoured===(isHome?'h':'a')){
-        snippets.push(`The ${esc(myT.nick)} are expected to win and need the points to stay in finals contention.`);
+        snippets.push(`The ${esc(myT.nick)} are expected to get the result${isHome?' in front of their home crowd':''}.`);
       } else {
-        snippets.push(`The ${esc(myT.nick)} face a tough ask, but an upset win would be massive for their season.`);
+        snippets.push(`The ${esc(myT.nick)} face a tough ask${isHome?' despite home advantage':''}, but an upset would be massive for their season.`);
       }
+      if(badWx) snippets.push(`Conditions forecast: ${esc(weather)}. Both sides will need to adapt their game plan to the elements.`);
     }
     const inj = myTeam().players.filter(id=>{ const p=G.players[id]; return p&&p.injury&&!p.playInjured; });
-    if(inj.length) snippets.push(`The ${esc(myTeam().nick)} are managing ${inj.length} injury absence${inj.length>1?'s':''} heading into this clash.`);
+    if(inj.length){
+      const names = inj.slice(0,2).map(id=>{ const p=G.players[id]; return p?p.name:''; }).filter(Boolean);
+      snippets.push(`${esc(myTeam().nick)} are missing ${names.join(' and ')}${inj.length>2?` and ${inj.length-2} more`:''} through injury heading into this clash.`);
+    }
     return `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
       <div style="font-size:11px;color:var(--brass);font-weight:600;margin-bottom:6px">MEDIA PREVIEW</div>
       ${snippets.map(s=>`<p style="font-size:12px;color:var(--muted);margin:4px 0">${s}</p>`).join('')}

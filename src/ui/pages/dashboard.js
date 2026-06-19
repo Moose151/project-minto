@@ -69,8 +69,19 @@ Object.assign(UI, {
       const home = next.h===t.id;
       const oppPos = lad.findIndex(r=>r.id===opp.id)+1;
       const oppRec = lad.find(r=>r.id===opp.id);
+      const streak = (() => {
+        const form = rec ? rec.form.slice().reverse().filter(f=>f==='W'||f==='L'||f==='D') : [];
+        if(!form.length) return '';
+        const t0 = form[0];
+        let count = 0;
+        for(const f of form){ if(f===t0) count++; else break; }
+        if(count < 2) return '';
+        const color = t0==='W'?'var(--green)':t0==='L'?'var(--red)':'var(--muted)';
+        return `<span style="font-size:11px;font-weight:700;color:${color};margin-left:6px">${count === form.length ? count+'✦ ' : count+'×'}${t0==='W'?'WIN STREAK':t0==='L'?'LOSS STREAK':'DRAWS'}</span>`;
+      })();
+      const slotInfo = next && next.slot ? `<span style="font-size:11px;color:var(--brass);font-weight:700;margin-right:8px">${esc(next.slot.label)}</span>` : '';
       nextHtml = `<div class="vs-big" style="padding:8px 0">
-        <div class="tm">${teamLogo(t,58)}<div class="nm">${esc(t.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(pos)} · ${rec?rec.w+'-'+rec.l:'–'}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}</div></div>
+        <div class="tm">${teamLogo(t,58)}<div class="nm">${esc(t.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(pos)} · ${rec?rec.w+'-'+rec.l:'–'}${streak}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}</div></div>
         <div class="dash">v</div>
         <div class="tm">${teamLogo(opp,58)}<div class="nm">${esc(opp.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(oppPos)} · ${oppRec.w}-${oppRec.l}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(opp,'overall','OVR')}${teamRatingPill(opp,'atk','ATT')}${teamRatingPill(opp,'def','DEF')}</div></div>
       </div>
@@ -80,7 +91,7 @@ Object.assign(UI, {
           const mrH = G.teams.find(x=>x.id===mr.hostTeamId);
           return `<div style="text-align:center;margin:4px 0;padding:4px 8px;background:rgba(210,165,62,.12);border-radius:6px;font-size:11px;color:var(--brass);font-weight:600">✦ Magic Round · ${esc(mr.venue)} · Neutral venue — no home advantage</div>`;
         }
-        return `<p style="text-align:center; color:var(--muted); font-size:12px">${home?'Home':'Away'} · Round ${G.round+1}</p>`;
+        return `<p style="text-align:center; color:var(--muted); font-size:12px">${slotInfo}${home?'Home':'Away'} · Round ${G.round+1}</p>`;
       })()}
       <div class="btnrow" style="justify-content:center"><button class="btn" onclick="UI.go('teamsheet')">Set team</button><button class="btn" onclick="UI.go('calendar')">Calendar</button><button class="btn primary" onclick="UI.advance()">${calendarStopForDay(ensureCalendar().day)?.key==='match'?'Play match day':'Next day'}</button></div>`;
     }

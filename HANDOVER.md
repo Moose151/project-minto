@@ -11,6 +11,11 @@ Updated every session.
 - Match Day pre-match now shows the slot badge (e.g. "Thu Night") next to the round number in the page subtitle.
 - Calendar "Next 14 Days" match day cards now include the kick-off slot label in the detail line (e.g. "Home v Storm · Sat Night").
 - Corrected HANDOVER: Magic Round, Crowd Vendor System, NRL Standard Mode, State of Origin, offseason dev review, and attribute-level delta tab are all already implemented — moved from ❌ to ✅ or annotated correctly.
+- Match report from fixtures — each completed coached-team match on the Fixtures page now has a "Match report →" button that sets `G._lastPlayedMatch` and opens the full analysis page; enables historical match replay for any past round.
+- Win/loss streak on Dashboard next match widget — shows "4× WIN STREAK" or "2× LOSS STREAK" in green/red when the coached team has 2+ consecutive results; slot badge (e.g. "Sat Night") shown below the matchup.
+- Rep status salary premium — `salaryFor()` now applies a multiplier: Kangaroos internationals +14% (OVR 70+), other international rep players +8% (OVR 65+), state reps +6% (OVR 70+); makes rep players command higher market rates.
+- Media snippets enriched — Predictions page now includes per-team form streaks ("on a 4-game winning run"), weather context when conditions are Heavy Rain or Windy, and names injured absentees.
+- Predictions media also names injured players by name (up to 2, then "+ N more").
 
 ---
 
