@@ -7,13 +7,17 @@ Object.assign(UI, {
   p_teams(){
     const lad = ladder();
     const sortFn = {
-      ladder: (a, b) => lad.findIndex(r=>r.id===a.id) - lad.findIndex(r=>r.id===b.id),
-      ovr:    (a, b) => squadStrength(b) - squadStrength(a),
-      name:   (a, b) => a.nick.localeCompare(b.nick),
+      ladder:   (a, b) => lad.findIndex(r=>r.id===a.id) - lad.findIndex(r=>r.id===b.id),
+      ovr:      (a, b) => squadStrength(b) - squadStrength(a),
+      name:     (a, b) => a.nick.localeCompare(b.nick),
+      prestige: (a, b) => (typeof clubPrestigeScore==='function'?clubPrestigeScore(b)-clubPrestigeScore(a):0),
     }[UI._teamsSort] || ((a,b) => 0);
 
     const sorted = [...G.teams].sort(sortFn);
-    const sortBtn = key => `<button class="btn sm ${UI._teamsSort===key?'primary':''}" onclick="UI._teamsSort='${key}';UI.render()">${{ladder:'Ladder',ovr:'OVR',name:'Name'}[key]}</button>`;
+    const sortBtn = key => `<button class="btn sm ${UI._teamsSort===key?'primary':''}" onclick="UI._teamsSort='${key}';UI.render()">${{ladder:'Ladder',ovr:'OVR',name:'Name',prestige:'Prestige'}[key]}</button>`;
+
+    const hofByTeam = {};
+    (G.hallOfFame||[]).forEach(h=>{ if(h.teamId!=null) hofByTeam[h.teamId]=(hofByTeam[h.teamId]||0)+1; });
 
     const cards = sorted.map(t => {
       const r = lad.find(x=>x.id===t.id) || {w:0,l:0,pts:0};
@@ -21,6 +25,8 @@ Object.assign(UI, {
       const tr = scoutedTeamRating(t, 'overall');
       const coach = t.headCoach;
       const coachRep = coach ? (coach.rep>=60?'Elite coach':coach.rep>=45?'Experienced':coach.rep>=30?'Developing':'Junior') : '';
+      const newCoach = coach && (coach.seasons||0) === 0;
+      const legends = hofByTeam[t.id] || 0;
       return `<div class="tp" onclick="UI.teamModal(${t.id})">
         <div style="float:right">${teamLogo(t,46)}</div>
         <div class="city">${esc(t.city)}</div>
@@ -28,13 +34,14 @@ Object.assign(UI, {
         <div style="margin:5px 0">${clubPrestigeBadge(t)}</div>
         <div class="str">${ord(pos)} · ${r.w}-${r.l} · OVR <span class="${tr.cls}">${tr.text}</span></div>
         <div class="team-rating-row">${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}${teamRatingPill(t,'coh','COH')}</div>
-        ${coach ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">HC: ${esc(coach.name)} · ${coachRep}</div>` : ''}
+        ${coach ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">HC: ${esc(coach.name)} · ${coachRep}${newCoach?' <span style="color:var(--brass)">NEW</span>':''}</div>` : ''}
+        ${legends ? `<div style="font-size:10px;color:var(--brass);margin-top:2px">HoF: ${legends} legend${legends===1?'':'s'}</div>` : ''}
       </div>`;
     }).join('');
 
     return `<h1 class="page">Clubs</h1>
     <p class="page-sub">Every club in the ${esc(G.config.leagueName)}. Tap to inspect a squad.</p>
-    <div class="btnrow" style="margin-bottom:12px">${sortBtn('ladder')}${sortBtn('ovr')}${sortBtn('name')}</div>
+    <div class="btnrow" style="margin-bottom:12px">${sortBtn('ladder')}${sortBtn('ovr')}${sortBtn('prestige')}${sortBtn('name')}</div>
     <div class="team-pick">${cards}</div>`;
   },
 
@@ -51,10 +58,14 @@ Object.assign(UI, {
       <button class="btn sm" onclick="event.stopPropagation();UI.godToggleSquad(${p.id})">${p.squad==='dev'?'Main':'Youth'}</button>
       <button class="btn sm danger" onclick="event.stopPropagation();UI.godReleasePlayer(${p.id})">Release</button>
     </div>` : '';
+    const hofLegends = (G.hallOfFame||[]).filter(h=>h.teamId===t.id);
+    const legendLine = hofLegends.length ? `<p style="font-size:11px;color:var(--brass);margin:4px 0 0">Hall of Fame legends: ${hofLegends.slice(0,4).map(h=>esc(h.name)).join(', ')}${hofLegends.length>4?` +${hofLegends.length-4} more`:''}</p>` : '';
+    const newCoachBadge = t.headCoach && (t.headCoach.seasons||0)===0 ? `<span style="font-size:10px;background:rgba(210,165,62,.18);color:var(--brass);padding:1px 5px;border-radius:4px;margin-left:6px">NEW COACH</span>` : '';
     UI.modal(`<h3 style="display:flex;align-items:center;gap:10px">${teamLogo(t,54)}<span>${esc(teamName(t))}</span></h3>
     <p class="page-sub">${ord(pos)} · ${rec.w}-${rec.l} · Payroll ${money(teamSalary(t))} · ${t.id===G.coach.teamId?'ratings exact':'opposition — scouting estimates'}</p>
     <div style="margin:6px 0">${clubPrestigeBadge(t)}</div>
-    ${coachLine}
+    ${legendLine}
+    ${coachLine}${newCoachBadge}
     <div class="team-rating-row" style="margin:8px 0 12px">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}${teamRatingPill(t,'coh','COH')}</div>
     ${godTeam}
     <div style="max-height:440px;overflow-y:auto"><table><thead><tr>

@@ -179,6 +179,8 @@ Object.assign(UI, {
             <th class="noclick" style="color:var(--muted);font-size:10px;font-weight:400;padding:2px 6px">${oppNick}</th>
           </tr></thead>
           <tbody>
+            ${myM.det.possH!=null ? statCmp('Possession %', mineIsH?myM.det.possH:myM.det.possA, mineIsH?myM.det.possA:myM.det.possH, `${mineIsH?myM.det.possH:myM.det.possA}%`, `${mineIsH?myM.det.possA:myM.det.possH}%`) : ''}
+            ${myM.det.complH!=null ? statCmp('Completion %', mineIsH?myM.det.complH:myM.det.complA, mineIsH?myM.det.complA:myM.det.complH, `${mineIsH?myM.det.complH:myM.det.complA}%`, `${mineIsH?myM.det.complA:myM.det.complH}%`) : ''}
             ${statCmp('Tries', mySt.t, oppSt.t)}
             ${statCmp('Goals', mySt.gl, oppSt.gl, `${mySt.gl}/${mySt.ga}`, `${oppSt.gl}/${oppSt.ga}`)}
             ${mySt.fg||oppSt.fg ? statCmp('Field goals', mySt.fg, oppSt.fg) : ''}
