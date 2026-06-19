@@ -94,8 +94,8 @@ function simMatch(m, isFinal){
   const goalsH = simTeamStats(th, triesH, det.h, ph.kick * weatherKickMod);
   const goalsA = simTeamStats(ta, triesA, det.a, pa.kick * weatherKickMod);
   // Infringements (after stats so they don't affect scoring math)
-  genInfringements(th, det);
-  genInfringements(ta, det);
+  genInfringements(th, det, det.h);
+  genInfringements(ta, det, det.a);
   let hs = triesH*4 + goalsH*2, as = triesA*4 + goalsA*2;
   if(Math.abs(hs-as)<=1 && rnd()<.5){ if(rnd()<.5 && th.matchPrefs?.fieldGoal!==false){ hs+=1; awardFieldGoal(th, det.h, det.events); } else if(ta.matchPrefs?.fieldGoal!==false){ as+=1; awardFieldGoal(ta, det.a, det.events); } }
   if(isFinal && hs===as){ if(rnd()<.5 && th.matchPrefs?.fieldGoal!==false){ hs+=1; awardFieldGoal(th, det.h, det.events); } else if(ta.matchPrefs?.fieldGoal!==false){ as+=1; awardFieldGoal(ta, det.a, det.events); } }
@@ -179,7 +179,8 @@ function simTeamStats(t, tries, out, kickSkill){
     const mtRate = clamp((90 - (x.p.attrs.tackling*0.55 + x.p.attrs.markerDef*0.35 + x.p.attrs.workRate*0.10)) / 120, 0.04, 0.35);
     line.mt = Math.max(0, Math.round(line.tk * mtRate * rf(0.5, 1.5)));
     // Line breaks
-    const lbSkill = (x.p.attrs.speed*0.35 + x.p.attrs.acceleration*0.30 + x.p.attrs.stepSkill*0.35);
+    const footwork = x.p.attrs.stepSkill != null ? x.p.attrs.stepSkill : (x.p.attrs.agility*.65 + x.p.attrs.ballRunning*.35);
+    const lbSkill = (x.p.attrs.speed*0.35 + x.p.attrs.acceleration*0.30 + footwork*0.35);
     const lbRate = clamp((lbSkill - 48) / 500, 0.003, 0.10);
     line.lb = Math.max(0, Math.round(line.runs * lbRate * rf(0.4, 1.8)));
     // Line break assists (playmakers)
@@ -194,7 +195,8 @@ function simTeamStats(t, tries, out, kickSkill){
     line.ks = Math.max(0, Math.round(ksBase * rf(0.6, 1.4)));
     const avgKickM = clamp(30 + (x.p.attrs.kickPower*0.25 + x.p.attrs.kickAccuracy*0.15), 30, 70);
     line.km = Math.max(0, Math.round(line.ks * avgKickM * rf(0.8, 1.2)));
-    line.r = clamp(5 + line.t*1.6 + line.ta*1.1 + line.gl*.25 + line.fg*.35 + line.tk/14 + line.m/65 + line.runs/18 + line.k4020*.45 + (line.fdo||0)*.35 - line.err*.8 + (x.p.attrs.lastDitch-55)/90 + formAdj*.55 + gauss(0,.7), 1, 10);
+    const baseline = x.slot < 13 ? 5.15 : 4.85;
+    line.r = clamp(baseline + line.t*1.05 + line.ta*.75 + line.gl*.08 + line.fg*.28 + line.tk/30 + line.m/115 + line.runs/38 + line.lb*.35 + line.lba*.22 + line.k4020*.35 + (line.fdo||0)*.22 - line.err*1.05 - line.mt*.16 + (x.p.attrs.lastDitch-55)/150 + formAdj*.35 + gauss(0,.55), 1, 10);
     line.fp = line.t*4 + line.ta*2 + line.gl*2 + line.fg*2 + line.k4020*3 + (line.fdo||0)*2 + Math.floor(line.tk/10) + Math.floor(line.m/25) + Math.floor(line.runs/8) - line.err*2;
     const s = x.p.s; s.g++; s.t+=line.t; s.runs+=(line.runs||0); s.gl+=line.gl; s.ga+=(line.ga||0); s.fg+=(line.fg||0); s.ta+=line.ta; s.tk+=line.tk; s.m+=line.m; s.err+=line.err; s.k4020+=(line.k4020||0); s.fdo=(s.fdo||0)+(line.fdo||0); s.rSum+=line.r; s.fpts+=(line.fp||0); s.mins=(s.mins||0)+mins; s.mt=(s.mt||0)+line.mt; s.lb=(s.lb||0)+line.lb; s.lba=(s.lba||0)+line.lba; s.ks=(s.ks||0)+line.ks; s.km=(s.km||0)+line.km;
     if(x.p.squad === 'trial') x.p.trialGames = (x.p.trialGames || 0) + 1;
@@ -288,7 +290,7 @@ function simTerritoryKicks(t, players, out){
     }
   }
 }
-function mkLine(){ return {t:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,runs:0,err:0,min:0,r:0,fp:0,k4020:0,fdo:0,mt:0,lb:0,lba:0,ks:0,km:0}; }
+function mkLine(){ return {t:0,gl:0,ga:0,fg:0,ta:0,tk:0,m:0,runs:0,err:0,min:0,r:0,fp:0,k4020:0,fdo:0,mt:0,lb:0,lba:0,ks:0,km:0,inf:0}; }
 function awardVotes(th, ta, det){
   const all = [];
   for(const id in det.h) if(det.h[id] && det.h[id].r) all.push({id:+id, r:det.h[id].r});
@@ -343,15 +345,22 @@ function updatePlayerForm(p, line, won, inTeam){
 }
 
 /* ---------- infringements ---------- */
-function genInfringements(t, det){
+function genInfringements(t, det, out){
   const players = t.lineup.slice(0,17).map(id=>G.players[id]).filter(Boolean);
   for(const p of players){
     const discip = p.attrs && p.attrs.discipline != null ? p.attrs.discipline : 55;
-    // Lower discipline = more infractions. Average player ~15% chance of named event per game.
-    const baseChance = clamp((90 - discip) / 600, 0.008, 0.22);
+    // Lower discipline = more infractions. Average team should land around 4-7 named penalties.
+    const slot = t.lineup.indexOf(p);
+    const workload = slot < 13 ? 1 : .55;
+    const baseChance = clamp(((105 - discip) / 145) * workload, 0.045, 0.48);
     if(rnd() > baseChance) continue;
     const min = ri(3, 78);
     const isMinor = rnd() < 0.62;
+    if(out){
+      out[p.id] = out[p.id] || mkLine();
+      out[p.id].inf = (out[p.id].inf || 0) + 1;
+      out[p.id].r = clamp((out[p.id].r || 5) - .18, 1, 10);
+    }
     if(p.s) p.s.inf = (p.s.inf||0) + 1;
     ensurePlayerCareerStats(p);
     p.career.inf += 1;

@@ -52,7 +52,7 @@ Object.assign(UI, {
         <div class="field"><label>Penalty preference</label><select onchange="myTeam().matchPrefs.penalty=this.value;UI.render()">
           ${['auto','kickTouch','tap','penaltyGoal'].map(v=>`<option value="${v}" ${prefs.penalty===v?'selected':''}>${label(v)}</option>`).join('')}
         </select></div>
-        <div class="field"><label>Watch speed</label><select onchange="UI._watchSpeed=+this.value;UI.render()">${[1,2,4,8].map(v=>`<option value="${v}" ${UI._watchSpeed===v?'selected':''}>${v}x</option>`).join('')}</select></div>
+        <div class="field"><label>Watch speed</label><select onchange="UI.setWatchSpeed(+this.value)">${[1,2,4,8].map(v=>`<option value="${v}" ${UI._watchSpeed===v?'selected':''}>${v}x</option>`).join('')}</select></div>
         <div class="field"><label>Automation</label>
           <label style="display:block;color:var(--muted);font-size:12px"><input type="checkbox" ${prefs.autoSubs?'checked':''} onchange="myTeam().matchPrefs.autoSubs=this.checked"> Auto substitutions</label>
           <label style="display:block;color:var(--muted);font-size:12px"><input type="checkbox" ${prefs.fieldGoal?'checked':''} onchange="myTeam().matchPrefs.fieldGoal=this.checked"> Attempt field goals inside 45m</label>

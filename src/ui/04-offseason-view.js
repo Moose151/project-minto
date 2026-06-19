@@ -254,7 +254,10 @@ Object.assign(UI, {
     };
     const renewals = ps.sponsorOffers.filter(s=>s.renewal);
     const newOffers = ps.sponsorOffers.filter(s=>!s.renewal);
-    const activeSponsorRows = (G.club.sponsorships||[]).filter(s=>s.yearsLeft>1).map(s=>
+    const activeSponsors = (G.club.sponsorships||[]).filter(s=>s.yearsLeft>0);
+    const majorUsed = activeSponsors.filter(s=>s.category==='major').length;
+    const minorUsed = activeSponsors.filter(s=>s.category==='minor').length;
+    const activeSponsorRows = activeSponsors.map(s=>
       `<tr><td><b>${esc(s.name)}</b> <span style="color:var(--green);font-size:10px">active</span><br><span class="pmeta">${esc(s.category)} · ${s.yearsLeft} yr${s.yearsLeft===1?'':'s'} remaining</span></td><td class="num">${money(s.value)}/yr</td><td style="color:var(--muted);font-size:11px">Secured</td></tr>`
     );
     const trialRows = ps.trials.map((tr,i)=>{
@@ -270,11 +273,11 @@ Object.assign(UI, {
         <div class="field"><label>Season ticket price</label>
           <div class="btnrow" style="margin:0;align-items:center">
             <button class="btn sm" onclick="UI.setMembershipPrice(${ps.membershipPrice-20})">-20</button>
-            <span style="font-family:var(--disp);font-size:28px;font-weight:700;min-width:90px;text-align:center">${money(mem.price)}</span>
+            <input type="number" min="80" max="500" step="1" value="${mem.price}" oninput="UI.setMembershipPrice(this.value, true)" onchange="UI.setMembershipPrice(this.value)" style="width:110px;text-align:center;font-family:var(--disp);font-size:22px;font-weight:700">
             <button class="btn sm" onclick="UI.setMembershipPrice(${ps.membershipPrice+20})">+20</button>
           </div>
         </div>
-        <div class="dash-status good"><div class="dash-label">Projected Members</div><div class="dash-value">${mem.members.toLocaleString()}</div><div class="dash-sub">${money(mem.revenue)} revenue</div></div>
+        <div id="membershipProjection" class="dash-status good"><div class="dash-label">Projected Members</div><div class="dash-value">${mem.members.toLocaleString()}</div><div class="dash-sub">${money(mem.revenue)} revenue</div></div>
       </div>
       <div class="card">
         <h2 class="sec" style="margin-top:0">Training Camp</h2>
@@ -292,14 +295,21 @@ Object.assign(UI, {
       </div>
     </div>
     <h2 class="sec">Sponsorship Window</h2>
+    <p class="page-sub" style="margin-top:-4px">Slots used: ${majorUsed}/1 major · ${minorUsed}/2 minor</p>
     ${activeSponsorRows.length ? `<div class="card" style="padding:6px;overflow-x:auto;margin-bottom:10px"><p style="font-size:11px;color:var(--muted);margin:4px 8px 6px">Active deals (already secured)</p><table><tbody>${activeSponsorRows.join('')}</tbody></table></div>` : ''}
     ${renewals.length ? `<div class="card" style="padding:6px;overflow-x:auto;margin-bottom:10px;border-color:var(--brass)"><p style="font-size:11px;color:var(--brass);margin:4px 8px 6px">⚠ Expiring this season — renew or let expire</p><table><thead><tr><th class="noclick">Sponsor</th><th class="noclick num">Value</th><th class="noclick"></th></tr></thead><tbody>${renewals.map(sponsorRow).join('')}</tbody></table></div>` : ''}
     <div class="card" style="padding:6px;overflow-x:auto"><p style="font-size:11px;color:var(--muted);margin:4px 8px 6px">New sponsorship opportunities</p><table><thead><tr><th class="noclick">Sponsor</th><th class="noclick num">Value</th><th class="noclick"></th></tr></thead><tbody>${newOffers.map(sponsorRow).join('') || '<tr><td colspan="3" style="color:var(--muted)">No new offers this season.</td></tr>'}</tbody></table></div>
     <div class="btnrow" style="margin-top:16px"><button class="btn primary" onclick="UI.completePreseason()">Start season</button></div>`;
   },
-  setMembershipPrice(value){
+  setMembershipPrice(value, live){
     const ps = G.offseason && G.offseason.preseason; if(!ps) return;
     ps.membershipPrice = clamp(Math.round(+value || ps.membershipPrice), 80, 500);
+    if(live){
+      const mem = membershipProjection(ps.membershipPrice);
+      const status = document.getElementById('membershipProjection');
+      if(status) status.innerHTML = `<div class="dash-label">Projected Members</div><div class="dash-value">${mem.members.toLocaleString()}</div><div class="dash-sub">${money(mem.revenue)} revenue</div>`;
+      return;
+    }
     UI.render();
   },
   acceptSponsor(id){

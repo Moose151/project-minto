@@ -506,6 +506,13 @@ function advanceContractSchedule(p){
 }
 function demandFor(p, toTeam){
   let d = salaryFor(p);
+  const posPremium = {
+    HB:1.45, FE:1.38, HK:1.34,
+    FB:1.18, LK:1.20, SR:1.16, PR:1.08,
+    CE:1.00, WG:0.98
+  }[p.pos] || 1;
+  const youthUpside = p.age <= 23 ? clamp(((p.pot || p.ovr || 60) - (p.ovr || 60)) / 25, 0, .18) : 0;
+  d *= posPremium * (1 + youthUpside);
   if(p.s.votes>10) d*=1.15;
   if(p.ambition>75) d*=1.08;
   if(p.morale<40) d*=1.1;
@@ -720,13 +727,16 @@ function acceptSponsorOffer(id){
   const offer = ps.sponsorOffers.find(s=>s.id===id);
   if(!offer) return {ok:false, msg:'Sponsor offer not found.'};
   if(ps.acceptedSponsorIds.includes(id)) return {ok:false, msg:'Sponsor already accepted.'};
-  const hasMajor = G.club.sponsorships.some(s=>s.category==='major' && s.yearsLeft>0) || ps.acceptedSponsorIds.some(x=>{ const s=ps.sponsorOffers.find(o=>o.id===x); return s && s.category==='major'; });
-  if(offer.category==='major' && hasMajor && !offer.renewal) return {ok:false, msg:'You can only have one major sponsor at a time.'};
-  ps.acceptedSponsorIds.push(id);
   if(offer.renewal){
     // remove the expiring deal being renewed (same name + category)
     G.club.sponsorships = G.club.sponsorships.filter(s=>!(s.name===offer.name && s.category===offer.category && s.yearsLeft===1));
   }
+  const activeAfterRenewal = G.club.sponsorships.filter(s=>s.yearsLeft>0);
+  const majorCount = activeAfterRenewal.filter(s=>s.category==='major').length;
+  const minorCount = activeAfterRenewal.filter(s=>s.category==='minor').length;
+  if(offer.category==='major' && majorCount >= 1) return {ok:false, msg:'You can only have one major sponsor at a time.'};
+  if(offer.category==='minor' && minorCount >= 2) return {ok:false, msg:'You can only have two minor sponsors at a time.'};
+  ps.acceptedSponsorIds.push(id);
   G.club.sponsorships.push({id:offer.id, name:offer.name, category:offer.category, value:offer.value, yearsLeft:offer.yearsLeft});
   return {ok:true, msg:`${offer.name} ${offer.renewal?'renewed':'signed'} as a ${offer.category} sponsor.`};
 }

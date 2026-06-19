@@ -2,6 +2,15 @@
 
 Updated every session.
 
+## Latest Session Notes
+
+- Added position-weighted contract demand premiums for spine/key positions plus youth upside scaling.
+- Rebalanced match ratings and fixed a missing `stepSkill` reference that could produce `NaN` ratings.
+- Recalibrated infringements to produce regular match penalties, and now writes infringement counts into match stat lines.
+- Fixed watch speed selector so changing speed does not re-render/restart the live feed.
+- Enforced sponsorship caps at 1 major + 2 minor active deals, and preseason now shows slot usage plus all active deals.
+- Reworked membership pricing in preseason with direct numeric input and live projected member/revenue updates.
+
 ## Workflow Rules
 
 - **Push to GitHub after every change.** Any time files are modified, added, or the handover is updated, commit and push to `origin main` before ending the session.
@@ -176,34 +185,9 @@ cd api && node server.js
 - Growth rates, professionalism multiplier, gamesProxy, devMod, and offseason pass all need recalibration.
 - Target: a 20yo on full game time in a well-run club should gain 2–5 OVR in a good season; veterans should visibly decline from 31+; poor facilities/form should noticeably reduce gains.
 
-#### Contract Demands — Position Weighting Too Flat
-- Spine positions (HB, FE, HK) should demand significantly more than wingers/centres at equivalent OVR/age/potential.
-- A 21yo 75OVR 85POT halfback should cost meaningfully more than the same player at WG/CE.
-- `demandFor` needs a position weight multiplier: spine (HB, FE, HK) ~1.35–1.5×, key forwards (LK, SR) ~1.15–1.25×, WG/CE at base rate.
-- The weighting should still vary by age, OVR, and potential — position just provides the starting premium.
-
 #### Post-Match Analysis — Needs Full Page
 - Currently shown as a popup/inline section. Should be a full dedicated page (or modal with a "Full Analysis →" deep-link).
 - Full page: both complete 17-player team lists with individual stats per player (T/TA/Goals/FG/Runs/Tackles/MT/LB/Errors/Rating), complete match data (score by half, possession, territory, completion rate, all team stats), scoring timeline, key moments, match context (venue/weather/crowd).
-
-#### Sponsorship — Cap Not Enforced + Minor Sponsors Not Showing
-- Currently possible to sign all available sponsors with no limit. Should cap at 1 major + 2 minor active deals at any time.
-- Only major sponsors appear under "Sponsorship Window" in Club Management — minor active deals are not shown.
-- Sponsor window should show: remaining slots (e.g. "0/1 major · 1/2 minor"), all active deals (major and minor), expiring deals, and new offers.
-
-#### Membership Price — Broken Update + No Text Input
-- +/-$20 button click is not updating the displayed membership price.
-- Projected members count is not updating when price changes (only expected revenue updates).
-- $20k minimum increment is unrealistic — need a text input field to type any value directly.
-- All three outputs (displayed price, projected members, expected revenue) must update together on every change.
-
-#### Infringements — Almost Always 0-0
-- Most simulated games show 0 infringements from both teams. Real NRL averages ~4–8 penalties per team per game.
-- `genInfringements` needs frequency recalibration; infringement events should appear regularly in the live match feed.
-
-#### Player Match Ratings — Almost Always 10
-- Nearly every player receives a 10/10 rating each game regardless of performance.
-- Rating formula needs rebalancing: average game should produce 6–7, good game 7–8, standout 9, exceptional 10; poor games 3–5.
 
 #### WG/CE Overlap on Squad Field View — Still Occurring
 - Despite the y-position fix (WG y:82, CE y:71), wingers and centres are still overlapping on the squad page team sheet field view.
@@ -213,10 +197,6 @@ cd api && node server.js
 - Ladder does not show bye round indicator; byes do not award 2 competition points (NRL standard gives 2 pts for a bye).
 - Ladder should credit 2 pts to teams on bye each round; ladder page should indicate recent/current bye rounds.
 - Still needed: forced even-team-count byes, Origin round bye blocks, better multi-bye distribution per season.
-
-#### Watch Game — Speed Selector Resets Feed
-- Changing watch speed during a live match triggers `UI.render()`, restarting the feed from the beginning.
-- Fix: update `UI._watchSpeed` and toggle button active-state in-place without a full re-render.
 
 #### Post-Match, Inbox, Avatars, Scouting, Facilities, Contracts — Partial
 - Post-match: save full match reports per fixture for historical reopening; possession/completion rate; half-by-half breakdown.
@@ -287,11 +267,9 @@ cd api && node server.js
 ### 💡 QoL Improvements
 
 - **Reset Filters button**: every page with active filter controls should include a "Reset Filters" button that clears all filters/searches at once. Affected pages: Recruitment, Contracts, Squad, Stats, Fantasy, History, Free Agents, Staff.
-- **Membership price text input**: allow typing a value directly rather than only +/-$20 increments.
 - **Bye round ladder points**: award 2 competition points for bye rounds on the full ladder (NRL standard). Ladder page should show a "BYE" indicator alongside affected teams for the current/recent round.
 - **My team OVR/ATK/DEF in next match widget**: show coached team's OVR, ATK, DEF pills alongside the opponent's pills on the Dashboard "Next match" widget for at-a-glance comparison.
 - **Sponsor active deal visibility**: minor active sponsors should appear alongside major sponsors in the Club Management "Sponsorship" section with remaining contract years.
-- **Sponsor slot indicators**: sponsor window should show remaining capacity (e.g. "0/1 major · 1/2 minor available") so the coach knows before clicking through.
 - **Post-match full page link**: post-match summary should have a "Full Analysis →" button linking to a detailed standalone page.
 
 ---
@@ -300,13 +278,8 @@ cd api && node server.js
 
 | Bug | Page / Area | Details |
 |---|---|---|
-| Infringements mostly 0-0 | Match Engine | `genInfringements` producing near-zero penalties — needs recalibration to ~4–8 per team per game |
-| Player ratings mostly 10 | Match Engine | Rating formula producing near-maximum for almost all players — needs rebalancing across 3–10 range |
-| Membership +/-$20 button broken | Preseason | Clicking +/-$20 does not update displayed price; projected members also not updating (only revenue updates) |
 | Minor sponsors missing from Club Management | Club Management | Only major active sponsors appear — minor deals not shown in Sponsorship section |
-| No sponsor signing cap | Preseason | Can sign all sponsors without limit — should enforce 1 major + 2 minor max |
 | WG/CE still overlapping on squad field view | Squad page | Wingers and centres still overlap despite previous y-position fix — needs further adjustment |
-| Watch game speed resets feed | Watch Game | Changing speed mid-match triggers full re-render and restarts feed from event 0 |
 | OVR delta badge may not render | Squad / Player modal | `seasonStartOvr` may not be set for all players; verify badge renders consistently |
 
 ---
