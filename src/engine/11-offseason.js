@@ -238,19 +238,20 @@ function applyOffseasonDevelopment(){
     const moraleMod = clamp(0.78 + (p.morale || 50) / 230, 0.78, 1.07);
     const prevOvr = p.ovr;
 
-    // Growth: mirror weekly rates × offseason weeks, Poisson-distributed
-    let baseWeeklyChance = 0;
-    if(p.age <= 17)       baseWeeklyChance = 0.38;
-    else if(p.age <= 19)  baseWeeklyChance = 0.30;
-    else if(p.age <= 21)  baseWeeklyChance = 0.23;
-    else if(p.age <= 23)  baseWeeklyChance = 0.16;
-    else if(p.age <= 25)  baseWeeklyChance = 0.09;
-    else if(p.age <= 27)  baseWeeklyChance = 0.055;
-    else if(p.age <= 30)  baseWeeklyChance = 0.025;
-    const growProb = baseWeeklyChance * profMod * moraleMod * devMod;
-    let gains = Math.min(poisson(growProb * OFFSEASON_WEEKS), 3);
+    // Growth: mirror in-season Poisson rates × offseason weeks
+    let baseWeeklyExpected = 0;
+    if(p.age <= 17)       baseWeeklyExpected = 2.2;
+    else if(p.age <= 19)  baseWeeklyExpected = 1.8;
+    else if(p.age <= 21)  baseWeeklyExpected = 1.3;
+    else if(p.age <= 23)  baseWeeklyExpected = 0.85;
+    else if(p.age <= 25)  baseWeeklyExpected = 0.48;
+    else if(p.age <= 27)  baseWeeklyExpected = 0.25;
+    else if(p.age <= 30)  baseWeeklyExpected = 0.10;
+    const growProb = baseWeeklyExpected * profMod * moraleMod * devMod;
+    const keyAttrsOS = positionKeyAttrs(p.pos);
+    let gains = Math.min(poisson(growProb * OFFSEASON_WEEKS), 6);
     for(let g = 0; g < gains && p.ovr < p.pot; g++){
-      const a = pick(ATTRS);
+      const a = (keyAttrsOS.length && rnd() < 0.72) ? pick(keyAttrsOS) : pick(ATTRS);
       const staffBonus = isMine ? staffMultiplier(a, p.pos) : 1;
       const gain = staffBonus > 1.15 && rnd() < (staffBonus - 1) ? 2 : 1;
       p.attrs[a] = clamp(p.attrs[a]+gain, 20, 99);

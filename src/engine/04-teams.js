@@ -36,8 +36,25 @@ function genFixtures(teamIds){
   const allRounds = [...rounds, ...secondHalf];
   const allByes = [...byesByRound, ...byesByRound];
 
+  // Assign day/time slots — no two games simultaneous; spread across Thu-Sun
+  const SLOT_ORDER = [
+    {day:'Thursday',  time:'night',     label:'Thu Night'},
+    {day:'Friday',    time:'night',     label:'Fri Night'},
+    {day:'Saturday',  time:'afternoon', label:'Sat Afternoon'},
+    {day:'Saturday',  time:'night',     label:'Sat Night'},
+    {day:'Sunday',    time:'afternoon', label:'Sun Afternoon'},
+    {day:'Sunday',    time:'night',     label:'Sun Night'},
+    {day:'Friday',    time:'afternoon', label:'Fri Afternoon'},
+    {day:'Saturday',  time:'afternoon', label:'Sat Afternoon 2'},
+  ];
+  const assignedRounds = allRounds.map(games => {
+    const slots = SLOT_ORDER.slice(0, Math.max(games.length, 1));
+    const shuffledSlots = shuffle(slots.slice());
+    return games.map((mm, i) => ({...mm, played:false, hs:0, as:0, det:null, slot: shuffledSlots[i] || SLOT_ORDER[i % SLOT_ORDER.length]}));
+  });
+
   return {
-    rounds: allRounds.map(g => g.map(mm => ({...mm, played:false, hs:0, as:0, det:null}))),
+    rounds: assignedRounds,
     byes: allByes,
   };
 }

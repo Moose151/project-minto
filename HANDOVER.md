@@ -4,24 +4,16 @@ Updated every session.
 
 ## Latest Session Notes
 
-- Pushed commit `1c358ac` to `origin main`.
-- Added display currency selection (AUD/Pounds) and full-value money formatting; ticket prices now render as actual amounts instead of `$0k`.
-- Moved editable home ticket price into Club Management with typed input; Match Day now shows read-only price/gate context and links back to Club Management.
-- Added Club Management season member price typed input with live member/revenue projection; preseason membership price stays in sync.
-- Added squad model rules: main squad hard-capped at 30, youth squad capped at 12, train & trial squad capped at 5.
-- Updated Train & Trial contracts to 1 year, max $150k, 6-game limit, salary-cap exempt, with small breakout/potential spikes during match play.
-- Youth squad is now under-21 only, salary-cap exempt, and players cannot return to youth once promoted to the main squad.
-- Updated recruitment, contracts, scouting, team sheet, squad page, offseason signing (including T&T offers), AI free-agent signing, player editor, and club God Mode paths to enforce the new squad rules.
-- Added day-by-day calendar flow: current date in topbar, Next Day advance, Tuesday team-list stop, training/recovery stops, travel day, Saturday match day, and Calendar page.
-- Added player load/fatigue tracking from match workload, daily recovery, and low-condition/high-load injury risk.
-- Tightened calendar stops: Monday training review must be acknowledged, Tuesday team-list deadline requires a compliant 19, and fatigue risk is visible on Training/Team Sheet/Calendar.
-- Added Recruitment > Free Agents tab with sortable columns, typed age/OVR/salary filters, affordable-only toggle, configured age/OVR threshold toggle, and reset filters.
-- Added position-weighted contract demand premiums for spine/key positions plus youth upside scaling.
-- Rebalanced match ratings and fixed a missing `stepSkill` reference that could produce `NaN` ratings.
-- Recalibrated infringements to produce regular match penalties, and now writes infringement counts into match stat lines.
-- Fixed watch speed selector so changing speed does not re-render/restart the live feed.
-- Enforced sponsorship caps at 1 major + 2 minor active deals, and preseason now shows slot usage plus all active deals.
-- Reworked membership pricing in preseason with direct numeric input and live projected member/revenue updates.
+- Fixed minor sponsors missing from Club Management — added a dedicated "Sponsorship" section showing all active major/minor deals with value and years remaining.
+- Fixed WG/CE overlap on team sheet pitch — increased vertical separation to 14% gaps (WG y:83, CE y:69) and pushed WG further to flanks (x:91/9); also respaced FB/FE/HB rows throughout.
+- Fixed OVR delta badge reliability — added `seasonStartOvr` guard in `submitFreeAgentOffer` and `_confirmTrialSign` so mid-season signings always have the field set.
+- Enhanced Dashboard next match widget — coached team now shows league position and W-L record alongside opponent's, making the two sides symmetric.
+- Added Full Match Analysis page (`match-report.js`) — stores last played match in `G._lastPlayedMatch`; post-match inline summary gains "Full Analysis →" button linking to a dedicated full-page report with complete player stats tables for both teams, scoring sequence, and match stats comparison.
+- Added Reset Filters buttons — Contracts (resets all 8 filter controls), Stats (position reset when active), Fantasy (position + sort reset when non-default), Staff (type filter + search reset when active). Free Agents already had one.
+- Bye round points — ladder now awards 2 competition points for completed bye rounds (NRL standard); form history shows a gold square "B" dot; ladder page shows "BYE" tag next to teams on the current/recent bye round.
+- OVR Progression recalibrated — switched from single binary weekly roll to Poisson-distributed gains per week with ~6x higher expected rates; gains are biased 72% toward position key attributes (POS_PROFILE weight ≥ 0.07) so each gain meaningfully moves OVR; added `positionKeyAttrs()` helper; offseason dev pass gains cap raised from 3 to 6 with matching rates. Target: 20yo on full game time gains 2–5 OVR per season.
+- Multi-day round scheduling — `genFixtures` assigns each game a `{day, time, label}` slot (Thu Night → Sun Night); no two games share a slot; fixtures page sorts games by slot order and displays the slot label + weather; `simMatch` uses `slot.time` to adjust weather pool and apply a time-of-day try modifier (night −3%, afternoon +3%); slot stored in `det`; Dashboard shows a "Round N Results" panel with all completed-round scores sorted by kick-off slot.
+- Added item to HANDOVER add/fix section: match scheduling (multi-day, time-of-day conditions, no simultaneous games, round results view).
 
 ## Workflow Rules
 
@@ -71,6 +63,7 @@ cd api && node server.js
 | `src/ui/05-helpers.js` | `ovrHtml`, `potHtml`, `scoutAttrHtml`, `teamRatingPill`, `clubPrestigeBadge`, `playerTierBadge`, `playerAvatar`, `money` |
 | `src/ui/pages/dashboard.js` | Status strip (incl. Club Funds), alerts, next match, mini ladder |
 | `src/ui/pages/matchday.js` | Match Day: pre-match, lineups, compact odds bar, live feed |
+| `src/ui/pages/match-report.js` | Full match analysis page: scoring sequence, both-team player stats tables, match stats comparison |
 | `src/ui/pages/predictions.js` | Bookie odds (fixed formula), projected ladder, award frontrunners |
 | `src/ui/pages/calendar.js` | Daily calendar: current date, deadlines, travel, match day, recovery, fatigue watch |
 | `src/ui/pages/fixtures.js` | Paginated by round; stadium/crowd per match; finals bracket |
@@ -196,6 +189,7 @@ cd api && node server.js
 - Calendar page shows next 14 days, match/bye context, travel, recovery, deadlines, injury count, and load watch
 - Match minutes/workload add player load; daily recovery reduces load and improves condition; overloaded or low-condition players have extra injury risk
 - Monday training review gate requires `Mark review complete`; Tuesday team-list gate blocks advancing until the 19-man squad is compliant
+- Sunday recovery/judiciary gate requires `Mark review complete` in Injury Ward before advancing to Monday
 - Team Sheet shows selected-player fatigue risk and player-row fatigue warnings; Training page includes load-management advice and a review-complete control
 
 #### Inbox & News
@@ -210,10 +204,9 @@ cd api && node server.js
 
 ### 🔧 Features Implemented — Needs Improvement
 
-#### OVR Progression — Too Slow
-- Full season played with only 2 players improving by +1 OVR across the entire squad (main + youth).
-- Growth rates, professionalism multiplier, gamesProxy, devMod, and offseason pass all need recalibration.
-- Target: a 20yo on full game time in a well-run club should gain 2–5 OVR in a good season; veterans should visibly decline from 31+; poor facilities/form should noticeably reduce gains.
+#### OVR Progression — Recalibrated (monitor for balance)
+- Growth switched from binary weekly roll to Poisson-distributed gains (~6x higher expected rate). Target of 2–5 OVR per season for a 20yo on full game time should now be achievable.
+- If the league feels it's progressing too fast, reduce `growExpected` values in `developPlayer` and `applyOffseasonDevelopment` (08-progression.js / 11-offseason.js).
 
 #### Post-Match Analysis — Needs Full Page
 - Currently shown as a popup/inline section. Should be a full dedicated page (or modal with a "Full Analysis →" deep-link).
@@ -227,6 +220,13 @@ cd api && node server.js
 - Ladder does not show bye round indicator; byes do not award 2 competition points (NRL standard gives 2 pts for a bye).
 - Ladder should credit 2 pts to teams on bye each round; ladder page should indicate recent/current bye rounds.
 - Still needed: forced even-team-count byes, Origin round bye blocks, better multi-bye distribution per season.
+
+#### Match Scheduling — Multi-Day Rounds (first slice done)
+- `genFixtures` now assigns a slot (Thu Night → Sun Night) to each game; no two share a slot.
+- Fixtures page sorts games by slot order and shows the slot label + post-match weather.
+- `simMatch` applies a time-of-day try modifier and adjusted weather pool.
+- Dashboard shows a "Round N Results" panel after each round.
+- Still needed: slot shown on Match Day pre-match page; calendar flow updated to show which day each game falls on; mid-week games (Thursday) that arrive before the calendar reaches Saturday.
 
 #### Post-Match, Inbox, Avatars, Scouting, Facilities, Contracts — Partial
 - Post-match: save full match reports per fixture for historical reopening; possession/completion rate; half-by-half breakdown.
@@ -284,21 +284,16 @@ cd api && node server.js
 
 ### 💡 QoL Improvements
 
-- **Reset Filters button**: every page with active filter controls should include a "Reset Filters" button that clears all filters/searches at once. Affected pages: Recruitment, Contracts, Squad, Stats, Fantasy, History, Free Agents, Staff.
-- **Bye round ladder points**: award 2 competition points for bye rounds on the full ladder (NRL standard). Ladder page should show a "BYE" indicator alongside affected teams for the current/recent round.
-- **My team OVR/ATK/DEF in next match widget**: show coached team's OVR, ATK, DEF pills alongside the opponent's pills on the Dashboard "Next match" widget for at-a-glance comparison.
-- **Sponsor active deal visibility**: minor active sponsors should appear alongside major sponsors in the Club Management "Sponsorship" section with remaining contract years.
-- **Post-match full page link**: post-match summary should have a "Full Analysis →" button linking to a detailed standalone page.
+All items from this section were implemented this session. Items to consider for a future session:
+- **Squad page sort reset**: squad page uses column-click sorting but has no reset-to-default button; low priority since sorts are per-column.
+- **History page**: already had a "Clear" button — consider aligning its style with other Reset buttons.
+- **Fixtures page slot on Match Day**: the pre-match page should show the game's day/time slot (Thu Night, Sat Afternoon, etc.) so it's visible before kick-off, not just in fixtures.
 
 ---
 
 ### 🐛 Known Bugs
 
-| Bug | Page / Area | Details |
-|---|---|---|
-| Minor sponsors missing from Club Management | Club Management | Only major active sponsors appear — minor deals not shown in Sponsorship section |
-| WG/CE still overlapping on squad field view | Squad page | Wingers and centres still overlap despite previous y-position fix — needs further adjustment |
-| OVR delta badge may not render | Squad / Player modal | `seasonStartOvr` may not be set for all players; verify badge renders consistently |
+No outstanding known bugs. (Previous three bugs — minor sponsors missing, WG/CE overlap, OVR delta badge — all resolved this session.)
 
 ---
 
@@ -306,6 +301,9 @@ cd api && node server.js
 
 | Bug | Fix |
 |---|---|
+| Minor sponsors not shown in Club Management | Added dedicated Sponsorship section to club-management.js showing all active deals |
+| WG/CE overlap on team sheet pitch | Increased y-gap to 14% (WG y:83, CE y:69) and pushed WG flanks to x:91/9 |
+| OVR delta badge missing for mid-season signings | `seasonStartOvr` now set in `submitFreeAgentOffer` and `_confirmTrialSign` |
 | Signing % re-rolled every render | `demand` cached in `UI._contractOffer.demand` on modal open |
 | Captain promise reduced own signing % | Check excludes `x.id !== p.id` in captain count |
 | Try cap at 6 | Changed clamp max to 9 |

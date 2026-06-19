@@ -246,8 +246,9 @@ Object.assign(UI, {
       if(banner){ banner.textContent = won?'🏆 WIN':drew?'DRAW':'LOSS'; banner.style.color = won?'var(--green)':drew?'var(--muted)':'var(--red)'; banner.style.fontWeight='700'; banner.style.fontSize='15px'; }
       if(allBtn) allBtn.style.display='';
       if(postMatch){
+        G._lastPlayedMatch = myM;
         postMatch.style.display='';
-        postMatch.innerHTML = `<h2 class="sec">Match Report</h2>${UI._buildMatchReportHtml(myM)}`;
+        postMatch.innerHTML = `<h2 class="sec">Match Report</h2>${UI._buildMatchReportHtml(myM)}<div class="btnrow" style="margin-top:14px"><button class="btn primary" onclick="UI.go('match-report')">Full Analysis →</button></div>`;
       }
     }
     setTimeout(()=>UI._revealFeedPage(events, i+1, myM), Math.max(80, 800/(UI._watchSpeed||2)));

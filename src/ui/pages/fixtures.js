@@ -22,12 +22,19 @@ Object.assign(UI, {
     const magicHostTeam = isMagicRound ? G.teams.find(t=>t.id===G.magicRound.hostTeamId) : null;
     const roundLabel = `Round ${r+1}${isMagicRound ? ' ★ Magic Round' : ''}${myBye ? ' — BYE' : ''}${isNext && !myBye ? ' — Next Up' : isCompleted ? ' — Completed' : !myBye ? ' — Upcoming' : ''}`;
 
+    const SLOT_ORDER_IDX = {'Thursday-night':0,'Friday-afternoon':1,'Friday-night':2,'Saturday-afternoon':3,'Saturday-night':4,'Sunday-afternoon':5,'Sunday-night':6};
+    const slotKey = m => m.slot ? `${m.slot.day}-${m.slot.time}` : 'Saturday-afternoon';
+    const sortedRound = round.slice().sort((a,b)=>(SLOT_ORDER_IDX[slotKey(a)]||3)-(SLOT_ORDER_IDX[slotKey(b)]||3));
+
     const gameRow = m => {
       const th = G.teams[m.h], ta = G.teams[m.a];
       const mine = m.h === G.coach.teamId || m.a === G.coach.teamId;
       const venue = m.played && m.det ? m.det.venue : (th.stadium || 'Home Ground');
       const crowd = m.played && m.det ? `${m.det.crowd.toLocaleString()} att.` : '';
+      const slotLabel = m.slot ? m.slot.label : 'Sat Afternoon';
+      const slotWeather = m.played && m.det ? ` · ${m.det.weather}` : '';
       return `<div style="${mine ? 'background:rgba(210,165,62,.06);border-radius:6px;margin:0 -6px;padding:2px 6px;' : ''}">
+        <div style="font-size:9px;color:var(--brass);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${esc(slotLabel)}${slotWeather}</div>
         <div class="score-line">
           ${teamLogo(th,24)}
           <span class="t ${m.played && m.hs > m.as ? 'winner' : ''}">${esc(th.nick)}</span>
@@ -69,7 +76,7 @@ Object.assign(UI, {
       <div class="navsep" style="margin:0 0 10px">${roundLabel}</div>
       ${magicRoundBanner}
       ${byeAlert}
-      ${round.map(gameRow).join('')}
+      ${sortedRound.map(gameRow).join('')}
       ${byeCard}
     </div>`;
 

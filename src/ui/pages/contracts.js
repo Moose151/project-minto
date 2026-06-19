@@ -57,7 +57,7 @@ Object.assign(UI, {
     <p class="page-sub">Full squad contract ledger. Current payroll ${money(totalSal)} of ${money(G.config.cap)} cap.${futureRows?`<br>${futureRows}`:''}</p>
     <h2 class="sec">Contract ledger</h2>
     <div class="btnrow">${posFilters}</div>
-    <div class="btnrow" style="align-items:center">
+    <div class="btnrow" style="align-items:center;flex-wrap:wrap">
       ${select('_conAge', [['all','All ages'],['u21','21 and under'],['22-26','22-26'],['27-30','27-30'],['31+','31+']])}
       ${select('_conOvr', [['all','Any OVR'],['60','OVR 60+'],['70','OVR 70+'],['80','OVR 80+'],['under60','Under 60']])}
       ${select('_conPot', [['all','Any potential'],['60','POT 60+'],['70','POT 70+'],['80','POT 80+'],['under60','POT under 60']])}
@@ -65,6 +65,7 @@ Object.assign(UI, {
       ${select('_conYear', [['all','Any years left'],['0','Off contract'],['1','1 year'],['2','2 years'],['3','3 years'],['4+','4+ years']])}
       ${select('_conSalary', [['all','Any salary'],['under200','Under $200k'],['200-500','$200k-$500k'],['500-900','$500k-$900k'],['900+','$900k+']])}
       ${select('_conSort', [['ovr','Sort: OVR'],['current','Sort: current salary'],['avg','Sort: avg salary'],['total','Sort: total value'],['years','Sort: years left'],['pot','Sort: potential'],['age','Sort: youngest'],['ageOld','Sort: oldest'],['demand','Sort: cheapest demand'],['form','Sort: form'],['runs','Sort: runs'],['tries','Sort: tries'],['tackles','Sort: tackles'],['fantasy','Sort: fantasy'],['goal','Sort: goal kicking'],['kicking','Sort: general kicking'],['speed','Sort: speed'],['playmaking','Sort: playmaking'],['defence','Sort: defence']])}
+      <button class="btn sm" onclick="UI.resetContractFilters()">Reset Filters</button>
     </div>
     <div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Player</th><th class="noclick num">Age</th><th class="noclick num">OVR</th><th class="noclick num">Current</th><th class="noclick num">Avg</th><th class="noclick num">Total</th><th class="noclick num">Yrs</th><th class="noclick">Structure</th><th class="noclick">Intent</th><th class="noclick"></th></tr></thead><tbody>
     ${players.map(p=>{
@@ -86,6 +87,11 @@ Object.assign(UI, {
       </tr>`;
     }).join('')||'<tr><td colspan="10" style="color:var(--muted)">No players match those contract filters.</td></tr>'}
     </tbody></table></div>`;
+  },
+  resetContractFilters(){
+    UI._conPos='all'; UI._conAge='all'; UI._conOvr='all'; UI._conPot='all';
+    UI._conIntent='all'; UI._conYear='all'; UI._conSalary='all'; UI._conSort='ovr';
+    UI.render();
   },
   contractOfferModal(id){
     const p = G.players[id]; if(!p) return;

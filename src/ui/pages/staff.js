@@ -129,6 +129,7 @@ Object.assign(UI, {
       ${['all','coaches','medical','scouts'].map(f =>
         `<button class="btn sm ${filt===f?'primary':''}" onclick="UI._staffFilter='${f}';UI.render()">${{all:'All',coaches:'Coaches',medical:'Medical',scouts:'Scouts'}[f]}</button>`
       ).join('')}
+      ${(filt!=='all'||srch)?`<button class="btn sm" onclick="UI._staffFilter='all';UI._staffSearch='';UI.render()">Reset</button>`:''}
     </div>`;
 
     // Generate market if not cached or stale

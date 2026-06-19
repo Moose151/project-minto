@@ -2,11 +2,11 @@
 
 /* Team sheet — pitch layout plus bench/reserves */
 const FIELD_SLOT_POS = {
-  0:{x:50,y:93},                              // 1 FB — fullback (deep, clear of wingers)
-  1:{x:87,y:82}, 4:{x:13,y:82},              // 2 WG right, 5 WG left — pushed wider + lower
-  2:{x:71,y:71}, 3:{x:29,y:71},              // 3 CE right, 4 CE left
-  5:{x:63,y:59}, 6:{x:37,y:59},              // 6 FE, 7 HB — halves spread wide (was 60/44, now 26% gap)
-  9:{x:74,y:44}, 7:{x:26,y:44}, 8:{x:50,y:44}, // 10 PR, 8 PR, 9 HK — front row spread (was 68/32, now 24% gap)
+  0:{x:50,y:96},                              // 1 FB — fullback (deepest)
+  1:{x:91,y:83}, 4:{x:9,y:83},               // 2 WG right, 5 WG left — far flanks, 13% above FB
+  2:{x:71,y:69}, 3:{x:29,y:69},              // 3 CE right, 4 CE left — 14% above WG, clear of overlap
+  5:{x:63,y:56}, 6:{x:37,y:56},              // 6 FE, 7 HB — halves, 13% above CE
+  9:{x:74,y:43}, 7:{x:26,y:43}, 8:{x:50,y:43}, // 10 PR, 8 PR, 9 HK — front row
   11:{x:68,y:30}, 10:{x:32,y:30},            // 12 SR, 11 SR — second row
   12:{x:50,y:18}                              // 13 LK — lock
 };

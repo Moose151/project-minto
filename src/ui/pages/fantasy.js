@@ -81,6 +81,7 @@ Object.assign(UI, {
       </div>
       <div class="btnrow" style="margin:0 0 10px"><span style="font-size:11px;color:var(--muted);margin-right:4px;align-self:center">Position:</span>
         ${positions.map(pos=>`<button class="btn sm ${UI._fantasyPos===pos?'primary':''}" onclick="UI._fantasyPos='${pos}';UI.render()">${pos==='all'?'All':pos}</button>`).join('')}
+        ${(UI._fantasyPos!=='all'||UI._fantasySort!=='fpts')?`<button class="btn sm" onclick="UI._fantasyPos='all';UI._fantasySort='fpts';UI.render()">Reset</button>`:''}
       </div>
       <table><thead><tr>
         <th class="noclick"></th><th class="noclick">Player</th><th class="noclick">Club</th>

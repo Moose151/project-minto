@@ -265,6 +265,29 @@ Object.assign(UI, {
       </div>
     </div>
 
+    <h2 class="sec">Sponsorship</h2>
+    <div class="card" style="margin-bottom:16px">
+      ${(()=>{
+        const activeSponsors = (G.club.sponsorships||[]).filter(s=>s.yearsLeft>0);
+        if(!activeSponsors.length) return '<p style="color:var(--muted);font-size:13px;margin:0">No active sponsorship deals. Sign sponsors during preseason.</p>';
+        const rows = activeSponsors.map(s=>{
+          const catCls = s.category==='major' ? 'var(--brass)' : 'var(--muted)';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);gap:8px">
+            <div style="flex:1;min-width:0">
+              <span style="font-size:13px;font-weight:600">${esc(s.name)}</span>
+              <span class="pos-tag" style="margin-left:6px;font-size:10px;color:${catCls};border-color:${catCls}">${s.category}</span>
+            </div>
+            <div style="text-align:right;white-space:nowrap">
+              <div style="font-size:13px;font-weight:700">${money(s.value)}/yr</div>
+              <div style="font-size:11px;color:var(--muted)">${s.yearsLeft} yr${s.yearsLeft===1?'':'s'} remaining</div>
+            </div>
+          </div>`;
+        });
+        const total = activeSponsors.reduce((s,x)=>s+(x.value||0),0);
+        return rows.join('') + `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:8px"><span>Total sponsor income</span><span>${money(total)}/yr</span></div>`;
+      })()}
+    </div>
+
     <h2 class="sec">Salary Cap</h2>
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin:5px 0"><span style="color:var(--muted)">Cap limit</span><b>${money(cap)}</b></div>

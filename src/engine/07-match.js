@@ -68,10 +68,16 @@ function simMatch(m, isFinal){
   const venue = isFinal ? 'Grand Final Stadium'
     : isMagicRound ? (G.magicRound.venue || (mrHost ? mrHost.city + ' Magic Round' : 'Magic Round'))
     : (th.stadium || pick(STADIUM_NAMES));
-  const weather = m.projWeather || pick(WEATHER);
+  const slot = m.slot || {day:'Saturday', time:'afternoon', label:'Sat Afternoon'};
+  // Night games: cooler and dewier — slightly better handling but more injury risk
+  // Afternoon games: heat and harder surface — slightly more tries but more errors
+  const isNight = slot.time === 'night';
+  const weatherPool = [...WEATHER, isNight ? 'Light rain' : 'Humid'];
+  const weather = m.projWeather || pick(weatherPool);
   const crowd = m.projCrowd || matchCrowd(isMagicRound ? mrHost || th : th, isFinal);
   const ticketPrice = th.id===G.coach.teamId && G.club ? (G.club.ticketPrice || 28) : 28;
-  const weatherTryMod = weather==='Heavy rain' ? .84 : weather==='Light rain' ? .92 : weather==='Windy' ? .95 : weather==='Humid' ? .96 : 1;
+  const timeOfDayMod = isNight ? 0.97 : 1.03; // night slightly fewer tries (dew, handling), afternoon slight edge
+  const weatherTryMod = (weather==='Heavy rain' ? .84 : weather==='Light rain' ? .92 : weather==='Windy' ? .95 : weather==='Humid' ? .96 : 1) * timeOfDayMod;
   const weatherKickMod = weather==='Heavy rain' ? .88 : weather==='Light rain' ? .93 : weather==='Windy' ? .90 : weather==='Humid' ? .97 : 1;
   const crowdHomeMod = (isFinal || isMagicRound) ? 1 : clamp(0.985 + crowd / 1200000, .985, 1.035);
   th._prevLineup = th.lineup.slice(0,13);
@@ -90,7 +96,7 @@ function simMatch(m, isFinal){
   const htGoalH = triesH > 0 ? Math.round((htSplitH / triesH) * (triesH * 0.65)) : 0;
   const htGoalA = triesA > 0 ? Math.round((htSplitA / triesA) * (triesA * 0.65)) : 0;
   const htScore = {h: htSplitH*4 + htGoalH*2, a: htSplitA*4 + htGoalA*2};
-  const det = {h:{}, a:{}, events:[], suspensions:[], venue, weather, crowd, ticketPrice, weatherTryMod, weatherKickMod, htScore};
+  const det = {h:{}, a:{}, events:[], suspensions:[], venue, weather, crowd, ticketPrice, weatherTryMod, weatherKickMod, htScore, slot};
   const goalsH = simTeamStats(th, triesH, det.h, ph.kick * weatherKickMod);
   const goalsA = simTeamStats(ta, triesA, det.a, pa.kick * weatherKickMod);
   // Infringements (after stats so they don't affect scoring math)

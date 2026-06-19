@@ -402,6 +402,13 @@ const PHYSICAL_ATTRS = ['speed','acceleration','agility','stamina','strength','b
 const TECHNICAL_ATTRS = ['ballRunning','finishing','shortPass','longPass','tackling','defRead','bigHit','lastDitch','markerDef','catching','ballSecurity'];
 const MENTAL_ATTRS = ['composure','leadership','vision','decisionMaking','discipline','professionalism','workRate'];
 
+// Returns attributes that most affect OVR for a position (weight >= 0.07 in POS_PROFILE)
+function positionKeyAttrs(pos){
+  const profile = POS_PROFILE[pos];
+  if(!profile) return ATTRS;
+  return Object.keys(profile).filter(k => profile[k][1] >= 0.07);
+}
+
 function developPlayer(p, t){
   const isMine = t.id===G.coach.teamId;
   handleIndividualTraining(p, t);
@@ -432,21 +439,26 @@ function developPlayer(p, t){
   const injuryMod = p.injury ? 0.45 : 1.0;
 
   // ── GROWTH ───────────────────────────────────────────────────────────────
-  // Age-banded weekly growth chance; peaks at 16-18, fades through the 20s
-  let growChance = 0;
-  if(p.age <= 17)       growChance = 0.38;
-  else if(p.age <= 19)  growChance = 0.30;
-  else if(p.age <= 21)  growChance = 0.23;
-  else if(p.age <= 23)  growChance = 0.16;
-  else if(p.age <= 25)  growChance = 0.09;
-  else if(p.age <= 27)  growChance = 0.055;
-  else if(p.age <= 30)  growChance = 0.025;
+  // Expected attribute gains per week (Poisson rate). Higher rates mean visible
+  // OVR progress: a 20yo on full game time should gain 2-5 OVR over a season.
+  let growExpected = 0;
+  if(p.age <= 17)       growExpected = 2.2;
+  else if(p.age <= 19)  growExpected = 1.8;
+  else if(p.age <= 21)  growExpected = 1.3;
+  else if(p.age <= 23)  growExpected = 0.85;
+  else if(p.age <= 25)  growExpected = 0.48;
+  else if(p.age <= 27)  growExpected = 0.25;
+  else if(p.age <= 30)  growExpected = 0.10;
 
-  growChance *= profMod * gameTimeMod * moraleMod * injuryMod * devMod;
-  if(t.focus==='youth' && p.age<=21 && isMine) growChance *= 1.5;
+  growExpected *= profMod * gameTimeMod * moraleMod * injuryMod * devMod;
+  if(t.focus==='youth' && p.age<=21 && isMine) growExpected *= 1.5;
 
-  if(growChance > 0 && rnd() < growChance && p.ovr < p.pot){
-    const pool = focusBoost.length && rnd()<.5 ? focusBoost : ATTRS;
+  const keyAttrs = positionKeyAttrs(p.pos);
+  const growGains = Math.min(poisson(growExpected), 3);
+  for(let _g = 0; _g < growGains && p.ovr < p.pot; _g++){
+    // 72% chance to target position key attributes (high OVR weight), else use focus/random pool
+    const pool = (keyAttrs.length && rnd() < 0.72) ? keyAttrs
+               : (focusBoost.length && rnd() < 0.55) ? focusBoost : ATTRS;
     const a = pick(pool);
     const staffBonus = isMine ? staffMultiplier(a, p.pos) : 1;
     const gain = staffBonus > 1.15 && rnd() < (staffBonus - 1) ? 2 : 1;

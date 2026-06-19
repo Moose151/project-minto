@@ -38,7 +38,9 @@ Object.assign(UI, {
     <p class="page-sub">${G.year} season · all clubs</p>
     <div class="btnrow" style="margin-bottom:8px">${cats.map(([k,l])=>`<button class="btn sm ${UI.statCat===k?'primary':''}" onclick="UI.statCat='${k}';UI.render()">${l}</button>`).join('')}</div>
     <div class="btnrow" style="margin-bottom:10px"><span style="font-size:11px;color:var(--muted);margin-right:4px;align-self:center">Position:</span>
-    ${positions.map(pos=>`<button class="btn sm ${UI._statPos===pos?'primary':''}" onclick="UI._statPos='${pos}';UI.render()">${pos==='all'?'All':pos}</button>`).join('')}</div>
+    ${positions.map(pos=>`<button class="btn sm ${UI._statPos===pos?'primary':''}" onclick="UI._statPos='${pos}';UI.render()">${pos==='all'?'All':pos}</button>`).join('')}
+    ${UI._statPos!=='all'?`<button class="btn sm" onclick="UI._statPos='all';UI.render()">Reset</button>`:''}
+    </div>
     <div class="card" style="padding:6px">
       <table><thead><tr>
         <th class="noclick"></th>

@@ -70,7 +70,7 @@ Object.assign(UI, {
       const oppPos = lad.findIndex(r=>r.id===opp.id)+1;
       const oppRec = lad.find(r=>r.id===opp.id);
       nextHtml = `<div class="vs-big" style="padding:8px 0">
-        <div class="tm">${teamLogo(t,58)}<div class="nm">${esc(t.nick)}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}</div></div>
+        <div class="tm">${teamLogo(t,58)}<div class="nm">${esc(t.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(pos)} · ${rec?rec.w+'-'+rec.l:'–'}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}</div></div>
         <div class="dash">v</div>
         <div class="tm">${teamLogo(opp,58)}<div class="nm">${esc(opp.nick)}</div><div class="pmeta" style="color:var(--muted)">${ord(oppPos)} · ${oppRec.w}-${oppRec.l}</div><div class="team-rating-row" style="justify-content:center">${teamRatingPill(opp,'overall','OVR')}${teamRatingPill(opp,'atk','ATT')}${teamRatingPill(opp,'def','DEF')}</div></div>
       </div>
@@ -117,6 +117,34 @@ Object.assign(UI, {
         </div>
       </div>`;
     })();
+    // Last completed round results for the "Round Results" panel
+    const lastCompletedRound = G.round > 0 ? G.round - 1 : null;
+    const roundResultsHtml = (() => {
+      if(lastCompletedRound === null || !G.fixtures[lastCompletedRound]) return '';
+      const rf = G.fixtures[lastCompletedRound];
+      const SLOT_ORDER_IDX = {'Thursday-night':0,'Friday-afternoon':1,'Friday-night':2,'Saturday-afternoon':3,'Saturday-night':4,'Sunday-afternoon':5,'Sunday-night':6};
+      const slotKey = m => m.slot ? `${m.slot.day}-${m.slot.time}` : 'Saturday-afternoon';
+      const sorted = rf.filter(m=>m.played).slice().sort((a,b)=>(SLOT_ORDER_IDX[slotKey(a)]||3)-(SLOT_ORDER_IDX[slotKey(b)]||3));
+      if(!sorted.length) return '';
+      const rows = sorted.map(m=>{
+        const h=G.teams[m.h], a=G.teams[m.a];
+        const mine = m.h===G.coach.teamId || m.a===G.coach.teamId;
+        const slotLabel = m.slot ? m.slot.label : 'Sat Afternoon';
+        return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line);${mine?'background:rgba(210,165,62,.06);margin:0 -8px;padding:4px 8px;':''}">
+          <span style="font-size:9px;color:var(--brass);min-width:68px;flex-shrink:0;font-weight:600">${esc(slotLabel)}</span>
+          ${teamLogo(h,18)}
+          <span style="font-size:12px;font-weight:${m.hs>m.as?700:400};flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(h.nick)}</span>
+          <span style="font-size:13px;font-weight:700;font-family:var(--disp);min-width:36px;text-align:center">${m.hs}–${m.as}</span>
+          <span style="font-size:12px;font-weight:${m.as>m.hs?700:400};flex:1;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(a.nick)}</span>
+          ${teamLogo(a,18)}
+        </div>`;
+      });
+      const byeTeams = (G.byes && G.byes[lastCompletedRound]) || [];
+      const byeRow = byeTeams.length ? `<div style="font-size:10px;color:var(--brass);text-align:center;padding:4px 0">${byeTeams.map(id=>G.teams[id]?esc(G.teams[id].nick):'').join(', ')} — BYE</div>` : '';
+      return `<div class="card" style="margin-top:16px"><h2 class="sec" style="margin-top:0">Round ${lastCompletedRound+1} Results</h2>${rows.join('')}${byeRow}
+        <div class="btnrow" style="margin-top:8px"><button class="btn sm" onclick="UI._fixtRound=${lastCompletedRound};UI.go('fixtures')">Full fixtures</button></div>
+      </div>`;
+    })();
     const news = (G.news || []).slice(0,12).map(n=>UI._newsCard(n)).join('') || '<p class="page-sub">Quiet week.</p>';
     return `<h1 class="page">Dashboard</h1><p class="page-sub">${esc(teamName(t))} · ${G.year} · Board expectation: ${esc(G.coach.expect.label)}</p>
     <div class="dash-strip">
@@ -134,6 +162,7 @@ Object.assign(UI, {
       <div class="card"><h2 class="sec" style="margin-top:0">Next match</h2>${nextHtml}</div>
       <div class="card"><h2 class="sec" style="margin-top:0">Club alerts</h2><div class="alert-list">${UI._dashAlerts(t, lad)}</div></div>
     </div>
+    ${roundResultsHtml}
     <div class="grid2" style="margin-top:16px">
       <div class="card"><h2 class="sec" style="margin-top:0">Ladder</h2><table><tbody>${mini}</tbody></table>
         <div class="btnrow"><button class="btn sm" onclick="UI.go('ladder')">Full ladder</button></div></div>

@@ -248,6 +248,7 @@ Object.assign(UI, {
       UI.closeModal(); return;
     }
     p.squad = 'trial';
+    if(p.seasonStartOvr == null) p.seasonStartOvr = p.ovr;
     p.salary = trialSalary;
     p.years = 1;
     p.contractType = 'flat';
@@ -304,6 +305,7 @@ Object.assign(UI, {
       p.everTopSquad = true;
       p.trialGames = undefined;
       p.trialBreakout = false;
+      if(p.seasonStartOvr == null) p.seasonStartOvr = p.ovr;
       if(o.isTrialUpgrade){
         // Already on the team — just update contract terms
         addNews(`${p.name} upgraded from train & trial to a full contract at ${money(o.salary)}/yr.`, {title:'Contract Upgrade', type:'contract', tone:'good', playerId:p.id, teamId:t.id, tag:'Contracts'});
