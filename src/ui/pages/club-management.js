@@ -27,6 +27,21 @@ Object.assign(UI, {
     const onTrack = pos <= expectedPos;
     const boardStatus = conf >= 70 ? {label:'Happy', cls:'good'} : conf >= 40 ? {label:'Satisfied', cls:''} : conf >= 20 ? {label:'Concerned', cls:'bad'} : {label:'Critical', cls:'bad'};
 
+    // Facility board expectations
+    const prestige = typeof clubPrestigeTier === 'function' ? clubPrestigeTier(t) : {key:'solid'};
+    const facilityKeys = Object.keys(FACILITY_DEFS);
+    const facilityAvg = facilityKeys.reduce((s,k)=>s+facilityLevel(k),0) / facilityKeys.length;
+    const facExpectMin = prestige.key==='dynasty'||prestige.key==='elite' ? 3.5
+      : prestige.key==='strong' ? 2.5
+      : prestige.key==='solid' ? 2.0
+      : 1.5;
+    const facExpectLabel = prestige.key==='dynasty'||prestige.key==='elite' ? 'Elite (avg Lv 4+)'
+      : prestige.key==='strong' ? 'Professional (avg Lv 3+)'
+      : prestige.key==='solid' ? 'Solid (avg Lv 2+)'
+      : 'Basic (avg Lv 2)';
+    const facOnTrack = facilityAvg >= facExpectMin;
+    const facShortfall = facilityKeys.filter(k=>facilityLevel(k)<Math.ceil(facExpectMin));
+
     // Season progress estimate (how many rounds played)
     const totalRounds = G.fixtures ? G.fixtures.length : 24;
     const roundsDone = Math.max(0, G.round);
@@ -206,6 +221,15 @@ Object.assign(UI, {
           </div>
           <div style="font-size:11px;color:var(--dim);margin-top:4px">Round ${roundsDone} of ${totalRounds}</div>
         </div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Facility Expectations</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px">Standard: <b>${facExpectLabel}</b></span>
+          <span style="font-size:13px;color:var(--muted)">Current: <b>${facilityAvg.toFixed(1)} avg</b></span>
+          <span style="font-size:12px;font-weight:700;color:${facOnTrack?'var(--green)':'var(--red)'}">${facOnTrack ? '✓ Meets expectations' : '✗ Below standard'}</span>
+        </div>
+        ${!facOnTrack && facShortfall.length ? `<div style="font-size:11px;color:var(--red);margin-top:4px">Upgrade needed: ${facShortfall.map(k=>FACILITY_DEFS[k].label).join(', ')}</div>` : ''}
       </div>
     </div>
 

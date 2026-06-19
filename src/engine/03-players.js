@@ -46,6 +46,7 @@ function genPlayer(pos, age, quality){ // quality ~ league tier centre, e.g. 60
   p.hgt = Math.round({back:184,half:178,fwd:192,hk:180}[POS_GROUP[pos]] + gauss(0,4));
   p.wgt = Math.round({back:94,half:86,fwd:108,hk:92}[POS_GROUP[pos]] + gauss(0,5));
   p.injProne = ri(1,20); p.prof = ri(20,99); p.ambition = ri(20,99); p.loyalty = ri(20,99); p.prefCity = pick(IDENTITIES).city;
+  p.personality = pick(['money','money','winner','winner','loyal','loyal','ambitious','ambitious','homesick','balanced']);
   shapeSpecialistAttributes(p);
   p.ovr = calcOvr(p);
   const headroom = age<=19 ? ri(6,24) : age<=22 ? ri(4,16) : age<=25 ? ri(2,9) : ri(0,3);

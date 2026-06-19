@@ -555,9 +555,14 @@ function demandFor(p, toTeam){
   if(p.ambition>75) d*=1.08;
   if(p.morale<40) d*=1.1;
   if((p.form == null ? 50 : p.form) >= 72) d*=1.05;
+  const psnl = p.personality;
+  if(psnl === 'money') d *= 1.14;
+  if(psnl === 'ambitious') d *= 1.06;
+  if(psnl === 'loyal') d *= 0.94;
   const current = G.teams.find(t=>t.players.includes(p.id));
   if(toTeam && current && current.id === toTeam.id && !p.releaseRequest){
-    const loyaltyDiscount = p.loyalty >= 85 ? .10 : p.loyalty >= 70 ? .06 : p.loyalty >= 55 ? .03 : 0;
+    const loyaltyBase = p.loyalty >= 85 ? .10 : p.loyalty >= 70 ? .06 : p.loyalty >= 55 ? .03 : 0;
+    const loyaltyDiscount = psnl === 'loyal' ? loyaltyBase + 0.07 : loyaltyBase;
     d *= (1 - loyaltyDiscount);
   }
   return Math.round(d/5000)*5000;
@@ -605,6 +610,18 @@ function contractSignChance(p, salary, years, toTeam, promises, demandOverride){
   if(years>=3 && p.age<=27) prob = Math.min(.97, prob*1.1);
   if(years<=1 && p.age<=25) prob *= .85;
   if(p.approachTeam === toTeam.id) prob = Math.min(.97, prob * 1.15);
+  // Personality modifiers
+  const psnl = p.personality;
+  const lad = (G.fixtures && G.fixtures.length && typeof ladder === 'function') ? ladder() : [];
+  const toPos = lad.length ? lad.findIndex(r=>r.id===toTeam.id)+1 : Math.ceil(G.teams.length/2);
+  if(psnl === 'money') prob *= 1.0; // money players already accounted for via higher demand
+  if(psnl === 'winner' && toPos <= Math.ceil(G.teams.length*0.35)) prob = Math.min(.97, prob*1.18); // love top clubs
+  if(psnl === 'winner' && toPos > Math.ceil(G.teams.length*0.65)) prob *= 0.82; // reluctant for bottom clubs
+  if(psnl === 'loyal' && current && toTeam && current.id===toTeam.id) prob = Math.min(.97, prob*1.22); // very sticky to own club
+  if(psnl === 'loyal' && current && toTeam && current.id!==toTeam.id) prob *= 0.80; // hard to poach
+  if(psnl === 'ambitious') { const pPull = ((prestige-50)/80); prob = Math.min(.97, prob*(1+pPull*0.18)); } // prestige-addicted
+  if(psnl === 'homesick' && p.prefCity && p.prefCity===toTeam.city) prob = Math.min(.97, prob*1.30);
+  if(psnl === 'homesick' && p.prefCity && p.prefCity!==toTeam.city) prob *= 0.72;
   const pr = normalisePromises(promises);
   if(pr.role === 'starter') prob *= 1.09;
   if(pr.role === 'bench') prob *= p.ovr < 68 ? 1.06 : 0.96;

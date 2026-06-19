@@ -274,8 +274,10 @@ Object.assign(UI, {
     const pct = Math.round(chance.prob*100);
     const promiseBtn = (role,label) => `<button class="btn sm ${o.promises.role===role?'primary':''}" onclick="UI._contractOffer.promises.role='${role}';UI.renderFreeAgentOffer()">${label}</button>`;
     const typeBtn = (type,label) => `<button class="btn sm ${o.promises.contractType===type?'primary':''}" onclick="UI._contractOffer.promises.contractType='${type}';UI.renderFreeAgentOffer()">${label}</button>`;
+    const psnlLabels = {money:'Money-Driven',winner:'Win-Hungry',loyal:'Club Loyalist',ambitious:'Prestige-Seeker',homesick:'Homesick',balanced:'Balanced'};
+    const psnlNote = {money:' (demands top dollar)',winner:' (wants a title contender)',loyal:' (very loyal — hard to poach)',ambitious:' (drawn to elite clubs)',homesick:' (strong city preference)',balanced:''};
     UI.modal(`<h3>Sign ${esc(p.name)}</h3>
-      <p class="page-sub">${p.pos}/${p.pos2} · ${p.age}yo · OVR ${p.ovr} · Market value ${money(o.demand)} avg/yr</p>
+      <p class="page-sub">${p.pos}/${p.pos2} · ${p.age}yo · OVR ${p.ovr} · Market value ${money(o.demand)} avg/yr${p.personality?` · <b>${psnlLabels[p.personality]||p.personality}</b>${psnlNote[p.personality]||''}`:''}</p>
       <div class="field"><label>Average salary offer</label><div class="btnrow" style="align-items:center;margin:0">
         <button class="btn sm" onclick="UI._contractOffer.salary=Math.max(85000,UI._contractOffer.salary-25000);UI.renderFreeAgentOffer()">-25k</button>
         <span style="font-family:var(--disp);font-size:26px;font-weight:700;min-width:120px;text-align:center">${money(o.salary)}</span>

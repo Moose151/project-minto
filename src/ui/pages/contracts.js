@@ -246,6 +246,7 @@ Object.assign(UI, {
         <div><span style="color:var(--muted)">Form</span> <b>${formText(p)}</b></div>
         <div><span style="color:var(--muted)">Loyalty</span> <b>${p.loyalty}</b></div>
         <div><span style="color:var(--muted)">Morale</span> <b>${p.morale}</b></div>
+        ${p.personality ? `<div style="grid-column:1/-1"><span style="color:var(--muted)">Personality</span> <b>${{'money':'Money-Driven','winner':'Win-Hungry','loyal':'Club Loyalist','ambitious':'Prestige-Seeker','homesick':'Homesick','balanced':'Balanced'}[p.personality]||p.personality}</b></div>` : ''}
       </div>
       ${intent.reason ? `<p style="font-size:11px;color:var(--dim);margin:4px 0 8px;font-style:italic">"${esc(intent.reason)}"</p>` : ''}
       ${promiseSummary(p) !== 'No promises' ? `<p style="font-size:11px;color:var(--brass);margin:0 0 8px">Promises: ${esc(promiseSummary(p))}</p>` : ''}

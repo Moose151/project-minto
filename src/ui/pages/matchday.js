@@ -271,6 +271,7 @@ Object.assign(UI, {
         header.style.background = flashColor;
         setTimeout(()=>{ if(header) header.style.background = ''; }, 900);
       }
+      if(won) UI._spawnConfetti();
       if(allBtn) allBtn.style.display='';
       if(postMatch){
         G._lastPlayedMatch = myM;
@@ -279,6 +280,25 @@ Object.assign(UI, {
       }
     }
     setTimeout(()=>UI._revealFeedPage(events, i+1, myM), Math.max(80, 800/(UI._watchSpeed||2)));
+  },
+
+  _spawnConfetti(){
+    let el = document.getElementById('wg-confetti');
+    if(!el){ el = document.createElement('div'); el.id='wg-confetti'; document.body.appendChild(el); }
+    el.innerHTML = '';
+    const COLORS = ['#d2a53e','#4caf7d','#5b9bd5','#e05c5c','#9c6dd8','#f0a430','#61c9a8'];
+    for(let i=0;i<55;i++){
+      const s = document.createElement('span');
+      s.style.left = (Math.random()*100)+'%';
+      s.style.background = COLORS[Math.floor(Math.random()*COLORS.length)];
+      s.style.animationDuration = (1.8+Math.random()*2)+'s';
+      s.style.animationDelay = (Math.random()*1.2)+'s';
+      s.style.width = (6+Math.random()*8)+'px';
+      s.style.height = s.style.width;
+      s.style.borderRadius = Math.random()>0.5?'50%':'2px';
+      el.appendChild(s);
+    }
+    setTimeout(()=>{ if(el && el.parentNode) el.parentNode.removeChild(el); }, 4500);
   },
 
   _buildMatchReportHtml(myM){
