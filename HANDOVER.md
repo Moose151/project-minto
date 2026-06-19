@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Inbox player messages — added direct player-message generation for low morale, youth pathway, and hot-form situations, with cooldowns, player links, and a dedicated Inbox filter.
 - Scouting region probabilities — regional scouting now weights positions by local specialities instead of uniform random pools, and region rows show the top likely positions before dispatch.
 - AI club facility tracking — every club now carries facility levels; AI facilities affect prestige, stadium capacity, recovery, medical recovery, and development, drift through offseason upgrades/degradation, and are visible on club cards/modals.
 - Hall of Fame ceremony UX — inductee cards now include a ceremony modal with legacy score, peak OVR, career totals, honours, final club context, and season review marks new Hall of Fame retirees with a direct inductions link.
@@ -267,7 +268,7 @@ cd api && node server.js
 
 #### Post-Match, Inbox, Avatars, Scouting, Facilities, Contracts — Partial
 - Post-match: possession/completion % now computed and shown in all stat tables ✅; half-by-half breakdown ✅; historical full match reports are available from every completed fixture ✅.
-- Inbox: action buttons implemented ✅; read/unread state ✅; player messages and richer scout items still to do.
+- Inbox: action buttons implemented ✅; read/unread state ✅; player messages ✅; richer scout items ✅.
 - Player avatars: current procedural SVG too complex at small sizes — consider simplified bold cartoon, pixel sprites, or canvas approach.
 - Scouting: prospect backstory ✅; scout position-matching skill ✅; richer region probabilities ✅.
 - Facilities: board expectations ✅; AI club facility tracking ✅.

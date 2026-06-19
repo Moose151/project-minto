@@ -114,6 +114,7 @@ function completeRound(roundIdx){
   coachWeekly(myM);
   generateWeeklyMedia(round, myM);
   generateStaffRecommendations();
+  generatePlayerMessages();
   advanceScouting();
   checkAchievements('round', {round, myM});
   simOriginIfDue(roundIdx);
@@ -952,6 +953,38 @@ function generateStaffRecommendations(){
       );
     }
   }
+}
+function generatePlayerMessages(){
+  const mt = myTeam();
+  if(!mt || G.phase !== 'regular') return;
+  const round = G.round + 1;
+  if(round < 3 || rnd() > 0.42) return;
+  const players = mt.players.map(id=>G.players[id]).filter(p=>p && (p.squad==='top' || p.squad==='dev' || p.squad==='trial'));
+  const eligible = players.filter(p=>!p.injury && (p._lastPlayerMessageRound == null || round - p._lastPlayerMessageRound >= 6));
+  if(!eligible.length) return;
+  const lowMorale = eligible.filter(p=>(p.morale||50) <= 38 && p.squad==='top').sort((a,b)=>(a.morale||50)-(b.morale||50));
+  const youthPath = eligible.filter(p=>p.squad==='dev' && p.age<=20 && p.ovr>=54).sort((a,b)=>b.pot-a.pot);
+  const inForm = eligible.filter(p=>p.squad==='top' && (p.form||50)>=78 && (p.s.g||0)>=3).sort((a,b)=>(b.form||50)-(a.form||50));
+  let p, title, body, tone;
+  if(lowMorale.length){
+    p = lowMorale[0];
+    title = 'Player Message';
+    body = `${p.name} has asked for a one-on-one conversation. He feels his role and morale need attention before frustration becomes a bigger issue.`;
+    tone = 'bad';
+  } else if(youthPath.length){
+    p = youthPath[0];
+    title = 'Youth Pathway Message';
+    body = `${p.name} has asked development staff what his pathway to first grade looks like. A training focus or controlled promotion plan could keep momentum high.`;
+    tone = 'neutral';
+  } else if(inForm.length){
+    p = inForm[0];
+    title = 'Player Confidence';
+    body = `${p.name} says the group is responding well to his current role. His form is high and he believes the team can lean into that momentum.`;
+    tone = 'good';
+  }
+  if(!p) return;
+  p._lastPlayerMessageRound = round;
+  addNews(body, {title, type:'player', tone, playerId:p.id, teamId:mt.id, tag:'Player Message', r:round, y:G.year});
 }
 function advanceScouting(){
   if(!G.scouting || !G.scouting.missions) return;

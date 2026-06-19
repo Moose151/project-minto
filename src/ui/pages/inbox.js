@@ -14,6 +14,7 @@ Object.assign(UI, {
       ['club',           'Club'],
       ['board',          'Board'],
       ['origin',         'State of Origin'],
+      ['player',         'Player Messages'],
       ['recommendation', 'Staff Reports'],
       ['form',           'Form Alerts'],
       ['scouting',       'Scouting'],
@@ -65,6 +66,7 @@ Object.assign(UI, {
         scouting:      `<button class="btn sm" onclick="event.stopPropagation();UI.go('scouting')">Scouting →</button>`,
         recruitment:   `<button class="btn sm" onclick="event.stopPropagation();UI.go('recruitment')">Recruitment →</button>`,
         form:          `<button class="btn sm" onclick="event.stopPropagation();UI.go('squad')">Squad →</button>`,
+        player:        `<button class="btn sm" onclick="event.stopPropagation();UI.go('squad')">Squad →</button>`,
         board:         `<button class="btn sm" onclick="event.stopPropagation();UI.go('club-management')">Club Management →</button>`,
         finance:       `<button class="btn sm" onclick="event.stopPropagation();UI.go('club-management')">Club Management →</button>`,
       }[n.type] || '';
