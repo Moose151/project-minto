@@ -27,7 +27,7 @@ function fitCap(G, t){ // scale salaries so top squad fits under cap
   const target = G.config.cap * rf(.88,.99);
   if(total > target){ const f = target/total; for(const id of t.players){ const p=G.players[id]; if(!salaryCountsForCap(p)) continue; p.salary = Math.max(85000, Math.round(p.salary*f/5000)*5000); if(p.contractSchedule && p.contractSchedule.length) p.contractSchedule = p.contractSchedule.map(v=>Math.max(85000, Math.round(v*f/5000)*5000)); } }
 }
-function genFixtures(teamIds){
+function genFixtures(teamIds, targetRounds){
   // double round robin, circle method; odd team count → one bye per round
   const ids = shuffle(teamIds);
   const n = ids.length;
@@ -53,8 +53,12 @@ function genFixtures(teamIds){
   }
 
   const secondHalf = rounds.map(g => g.map(mm => ({h:mm.a, a:mm.h})));
-  const allRounds = [...rounds, ...secondHalf];
-  const allByes = [...byesByRound, ...byesByRound];
+  let allRounds = [...rounds, ...secondHalf];
+  let allByes = [...byesByRound, ...byesByRound];
+  if(targetRounds && targetRounds > 0 && targetRounds < allRounds.length){
+    allRounds = allRounds.slice(0, targetRounds);
+    allByes = allByes.slice(0, targetRounds);
+  }
 
   // Assign day/time slots — no two games simultaneous; spread across Thu-Sun
   const assignedRounds = allRounds.map(games => {

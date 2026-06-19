@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- NRL Standard preset corrected — wizard now advertises and generates 17 NRL clubs with a 27-round regular season, $10.2M cap, and existing top-8 finals.
 - Inbox player messages — added direct player-message generation for low morale, youth pathway, and hot-form situations, with cooldowns, player links, and a dedicated Inbox filter.
 - Scouting region probabilities — regional scouting now weights positions by local specialities instead of uniform random pools, and region rows show the top likely positions before dispatch.
 - AI club facility tracking — every club now carries facility levels; AI facilities affect prestige, stadium capacity, recovery, medical recovery, and development, drift through offseason upgrades/degradation, and are visible on club cards/modals.
@@ -303,7 +304,7 @@ cd api && node server.js
 - Coach rep-job offers, dual-role management, international fixtures not yet done.
 
 #### NRL Standard League Mode
-- New game wizard "NRL Standard" preset: 17 real NRL clubs, real names/colours/stadiums, 27-round season, correct finals format.
+- New game wizard "NRL Standard" preset: 17 real NRL clubs, real names/colours/stadiums, 27-round season, correct finals format. ✅
 
 #### Magic Round ✅ (already implemented)
 - Engine: `G.magicRound` assigned in `05-game.js` and refreshed in `11-offseason.js`; `simMatch` uses magic round venue; host club earns $1.5M windfall via `payClubWeekly`; fixtures/matchday pages show Magic Round banner. Moving to ✅ section.

@@ -75,7 +75,7 @@ function startNewGame(cfg){
   srand(cfg.seed || Date.now());
   _pid = 1;
   G = { v:1, year:2026, season:1, round:0, phase:'regular', godMode:false, achievementsLocked:false,
-    config:{ nTeams:cfg.nTeams, cap:cfg.cap, capGrowth:.03, leagueName: cfg.leagueName || 'Minto Premiership' },
+    config:{ nTeams:cfg.nTeams, cap:cfg.cap, capGrowth:.03, leagueName: cfg.leagueName || 'Minto Premiership', seasonRounds:cfg.seasonRounds || null },
     players:{}, teams:[], freeAgents:[], news:[], history:[], hallOfFame:[], achievements:[], finals:null, offseason:null,
     calendar:{day:0, startISO:'2026-03-02', lastStop:{key:'training', label:'Training review', page:'training', tone:'neutral'}},
     staff: [genStaff('attacking', 52), genStaff('defensive', 52), genStaff('fitness', 48)],
@@ -93,7 +93,7 @@ function startNewGame(cfg){
   buildFreeAgentPool(G);
   for(const t of G.teams) fitCap(G, t);
   G.coach.teamId = cfg.teamId;
-  const fixtResult = genFixtures(G.teams.map(t=>t.id));
+  const fixtResult = genFixtures(G.teams.map(t=>t.id), G.config.seasonRounds);
   G.fixtures = fixtResult.rounds;
   G.byes = fixtResult.byes;
   if(G.fixtures.length >= 10){

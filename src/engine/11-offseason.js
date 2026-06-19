@@ -931,7 +931,7 @@ function startNewSeason(){
   }
   for(const id in G.players){ const p=G.players[id]; resetSeasonStats(p); p.morale=clamp(p.morale, 45, 90); p.form=clamp(Math.round((p.form == null ? 50 : p.form)*0.72 + 50*0.28), 25, 85); p.ovr=calcOvr(p); p.pot=Math.max(p.pot,p.ovr); p.seasonStartOvr=p.ovr; p.seasonStartPot=p.pot; p.seasonStartGames=p.career.games; p.seasonStartAttrs={...p.attrs}; delete p.approachTeam; if(p.ovrHistory){ p.ovrHistory.push({year:G.year, ovr:p.ovr}); if(p.ovrHistory.length>20) p.ovrHistory.shift(); } }
   for(const t of G.teams){ t.rep = Math.round(squadStrength(t)); autoPick(t); }
-  const fixtResult = genFixtures(G.teams.map(t=>t.id));
+  const fixtResult = genFixtures(G.teams.map(t=>t.id), G.config.seasonRounds);
   G.fixtures = fixtResult.rounds;
   G.byes = fixtResult.byes;
   // Magic Round: pick host by prestige bid (squad strength + randomness)

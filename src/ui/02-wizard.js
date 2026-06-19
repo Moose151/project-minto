@@ -26,7 +26,7 @@ Object.assign(UI, {
             <div class="opt ${isNRL?'sel':''}" onclick="UI.wizSetMode('nrl')">NRL Standard</div>
           </div>
         </div>
-        ${isNRL ? `<div style="font-size:12px;color:var(--muted);margin:0 0 12px;padding:8px 12px;background:var(--card2);border-radius:6px">17 NRL clubs · 32-round season · Top-8 finals · $10.2M salary cap</div>` : ''}
+        ${isNRL ? `<div style="font-size:12px;color:var(--muted);margin:0 0 12px;padding:8px 12px;background:var(--card2);border-radius:6px">17 NRL clubs · 27-round season · Top-8 finals · $10.2M salary cap</div>` : ''}
         <div class="field"><label>Coach name</label><input type="text" id="wzName" placeholder="e.g. Dan Carmody" value="${esc(UI.wizCfg.coachName)}"></div>
         ${!isNRL ? `<div class="field"><label>League size</label>
           <div class="radio-row">${[8,10,12,14,16].map(n=>`<div class="opt ${UI.wizCfg.nTeams===n?'sel':''}" onclick="UI.wizSet('nTeams',${n})">${n} clubs</div>`).join('')}</div></div>` : ''}
@@ -59,6 +59,7 @@ Object.assign(UI, {
       teamId: null,
       identities: isNRL ? NRL_IDENTITIES : null,
       leagueName: isNRL ? 'NRL Premiership' : 'Minto Premiership',
+      seasonRounds: isNRL ? 27 : null,
     });
     UI.wizWorld = true;
     UI.render();
