@@ -47,7 +47,7 @@ Object.assign(UI, {
 
     return `<h1 class="page">Squad</h1>
     <p class="page-sub">${top.length}/${TOP_SQUAD_CAP} main squad · ${trial.length}/${TRIAL_SQUAD_CAP} train & trial · ${dev.length}/${YOUTH_SQUAD_CAP} youth · cap salary ${money(totalSal)} of ${money(G.config.cap)} <span style="color:${totalSal>G.config.cap?'var(--red)':'var(--green)'}">(${money(G.config.cap-totalSal)} ${totalSal>G.config.cap?'over':'free'})</span></p>
-    <div class="btnrow"><button class="btn sm" onclick="UI.go('teamsheet')">Team sheet</button><button class="btn sm" onclick="UI.go('injuryward')">Injury ward</button><button class="btn sm" onclick="UI.go('contracts')">Contracts</button><button class="btn sm" onclick="UI.go('recruitment')">Sign T&T →</button></div>
+    <div class="btnrow"><button class="btn sm" onclick="UI.go('teamsheet')">Team sheet</button><button class="btn sm" onclick="UI.go('injuryward')">Injury ward</button><button class="btn sm" onclick="UI.go('contracts')">Contracts</button><button class="btn sm" onclick="UI.go('recruitment')">Sign T&T →</button>${UI.sortKey!=='ovr'||UI.sortDir!==-1?`<button class="btn sm" onclick="UI.sortKey='ovr';UI.sortDir=-1;UI.render()">Reset sort</button>`:''}</div>
     <div class="card" style="padding:6px;overflow-x:auto">
       <div class="navsep" style="margin:4px 0 6px">Main Squad (${top.length}/${TOP_SQUAD_CAP}) ${top.length>=TOP_SQUAD_CAP?`<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:8px">SQUAD FULL — sign depth to T&T</span>`:''}</div>
       <table><thead>${tableHead}</thead><tbody>${sort(top).map(p=>UI.playerRow(p,'none')).join('')}</tbody></table>

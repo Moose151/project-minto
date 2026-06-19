@@ -31,6 +31,13 @@ Object.assign(UI, {
       if(ev && ev.key === 'training') detail = 'Review training focus and medical load after the previous round.';
       if(ev && ev.key === 'travel') detail = 'Away trip logistics. Keep overloaded players fresh.';
       if(ev && ev.key === 'recovery') detail = 'Medical checks, rehab and reduced field load.';
+      if(ev && ev.key === 'gamenight'){
+        const round = G.fixtures && G.fixtures[r];
+        if(round){
+          const gn = round.filter(mm=>mm.slot&&(mm.slot.day==='Thursday'||mm.slot.day==='Friday')&&mm.h!==G.coach.teamId&&mm.a!==G.coach.teamId);
+          detail = gn.map(mm=>`${teamName(G.teams[mm.h])} v ${teamName(G.teams[mm.a])} (${mm.slot.label})`).join(' · ') || 'AI games today.';
+        }
+      }
       if(ev && ev.key === 'match'){
         if(isBye) detail = 'No fixture. Squad receives a rest week.';
         else if(m){
