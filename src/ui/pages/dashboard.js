@@ -133,9 +133,7 @@ Object.assign(UI, {
     const roundResultsHtml = (() => {
       if(lastCompletedRound === null || !G.fixtures[lastCompletedRound]) return '';
       const rf = G.fixtures[lastCompletedRound];
-      const SLOT_ORDER_IDX = {'Thursday-night':0,'Friday-afternoon':1,'Friday-night':2,'Saturday-afternoon':3,'Saturday-night':4,'Sunday-afternoon':5,'Sunday-night':6};
-      const slotKey = m => m.slot ? `${m.slot.day}-${m.slot.time}` : 'Saturday-afternoon';
-      const sorted = rf.filter(m=>m.played).slice().sort((a,b)=>(SLOT_ORDER_IDX[slotKey(a)]||3)-(SLOT_ORDER_IDX[slotKey(b)]||3));
+      const sorted = sortMatchesBySlot(rf.filter(m=>m.played));
       if(!sorted.length) return '';
       const rows = sorted.map(m=>{
         const h=G.teams[m.h], a=G.teams[m.a];

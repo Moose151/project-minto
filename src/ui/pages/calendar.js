@@ -34,8 +34,8 @@ Object.assign(UI, {
       if(ev && ev.key === 'gamenight'){
         const round = G.fixtures && G.fixtures[r];
         if(round){
-          const gn = round.filter(mm=>mm.slot&&(mm.slot.day==='Thursday'||mm.slot.day==='Friday')&&mm.h!==G.coach.teamId&&mm.a!==G.coach.teamId);
-          detail = gn.map(mm=>`${teamName(G.teams[mm.h])} v ${teamName(G.teams[mm.a])} (${mm.slot.label})`).join(' · ') || 'AI games today.';
+          const gn = sortMatchesBySlot(round).filter(mm=>!mm.played && slotDow(mm.slot)===dow);
+          detail = gn.map(mm=>`${teamName(G.teams[mm.h])} v ${teamName(G.teams[mm.a])} (${mm.slot ? mm.slot.label : 'TBC'})`).join(' · ') || 'Games today.';
         }
       }
       if(ev && ev.key === 'match'){
@@ -60,6 +60,20 @@ Object.assign(UI, {
       const opp = G.teams[myMatch.h===G.coach.teamId ? myMatch.a : myMatch.h];
       return `${myMatch.h===G.coach.teamId?'Home':'Away'} v ${teamName(opp)}`;
     })() : bye ? 'Bye week' : 'No fixture';
+    const roundMatches = sortMatchesBySlot(G.fixtures[roundIdx] || []);
+    const roundRows = roundMatches.map(m=>{
+      const h = G.teams[m.h], a = G.teams[m.a];
+      const mine = m.h===G.coach.teamId || m.a===G.coach.teamId;
+      const slotLabel = m.slot ? m.slot.label : 'Sat Afternoon';
+      const status = m.played ? `${m.hs}–${m.as}` : 'Upcoming';
+      const statusColour = m.played ? 'var(--ink)' : 'var(--muted)';
+      return `<tr style="${mine?'background:rgba(210,165,62,.07)':''}">
+        <td style="font-size:11px;color:var(--brass);font-weight:700">${esc(slotLabel)}</td>
+        <td>${teamLogo(h,20)} ${esc(h.nick)}</td>
+        <td class="num" style="font-weight:700;color:${statusColour}">${status}</td>
+        <td style="text-align:right">${esc(a.nick)} ${teamLogo(a,20)}</td>
+      </tr>`;
+    }).join('');
     return `<h1 class="page">Calendar</h1>
     <p class="page-sub">${calendarDateLabel()} · Round ${roundIdx+1} · ${esc(matchLine)}</p>
     <div class="grid3" style="margin-bottom:12px">
@@ -69,6 +83,8 @@ Object.assign(UI, {
     </div>
     <div class="btnrow"><button class="btn primary" onclick="UI.advance()">${stop&&stop.key==='match'&&!bye?'Play Match Day':'Next Day'}</button><button class="btn" onclick="UI.go('teamsheet')">Team Sheet</button><button class="btn" onclick="UI.go('training')">Training</button><button class="btn" onclick="UI.go('injuryward')">Injury Ward</button>${lowCond.length?`<button class="btn" onclick="myTeam().focus='recovery';UI.toast('Team focus set to recovery.');UI.render()">Set recovery focus</button>`:''}</div>
     ${lowCond.length?`<h2 class="sec">Load Watch</h2><div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Player</th><th class="noclick">Pos</th><th class="noclick num">Cond</th><th class="noclick num">Load</th><th class="noclick num">Fatigue</th></tr></thead><tbody>${lowCond.map(p=>`<tr class="click" onclick="UI.playerModal(${p.id})"><td><b>${esc(p.name)}</b></td><td><span class="pos-tag">${p.pos}</span></td><td class="num" style="color:${p.cond<65?'var(--red)':p.cond<78?'var(--brass)':'var(--muted)'}">${Math.round(p.cond)}%</td><td class="num">${Math.round(p.load||0)}</td><td class="num">${Math.round(p.fatigue||0)}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <h2 class="sec">Round ${roundIdx+1} Games</h2>
+    <div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Kickoff</th><th class="noclick">Home</th><th class="noclick num">Status</th><th class="noclick" style="text-align:right">Away</th></tr></thead><tbody>${roundRows}</tbody></table></div>
     <h2 class="sec">Next 14 Days</h2>
     <div class="grid3">${Array.from({length:14},(_,i)=>eventCard(today+i)).join('')}</div>`;
   }

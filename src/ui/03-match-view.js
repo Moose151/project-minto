@@ -37,9 +37,9 @@ Object.assign(UI, {
     }
     UI.render();
     if(res && (res.type === 'day' || res.type === 'round') && res.stop) UI.toast(res.stop.label);
-    if(res && res.type==='round') UI.showRoundResults(res.round, `Round ${G.round} results`);
+    if(res && res.type==='round') UI.showRoundResults(res.round, `Round ${(res.roundIdx == null ? G.round - 1 : res.roundIdx) + 1} results`);
     if(res && res.type==='finals') UI.showRoundResults(res.games, res.label);
-    if(res && res.earlyMatches && res.earlyMatches.length) UI.showEarlyResults(res.earlyMatches);
+    if(res && res.type==='day' && res.earlyMatches && res.earlyMatches.length) UI.showEarlyResults(res.earlyMatches);
   },
   showRoundResults(games, title){
     const myM = games.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);

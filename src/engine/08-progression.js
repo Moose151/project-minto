@@ -83,41 +83,57 @@ function vendorRevenuePerHead(){
 }
 
 /* ---------- weekly progression ---------- */
+function completeRound(roundIdx){
+  if(G.phase !== 'regular') return null;
+  roundIdx = roundIdx == null ? G.round : roundIdx;
+  const round = G.fixtures && G.fixtures[roundIdx];
+  if(!round || round._completed) return null;
+  const myM = round.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);
+
+  // Bye week: give coached team players a bonus rest boost
+  const byeTeams = (G.byes && G.byes[roundIdx]) || [];
+  const onBye = byeTeams.includes(G.coach.teamId);
+  if(onBye){
+    const mt = myTeam();
+    for(const id of mt.players){
+      const p = G.players[id];
+      if(p && !p.injury) p.cond = Math.min(100, p.cond + 8);
+    }
+    addNews(`${mt.nick} have a bye in Round ${roundIdx+1}. Players take advantage of the rest week.`, {
+      title:'Bye Round', type:'club', tone:'neutral', teamId:G.coach.teamId, tag:'Bye'
+    });
+  }
+
+  round._completed = true;
+  recordTeamOfWeek(round);
+  weeklyRecoveryAndDev();
+  payCoachWeekly();
+  payClubWeekly(round);
+  aiUseFreeAgents();
+  auditContractPromises();
+  coachWeekly(myM);
+  generateWeeklyMedia(round, myM);
+  generateStaffRecommendations();
+  advanceScouting();
+  checkAchievements('round', {round, myM});
+  simOriginIfDue(roundIdx);
+  G.round = Math.max(G.round, roundIdx + 1);
+  if(G.round >= G.fixtures.length){ startFinals(); }
+  return {type:'round', round, roundIdx, myM, onBye};
+}
+function completeRoundIfReady(roundIdx){
+  if(G.phase !== 'regular') return null;
+  roundIdx = roundIdx == null ? G.round : roundIdx;
+  const round = G.fixtures && G.fixtures[roundIdx];
+  if(!round || !round.length || !round.every(m=>m.played)) return null;
+  return completeRound(roundIdx);
+}
 function advanceRound(){
   if(G.phase==='regular'){
-    const round = G.fixtures[G.round];
+    const roundIdx = G.round;
+    const round = G.fixtures[roundIdx];
     for(const m of round) simMatch(m, false);
-    const myM = round.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);
-
-    // Bye week: give coached team players a bonus rest boost
-    const byeTeams = (G.byes && G.byes[G.round]) || [];
-    const onBye = byeTeams.includes(G.coach.teamId);
-    if(onBye){
-      const mt = myTeam();
-      for(const id of mt.players){
-        const p = G.players[id];
-        if(p && !p.injury) p.cond = Math.min(100, p.cond + 8);
-      }
-      addNews(`${mt.nick} have a bye in Round ${G.round+1}. Players take advantage of the rest week.`, {
-        title:'Bye Round', type:'club', tone:'neutral', teamId:G.coach.teamId, tag:'Bye'
-      });
-    }
-
-    recordTeamOfWeek(round);
-    weeklyRecoveryAndDev();
-    payCoachWeekly();
-    payClubWeekly(round);
-    aiUseFreeAgents();
-    auditContractPromises();
-    coachWeekly(myM);
-    generateWeeklyMedia(round, myM);
-    generateStaffRecommendations();
-    advanceScouting();
-    checkAchievements('round', {round, myM});
-    simOriginIfDue(G.round);
-    G.round++;
-    if(G.round >= G.fixtures.length){ startFinals(); }
-    return {type:'round', round, myM, onBye};
+    return completeRound(roundIdx);
   }
   if(G.phase==='finals'){ return advanceFinals(); }
   return null;

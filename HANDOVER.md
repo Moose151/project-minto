@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Multi-day match calendar completed — fixture slots are now unique Thu Night/Fri Night/Sat Afternoon/Sat Twilight/Sat Night/Sun Afternoon/Sun Twilight/Sun Night windows; daily advance simulates only the current day; coached-team matches play on their assigned slot day; rounds close only after the final scheduled game; Calendar now has a round games/results table.
 - Coach profile career context — profile now shows current-season W-L-D and career win rate; offseason history stores each season's W-L-D and the coaching history table displays the record.
 - Facility board expectations — Club Management board card now shows whether current facility standard meets prestige-tier expectations (Dynasty/Elite → avg Lv 4+, Strong → Lv 3+, Solid → Lv 2+); failing facilities listed by name in red.
 - Win confetti animation — CSS confetti (55 particles, 7 colours, 1.8–3.8s fall) fires on full-time win; auto-removed after 4.5s.
@@ -218,9 +219,9 @@ cd api && node server.js
 
 #### Daily Calendar & Fatigue
 - Season runs day-by-day from Monday; topbar shows current date and the advance button moves one day at a time
-- Saturday is match day and plays the current round; bye weekends advance through the calendar without team-sheet validation
-- Auto-stop routing: Monday training review, Tuesday team-list deadline, away travel day, Saturday match/bye, Sunday recovery and judiciary review
-- Calendar page shows next 14 days, match/bye context, travel, recovery, deadlines, injury count, and load watch
+- Match days follow actual fixture slots across Thu night, Fri night, Sat afternoon/twilight/night, and Sun afternoon/twilight/night; bye weekends advance through the calendar without team-sheet validation
+- Auto-stop routing: Monday training review, Tuesday team-list deadline, away travel day, assigned match slot, other round games, Sunday recovery and judiciary review
+- Calendar page shows next 14 days, match/bye context, other games/results for the current round, travel, recovery, deadlines, injury count, and load watch
 - Match minutes/workload add player load; daily recovery reduces load and improves condition; overloaded or low-condition players have extra injury risk
 - Monday training review gate requires `Mark review complete`; Tuesday team-list gate blocks advancing until the 19-man squad is compliant
 - Sunday recovery/judiciary gate requires `Mark review complete` in Injury Ward before advancing to Monday
@@ -243,14 +244,15 @@ cd api && node server.js
 - If the league feels it's progressing too fast, reduce `growExpected` values in `developPlayer` and `applyOffseasonDevelopment` (08-progression.js / 11-offseason.js).
 
 #### Match Scheduling — Multi-Day Rounds (substantially complete)
-- `genFixtures` assigns a slot (Thu Night → Sun Night) to each game; no two share a slot.
+- `genFixtures` assigns a unique slot (Thu Night → Sun Night, with Sat/Sun twilight as needed) to each game; no two share a slot.
 - Fixtures page sorts games by slot order and shows the slot label + post-match weather.
 - Match Day pre-match page shows the slot badge (e.g. "Sat Night") next to the round number.
-- Calendar's "Next 14 Days" shows the slot label on the match day card and matchup detail for Thu/Fri game nights.
-- `simMatch` applies a time-of-day try modifier and adjusted weather pool; guard prevents re-simulation.
-- Thu/Fri AI matches simulate on their actual calendar day; popup shows early results; calendar stop shows matchup detail.
+- Calendar's "Next 14 Days" shows the slot label on the match day card and matchup detail for all game days.
+- Calendar has a "Round Games" table showing all fixtures in slot order with upcoming/result status.
+- `simMatch` applies afternoon/twilight/night try modifiers and adjusted weather pool; guard prevents re-simulation.
+- All regular-season matches, including the coached team's match, simulate on their actual calendar day; popup shows early non-coached results; calendar stop shows matchup detail.
+- Weekly payments, development, media, scouting and achievements now fire only when the whole round is complete.
 - Dashboard shows a "Round N Results" panel after each round sorted by slot.
-- Still needed: coached team's match simulated on its actual slot day rather than always Saturday; Sunday late games modal.
 
 #### Bye Rounds — Partially Incomplete
 - Ladder awards 2 pts for completed bye rounds; form history shows "B" dot; ladder page shows "BYE" tag. ✅

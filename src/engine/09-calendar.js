@@ -24,7 +24,9 @@ function calendarDateLabel(day){
   return `${CAL_WEEKDAYS[calendarDayInWeek(day)]} ${d.getUTCDate()} ${CAL_MONTHS[d.getUTCMonth()]}`;
 }
 function calendarRoundForDay(day){
-  return Math.max(0, Math.min((G.fixtures ? G.fixtures.length : 1) - 1, Math.floor((day == null ? ensureCalendar().day : day) / 7)));
+  const byDate = Math.floor((day == null ? ensureCalendar().day : day) / 7);
+  const active = G && G.phase === 'regular' ? (G.round || 0) : byDate;
+  return Math.max(0, Math.min((G.fixtures ? G.fixtures.length : 1) - 1, Math.max(active, byDate)));
 }
 function calendarMyMatch(roundIdx){
   if(!G.fixtures || !G.fixtures[roundIdx]) return null;
@@ -36,20 +38,21 @@ function calendarStopForDay(day){
   const r = calendarRoundForDay(day);
   const m = calendarMyMatch(r);
   const bye = ((G.byes && G.byes[r]) || []).includes(G.coach.teamId);
+  const round = G.fixtures && G.fixtures[r];
+  const gamesToday = round ? round.filter(mm=>!mm.played && slotDow(mm.slot) === dow) : [];
+  const myGameToday = gamesToday.find(mm=>mm.h===G.coach.teamId || mm.a===G.coach.teamId);
   if(dow === 0) return {key:'training', label:'Training review', page:'training', tone:'neutral'};
   if(dow === 1) return {key:'selection', label:'Team list due Tuesday', page:'teamsheet', tone:'warn'};
-  if(dow === 3){
-    const round = G.fixtures && G.fixtures[r];
-    const thuGames = round ? round.filter(mm=>mm.slot&&mm.slot.day==='Thursday'&&!mm.played&&mm.h!==G.coach.teamId&&mm.a!==G.coach.teamId).length : 0;
-    if(thuGames > 0) return {key:'gamenight', label:`Thursday Night Football — ${thuGames} game${thuGames===1?'':'s'} tonight`, page:'calendar', tone:'neutral'};
+  if(dow >= 3 && dow <= 6 && myGameToday && !bye){
+    const label = myGameToday.slot ? `${myGameToday.slot.label} — Match day` : 'Match day';
+    return {key:'match', label, page:'matchday', tone:'good'};
   }
-  if(dow === 4 && m && !bye && m.a === G.coach.teamId) return {key:'travel', label:'Travel day', page:'calendar', tone:'neutral'};
-  if(dow === 4){
-    const round = G.fixtures && G.fixtures[r];
-    const friGames = round ? round.filter(mm=>mm.slot&&mm.slot.day==='Friday'&&!mm.played&&mm.h!==G.coach.teamId&&mm.a!==G.coach.teamId).length : 0;
-    if(friGames > 0) return {key:'gamenight', label:`Friday Night Football — ${friGames} game${friGames===1?'':'s'} tonight`, page:'calendar', tone:'neutral'};
+  if(dow === 4 && m && !bye && m.a === G.coach.teamId && slotDow(m.slot) > dow) return {key:'travel', label:'Travel day', page:'calendar', tone:'neutral'};
+  if(dow >= 3 && dow <= 6 && gamesToday.length){
+    const dayName = Object.keys(SLOT_DAY_DOW).find(k=>SLOT_DAY_DOW[k]===dow) || 'Game';
+    return {key:'gamenight', label:`${dayName} Football — ${gamesToday.length} game${gamesToday.length===1?'':'s'} today`, page:'calendar', tone:'neutral'};
   }
-  if(dow === 5) return {key:'match', label:bye ? 'Bye weekend' : 'Match day', page:bye ? 'calendar' : 'matchday', tone:bye ? 'neutral' : 'good'};
+  if(dow === 5 && bye) return {key:'bye', label:'Bye weekend', page:'calendar', tone:'neutral'};
   if(dow === 6) return {key:'recovery', label:'Recovery and judiciary review', page:'injuryward', tone:'neutral'};
   return null;
 }
@@ -94,16 +97,16 @@ function dailyRecoveryAndFatigue(){
 // Map slot.day label to calendar day-of-week index (Mon=0 ... Sun=6)
 const SLOT_DAY_DOW = {Thursday:3, Friday:4, Saturday:5, Sunday:6};
 
-function simEarlyGamesForDow(dow){
+function slotDow(slot){
+  return SLOT_DAY_DOW[slot && slot.day] == null ? 5 : SLOT_DAY_DOW[slot.day];
+}
+function simGamesForDow(dow){
   if(!G.fixtures || !G.fixtures[G.round]) return [];
   const round = G.fixtures[G.round];
-  const dayNames = Object.keys(SLOT_DAY_DOW).filter(k=>SLOT_DAY_DOW[k]===dow);
   const played = [];
-  for(const m of round){
+  for(const m of sortMatchesBySlot(round)){
     if(m.played) continue;
-    if(!m.slot || !dayNames.includes(m.slot.day)) continue;
-    // Don't auto-sim the coached team's match — that needs the match day UI
-    if(m.h === G.coach.teamId || m.a === G.coach.teamId) continue;
+    if(slotDow(m.slot) !== dow) continue;
     simMatch(m, false);
     played.push(m);
   }
@@ -114,27 +117,19 @@ function advanceCalendarDay(){
   if(!G || G.phase !== 'regular') return advanceRound();
   const c = ensureCalendar();
   const dow = calendarDayInWeek(c.day);
-
-  // Mid-week game days: simulate AI matches for Thu/Fri slot
-  if(dow === 3 || dow === 4){
-    const earlyMatches = simEarlyGamesForDow(dow);
-    dailyRecoveryAndFatigue();
-    c.day++;
-    c.lastStop = calendarStopForDay(c.day);
-    const res = {type:'day', day:c.day, stop:c.lastStop};
-    if(earlyMatches.length) res.earlyMatches = earlyMatches;
-    return res;
-  }
-
-  if(dow === 5){
-    const res = advanceRound();
-    c.day++;
-    c.lastStop = calendarStopForDay(c.day);
-    if(res){ res.day = c.day; res.stop = c.lastStop; }
-    return res;
-  }
+  const roundIdx = G.round;
+  const playedToday = dow >= 3 && dow <= 6 ? simGamesForDow(dow) : [];
   dailyRecoveryAndFatigue();
+  const completed = completeRoundIfReady(roundIdx);
   c.day++;
   c.lastStop = calendarStopForDay(c.day);
-  return {type:'day', day:c.day, stop:c.lastStop};
+  const res = completed || {type:'day'};
+  res.day = c.day;
+  res.stop = c.lastStop;
+  if(playedToday.length){
+    res.playedToday = playedToday;
+    res.earlyMatches = playedToday.filter(m=>m.h!==G.coach.teamId && m.a!==G.coach.teamId);
+    res.myM = playedToday.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId) || res.myM;
+  }
+  return res;
 }

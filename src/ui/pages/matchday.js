@@ -152,15 +152,25 @@ Object.assign(UI, {
   },
 
   playMatchDay(watch){
-    const res = advanceRound();
+    const stop = typeof calendarStopForDay === 'function' ? calendarStopForDay(ensureCalendar().day) : null;
+    if(G.phase === 'regular' && (!stop || stop.key !== 'match')){
+      UI.toast('This match is not scheduled for today.');
+      UI.go('calendar');
+      return;
+    }
+    const res = G.phase === 'regular' && typeof advanceCalendarDay === 'function' ? advanceCalendarDay() : advanceRound();
     autoSave();
-    if(!res || res.type!=='round') { UI.render(); return; }
+    if(!res || (res.type!=='round' && !res.myM)) { UI.render(); return; }
+    const label = res.type === 'round'
+      ? `Round ${(res.roundIdx == null ? G.round - 1 : res.roundIdx) + 1} results`
+      : `${res.myM && res.myM.slot ? res.myM.slot.label : 'Match'} result`;
     if(watch){
-      UI._watchGameRound = res.round;
+      UI._watchGameRound = res.round || res.playedToday || [res.myM];
+      UI._watchGameTitle = label;
       UI.go('watchgame');
     } else {
       UI.render();
-      UI.showRoundResults(res.round, `Round ${G.round} results`);
+      UI.showRoundResults(res.round || res.playedToday || [res.myM], label);
     }
   },
 
@@ -227,7 +237,7 @@ Object.assign(UI, {
       <div id="wg-postMatch" style="display:none;margin-top:20px"></div>
       <div class="btnrow" style="margin-top:12px">
         <button class="btn" onclick="UI.go('matchday')">Back to Match Day</button>
-        <button class="btn" id="wg-allResultsBtn" style="display:none" onclick="UI.showRoundResults(UI._watchGameRound,'Round ${G.round} results')">All round results</button>
+        <button class="btn" id="wg-allResultsBtn" style="display:none" onclick="UI.showRoundResults(UI._watchGameRound,UI._watchGameTitle||'Match result')">All results</button>
       </div>
     </div>`;
   },

@@ -2,6 +2,26 @@
 
 /* ---------- team & league generation ---------- */
 const SQUAD_TEMPLATE = ['FB','FB','WG','WG','WG','WG','CE','CE','CE','CE','FE','FE','HB','HB','HK','HK','PR','PR','PR','PR','PR','SR','SR','SR','SR','LK','LK','HK'];
+const MATCH_SLOTS = [
+  {day:'Thursday', time:'night',     label:'Thu Night',       hour:19, order:0},
+  {day:'Friday',   time:'night',     label:'Fri Night',       hour:20, order:1},
+  {day:'Saturday', time:'afternoon', label:'Sat Afternoon',   hour:15, order:2},
+  {day:'Saturday', time:'twilight',  label:'Sat Twilight',    hour:17, order:3},
+  {day:'Saturday', time:'night',     label:'Sat Night',       hour:19, order:4},
+  {day:'Sunday',   time:'afternoon', label:'Sun Afternoon',   hour:14, order:5},
+  {day:'Sunday',   time:'twilight',  label:'Sun Twilight',    hour:16, order:6},
+  {day:'Sunday',   time:'night',     label:'Sun Night',       hour:18, order:7},
+];
+
+function matchSlotOrder(m){
+  if(m && m.slot && m.slot.order != null) return m.slot.order;
+  const key = m && m.slot ? `${m.slot.day}-${m.slot.time}` : 'Saturday-afternoon';
+  const legacy = {'Thursday-night':0,'Friday-night':1,'Friday-afternoon':1,'Saturday-afternoon':2,'Saturday-twilight':3,'Saturday-night':4,'Sunday-afternoon':5,'Sunday-twilight':6,'Sunday-night':7};
+  return legacy[key] == null ? 2 : legacy[key];
+}
+function sortMatchesBySlot(matches){
+  return (matches || []).slice().sort((a,b)=>matchSlotOrder(a)-matchSlotOrder(b));
+}
 function fitCap(G, t){ // scale salaries so top squad fits under cap
   let total = teamSalary(t);
   const target = G.config.cap * rf(.88,.99);
@@ -37,20 +57,10 @@ function genFixtures(teamIds){
   const allByes = [...byesByRound, ...byesByRound];
 
   // Assign day/time slots — no two games simultaneous; spread across Thu-Sun
-  const SLOT_ORDER = [
-    {day:'Thursday',  time:'night',     label:'Thu Night'},
-    {day:'Friday',    time:'night',     label:'Fri Night'},
-    {day:'Saturday',  time:'afternoon', label:'Sat Afternoon'},
-    {day:'Saturday',  time:'night',     label:'Sat Night'},
-    {day:'Sunday',    time:'afternoon', label:'Sun Afternoon'},
-    {day:'Sunday',    time:'night',     label:'Sun Night'},
-    {day:'Friday',    time:'afternoon', label:'Fri Afternoon'},
-    {day:'Saturday',  time:'afternoon', label:'Sat Afternoon 2'},
-  ];
   const assignedRounds = allRounds.map(games => {
-    const slots = SLOT_ORDER.slice(0, Math.max(games.length, 1));
+    const slots = MATCH_SLOTS.slice(0, Math.max(games.length, 1));
     const shuffledSlots = shuffle(slots.slice());
-    return games.map((mm, i) => ({...mm, played:false, hs:0, as:0, det:null, slot: shuffledSlots[i] || SLOT_ORDER[i % SLOT_ORDER.length]}));
+    return games.map((mm, i) => ({...mm, played:false, hs:0, as:0, det:null, slot: shuffledSlots[i] || MATCH_SLOTS[i % MATCH_SLOTS.length]}));
   });
 
   return {

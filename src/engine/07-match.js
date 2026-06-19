@@ -70,14 +70,14 @@ function simMatch(m, isFinal){
     : isMagicRound ? (G.magicRound.venue || (mrHost ? mrHost.city + ' Magic Round' : 'Magic Round'))
     : (th.stadium || pick(STADIUM_NAMES));
   const slot = m.slot || {day:'Saturday', time:'afternoon', label:'Sat Afternoon'};
-  // Night games: cooler and dewier — slightly better handling but more injury risk
-  // Afternoon games: heat and harder surface — slightly more tries but more errors
+  // Night games: cooler and dewier; afternoon games: heat/harder surface; twilight sits between.
   const isNight = slot.time === 'night';
-  const weatherPool = [...WEATHER, isNight ? 'Light rain' : 'Humid'];
+  const isTwilight = slot.time === 'twilight';
+  const weatherPool = [...WEATHER, isNight ? 'Light rain' : isTwilight ? 'Windy' : 'Humid'];
   const weather = m.projWeather || pick(weatherPool);
   const crowd = m.projCrowd || matchCrowd(isMagicRound ? mrHost || th : th, isFinal);
   const ticketPrice = th.id===G.coach.teamId && G.club ? (G.club.ticketPrice || 28) : 28;
-  const timeOfDayMod = isNight ? 0.97 : 1.03; // night slightly fewer tries (dew, handling), afternoon slight edge
+  const timeOfDayMod = isNight ? 0.97 : isTwilight ? 1.00 : 1.03; // night dew, twilight neutral, afternoon opens up
   const baseWeatherTryMod = (weather==='Heavy rain' ? .84 : weather==='Light rain' ? .92 : weather==='Windy' ? .95 : weather==='Humid' ? .96 : 1) * timeOfDayMod;
   const baseWeatherKickMod = weather==='Heavy rain' ? .88 : weather==='Light rain' ? .93 : weather==='Windy' ? .90 : weather==='Humid' ? .97 : 1;
   const badWeather = weather === 'Heavy rain' || weather === 'Windy';
