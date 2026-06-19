@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- AI club facility tracking — every club now carries facility levels; AI facilities affect prestige, stadium capacity, recovery, medical recovery, and development, drift through offseason upgrades/degradation, and are visible on club cards/modals.
 - Hall of Fame ceremony UX — inductee cards now include a ceremony modal with legacy score, peak OVR, career totals, honours, final club context, and season review marks new Hall of Fame retirees with a direct inductions link.
 - Signing ceremony UX — accepted free-agent deals, train & trial contracts, youth prospect signings, contract upgrades, and extensions now show a polished signing modal with player/team visuals, terms, total value, structure, and quick navigation.
 - Scouting position matching — scouts now have positional specialties; targeted scouting chance scales by scout ability and specialty, target buttons show hit chance, and returned prospects note whether the requested position was matched.
@@ -268,7 +269,7 @@ cd api && node server.js
 - Inbox: action buttons implemented ✅; read/unread state ✅; player messages and richer scout items still to do.
 - Player avatars: current procedural SVG too complex at small sizes — consider simplified bold cartoon, pixel sprites, or canvas approach.
 - Scouting: prospect backstory ✅; scout position-matching skill ✅; richer region probabilities still to do.
-- Facilities: board expectations ✅; AI club facility tracking still to do (AI teams use prestige-score estimate).
+- Facilities: board expectations ✅; AI club facility tracking ✅.
 - Contracts: rep-status premiums ✅; personality-based demand ✅; market scarcity by position ✅; ceremony UX for signings ✅.
 - Hall of Fame: rep honour badges ✅; club legend wall ✅; richer ceremony UX ✅.
 - Development insights: attribute-level delta tab on player modal ✅; offseason development review screen ✅.

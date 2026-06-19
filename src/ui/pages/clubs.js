@@ -27,6 +27,7 @@ Object.assign(UI, {
       const coachRep = coach ? (coach.rep>=60?'Elite coach':coach.rep>=45?'Experienced':coach.rep>=30?'Developing':'Junior') : '';
       const newCoach = coach && (coach.seasons||0) === 0;
       const legends = hofByTeam[t.id] || 0;
+      const facAvg = typeof teamFacilityAverage === 'function' ? teamFacilityAverage(t) : 2;
       return `<div class="tp" onclick="UI.teamModal(${t.id})">
         <div style="float:right">${teamLogo(t,46)}</div>
         <div class="city">${esc(t.city)}</div>
@@ -34,6 +35,7 @@ Object.assign(UI, {
         <div style="margin:5px 0">${clubPrestigeBadge(t)}</div>
         <div class="str">${ord(pos)} · ${r.w}-${r.l} · OVR <span class="${tr.cls}">${tr.text}</span></div>
         <div class="team-rating-row">${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}${teamRatingPill(t,'coh','COH')}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Facilities avg Lv ${facAvg.toFixed(1)}</div>
         ${coach ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">HC: ${esc(coach.name)} · ${coachRep}${newCoach?' <span style="color:var(--brass)">NEW</span>':''}</div>` : ''}
         ${legends ? `<div style="font-size:10px;color:var(--brass);margin-top:2px">HoF: ${legends} legend${legends===1?'':'s'}</div>` : ''}
       </div>`;
@@ -61,11 +63,17 @@ Object.assign(UI, {
     const hofLegends = (G.hallOfFame||[]).filter(h=>h.teamId===t.id);
     const legendLine = hofLegends.length ? `<p style="font-size:11px;color:var(--brass);margin:4px 0 0">Hall of Fame legends: ${hofLegends.slice(0,4).map(h=>esc(h.name)).join(', ')}${hofLegends.length>4?` +${hofLegends.length-4} more`:''}</p>` : '';
     const newCoachBadge = t.headCoach && (t.headCoach.seasons||0)===0 ? `<span style="font-size:10px;background:rgba(210,165,62,.18);color:var(--brass);padding:1px 5px;border-radius:4px;margin-left:6px">NEW COACH</span>` : '';
+    const facKeys = Object.keys(FACILITY_DEFS);
+    const facSummary = typeof teamFacilityLevel === 'function' ? `<div class="card" style="padding:8px;margin:8px 0">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Facilities · Avg Lv ${teamFacilityAverage(t).toFixed(1)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${facKeys.map(k=>`<span style="font-size:11px;color:var(--muted)">${esc(FACILITY_DEFS[k].label)} <b style="color:var(--ink)">Lv ${teamFacilityLevel(t,k)}</b></span>`).join('')}</div>
+    </div>` : '';
     UI.modal(`<h3 style="display:flex;align-items:center;gap:10px">${teamLogo(t,54)}<span>${esc(teamName(t))}</span></h3>
     <p class="page-sub">${ord(pos)} · ${rec.w}-${rec.l} · Payroll ${money(teamSalary(t))} · ${t.id===G.coach.teamId?'ratings exact':'opposition — scouting estimates'}</p>
     <div style="margin:6px 0">${clubPrestigeBadge(t)}</div>
     ${legendLine}
     ${coachLine}${newCoachBadge}
+    ${facSummary}
     <div class="team-rating-row" style="margin:8px 0 12px">${teamRatingPill(t,'overall','OVR')}${teamRatingPill(t,'atk','ATT')}${teamRatingPill(t,'def','DEF')}${teamRatingPill(t,'coh','COH')}</div>
     ${godTeam}
     <div style="max-height:440px;overflow-y:auto"><table><thead><tr>

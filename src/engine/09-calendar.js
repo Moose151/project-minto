@@ -66,7 +66,7 @@ function dailyRecoveryAndFatigue(){
       const p = G.players[id];
       if(!p) continue;
       const load = Math.max(0, p.load || 0);
-      const facilityRecovery = isMine ? (facilityLevel('gym') - 1) * 0.35 : 0;
+      const facilityRecovery = (teamFacilityLevel(t, 'gym') - 1) * 0.35;
       const dayBase = dow === 6 ? 5.2 : dow === 0 ? 3.6 : dow === 4 ? 2.2 : 3.0;
       const focusMod = t.focus === 'recovery' ? 1.55 : t.focus === 'fitness' ? 0.9 : 1;
       if(!p.injury){

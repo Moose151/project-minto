@@ -912,6 +912,7 @@ function startNewSeason(){
     addNews(`Facility wear and tear: ${degraded.join(', ')} ${degraded.length>1?'have':'has'} degraded by one level. Consider reinvesting in infrastructure.`,
       {title:'Facility Degradation', type:'board', tone:'bad', tag:'Facilities'});
   }
+  updateAiClubFacilities();
   G.club.seasonRevenue = 0; G.club.seasonWages = 0; G.club.gateRevenue = 0; G.club.broadcastRevenue = 0; G.club.membershipRevenue = 0; G.club.sponsorshipRevenue = 0; G.club.vendorRevenue = 0; G.club.magicRoundRevenue = 0;
   G.club.sponsorships = (G.club.sponsorships || []).map(s=>({...s, yearsLeft:Math.max(0,(s.yearsLeft||1)-1)})).filter(s=>s.yearsLeft>0);
   G.config.cap = Math.round(G.config.cap * (1+G.config.capGrowth) / 10000)*10000;
@@ -978,4 +979,30 @@ function startNewSeason(){
   }
   replenishFreeAgents();
   addNews(`Season ${G.year} begins. Salary cap: ${money(G.config.cap)}. Board expectation: ${G.coach.expect.label}.`);
+}
+function updateAiClubFacilities(){
+  if(!G || !G.teams || typeof ensureTeamFacilities !== 'function') return;
+  const log = [];
+  for(const t of G.teams){
+    if(t.id === G.coach.teamId) continue;
+    const fac = ensureTeamFacilities(t);
+    const strength = typeof squadStrength === 'function' ? squadStrength(t) : (t.rep || 55);
+    const ambition = clamp((strength - 50) / 30 + ((t.headCoach && t.headCoach.rep) || 40) / 110, 0.15, 1.35);
+    const keys = Object.keys(FACILITY_DEFS);
+    const avg = keys.reduce((s,k)=>s+(fac[k]||2),0) / keys.length;
+    if(avg < 4.6 && rnd() < 0.18 + ambition * 0.12){
+      const key = keys.slice().sort((a,b)=>(fac[a]||2)-(fac[b]||2))[0];
+      fac[key] = clamp((fac[key] || 2) + 1, 1, FACILITY_MAX);
+      log.push(`${t.nick} upgraded ${FACILITY_DEFS[key].label}`);
+    }
+    for(const key of keys){
+      const lvl = fac[key] || 2;
+      if(lvl > 1 && rnd() < 0.025 + lvl * 0.01){
+        fac[key] = lvl - 1;
+        log.push(`${t.nick} ${FACILITY_DEFS[key].label} degraded`);
+        break;
+      }
+    }
+  }
+  G.aiFacilityLog = (G.aiFacilityLog || []).concat(log.map(x=>({year:G.year, text:x}))).slice(-30);
 }

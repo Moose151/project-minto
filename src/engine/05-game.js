@@ -23,8 +23,17 @@ function ensureTeamLogo(t){
 /* rebuild genTeam to register properly */
 function buildTeam(G, identity, id, strength){
   const coachRep = ri(20, 62);
+  const baseFacility = clamp(Math.round(1 + (strength - 50) / 10 + rf(-0.8, 0.8)), 1, 4);
+  const facilities = {
+    stadium:clamp(baseFacility + ri(-1, 1), 1, 5),
+    training:clamp(baseFacility + ri(-1, 1), 1, 5),
+    gym:clamp(baseFacility + ri(-1, 1), 1, 5),
+    medical:clamp(baseFacility + ri(-1, 1), 1, 5),
+    academy:clamp(baseFacility + ri(-1, 1), 1, 5),
+  };
   const t = { id, ...identity, players:[], lineup:Array(19).fill(null), plan:'balanced', focus:'balanced', rep:strength, cohesion:50,
     headCoach:{ name:`${pick(FIRST)} ${pick(LAST)}`, rep:coachRep, seasons:0 },
+    facilities,
     roles:{captain:null, goalKicker:null, primaryKicker:null, secondaryKicker:null, primaryPlaymaker:null, secondaryPlaymaker:null},
     positionRoles:{}, zoneTactics:{own20:'safe', own40:'balanced', mid:'balanced', opp40:'expansive', redZone:'balanced'},
     matchPrefs:{autoSubs:true, penalty:'auto', fieldGoal:true} };

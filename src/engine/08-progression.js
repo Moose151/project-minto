@@ -252,6 +252,22 @@ function facilityLevel(key){
   const f = ensureClubFacilities();
   return clamp(Math.round(f[key] || 1), 1, FACILITY_MAX);
 }
+function ensureTeamFacilities(t){
+  if(!t) return {};
+  t.facilities = Object.assign({stadium:2, training:2, gym:2, medical:2, academy:2}, t.facilities || {});
+  for(const key of Object.keys(FACILITY_DEFS)) t.facilities[key] = clamp(Math.round(t.facilities[key] || 2), 1, FACILITY_MAX);
+  return t.facilities;
+}
+function teamFacilityLevel(t, key){
+  if(!t) return 1;
+  if(G && G.coach && t.id === G.coach.teamId) return facilityLevel(key);
+  const f = ensureTeamFacilities(t);
+  return clamp(Math.round(f[key] || 2), 1, FACILITY_MAX);
+}
+function teamFacilityAverage(t){
+  const keys = Object.keys(FACILITY_DEFS);
+  return keys.reduce((s,k)=>s+teamFacilityLevel(t,k),0) / keys.length;
+}
 function facilityUnderConstruction(key){
   ensureClubFacilities();
   return !!(G.club.construction && G.club.construction[key]);
@@ -299,7 +315,7 @@ function clubPrestigeScore(t){
   const pos = ladderRows.length ? ladderRows.findIndex(r=>r.id===t.id)+1 : 0;
   const ladderScore = pos ? clamp(72 - (pos-1) * (38/Math.max(1,G.teams.length-1)), 30, 74) : 50;
   const historyBonus = (G.history || []).slice(0,5).reduce((s,h,i)=>s + (h.premier===t.id ? 7-i : h.minor===t.id ? 3-i*.4 : 0), 0);
-  const facilityBonus = t.id === G.coach.teamId ? (Object.keys(FACILITY_DEFS).reduce((s,k)=>s+facilityLevel(k),0) - 5) * 1.4 : 4;
+  const facilityBonus = (Object.keys(FACILITY_DEFS).reduce((s,k)=>s+teamFacilityLevel(t,k),0) - 5) * 1.4;
   return Math.round(clamp(strength*.42 + coachRep*.18 + ladderScore*.22 + 18 + historyBonus + facilityBonus, 20, 99));
 }
 function clubPrestigeTier(t){
@@ -343,7 +359,7 @@ function recentWinStreak(teamId){
 function matchCrowd(homeTeam, isFinal){
   if(isFinal) return ri(52000, 82000);
   const isMine = homeTeam && homeTeam.id === G.coach.teamId;
-  const cap = isMine ? stadiumCapacity() : ri(22000, 52000);
+  const cap = isMine ? stadiumCapacity() : (STADIUM_CAPACITY_BY_LEVEL[teamFacilityLevel(homeTeam, 'stadium') - 1] || ri(22000, 52000));
   const rep = homeTeam ? (homeTeam.rep || squadStrength(homeTeam)) : 55;
   const formBoost = homeTeam ? Math.max(-1800, Math.min(3000, ((homeTeam.cohesion || 50) - 50) * 90)) : 0;
   const price = isMine ? clamp(G.club.ticketPrice || 28, 10, 120) : 28;
@@ -370,16 +386,17 @@ function weeklyRecoveryAndDev(){
     const fitnessBonus = (isMine && G.coach.attrs) ? G.coach.attrs.fitness / 300 : 0;
     for(const id of t.players){
       const p = G.players[id];
-      const facilityRecovery = isMine ? (facilityLevel('gym') - 1) * 1.4 : 0;
+      const facilityRecovery = (teamFacilityLevel(t, 'gym') - 1) * 1.4;
       const recBase = (t.focus==='recovery' ? 5 : 2) + facilityRecovery;
       p.cond = clamp(p.cond + recBase + p.attrs.stamina/20 + fitnessBonus*10, 0, 100);
       if(p.injury){
         p.injury.weeks--;
-        // Medical staff: chance to reduce recovery time by 1 extra week
-        if(isMine && p.injury.weeks > 0){
+        // Medical quality: user club gets physio + facility; AI clubs use facility level.
+        if(p.injury.weeks > 0){
           const medic = (G.staff||[]).find(s=>s.role==='medical');
-          const medFacilityBonus = (facilityLevel('medical') - 1) * .018;
-          if(medic && rnd() < medic.ability/220 + medFacilityBonus) p.injury.weeks = Math.max(0, p.injury.weeks-1);
+          const medFacilityBonus = (teamFacilityLevel(t, 'medical') - 1) * .018;
+          const medicBonus = isMine && medic ? medic.ability/220 : 0;
+          if(rnd() < medicBonus + medFacilityBonus) p.injury.weeks = Math.max(0, p.injury.weeks-1);
         }
         if(p.injury.weeks<=0){ p.injury=null; p.playInjured=false; p.cond=Math.min(p.cond,80); }
       }
@@ -446,7 +463,7 @@ function developPlayer(p, t){
     specialist:[]
   }[p.training || 'balanced'] || [] : [];
   const focusBoost = individualBoost.length ? individualBoost : (isMine ? teamFocusBoost : []);
-  const facilityDev = isMine ? (0.92 + facilityLevel('training')*.035 + (p.age<=21 ? facilityLevel('academy')*.025 : 0)) : 1;
+  const facilityDev = 0.92 + teamFacilityLevel(t, 'training')*.035 + (p.age<=21 ? teamFacilityLevel(t, 'academy')*.025 : 0);
   const devMod = ((isMine && G.coach.attrs) ? (0.7 + 0.6*(G.coach.attrs.development/100)) : 1) * facilityDev;
   const gamesProxy = p.squad==='dev' ? Math.min(p.s.g + 8, 20) : p.s.g;
   const profMod = clamp(0.6 + (p.attrs.professionalism || 50) / 200, 0.6, 1.05);
