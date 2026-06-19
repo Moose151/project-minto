@@ -4,10 +4,13 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Weather tactical adjustment — on the Match Day pre-match page, if conditions are Heavy Rain or Windy, a "Conditions" card appears with a toggle between "Normal game plan" and "Adapt to conditions"; conservative play reduces try risk (×0.93) but halves the weather penalty on kicking accuracy, making structured goal-kicking football viable in bad weather; the per-team modifier is applied in simMatch so only the coached team is affected by their choice.
+- Full-time graphic — the watch game header flashes green (win) / red (loss) / grey (draw) for 900ms when FULL TIME fires; banner text upgraded to "FULL TIME — WIN/DRAW/LOSS".
+- More staff recommendations — attack coach flags in-form bench players; defence coach warns of low-morale run-on players; physio warns of high-load injury risk; existing fitness and development coach reports retained. All fire via `generateStaffRecommendations` post-round when appropriate staff are hired.
 - Half-time team talk added to Watch Game — feed auto-pauses at half-time and presents 4 choices (Fire Up / Encourage / Tactical / Berate); each choice adds a narrative line to the live feed and adjusts coached players' form heading into next match; Berate has random per-player variance (35% chance of negative effect).
 - Match Day pre-match now shows the slot badge (e.g. "Thu Night") next to the round number in the page subtitle.
 - Calendar "Next 14 Days" match day cards now include the kick-off slot label in the detail line (e.g. "Home v Storm · Sat Night").
-- Cleaned up stale "Needs Improvement" entries that were resolved last session (Post-Match Full Page, WG/CE overlap, Bye Rounds ladder credit).
+- Corrected HANDOVER: Magic Round, Crowd Vendor System, NRL Standard Mode, State of Origin, offseason dev review, and attribute-level delta tab are all already implemented — moved from ❌ to ✅ or annotated correctly.
 
 ---
 
@@ -263,21 +266,21 @@ cd api && node server.js
 - Live match feed: tackle count, field position, possession indicator, substitution events.
 
 #### Representative & International Games
-- State of Origin (QLD/NSW), Pacific Tests, Test series, international windows.
-- Player eligibility already stored; needs rep squads, fixtures, match sim, injuries/condition impact, awards, career rep history.
-- Coach eligibility/nationality, rep job offers based on reputation, club + rep dual-role management.
+- State of Origin (QLD/NSW) is implemented (engine: `generateOriginSchedule`, `simOriginIfDue`; dashboard shows series scores and upcoming fixtures; inbox has Origin category). ✅
+- Pacific Tests, Test series, international windows still to add.
+- Coach rep-job offers, dual-role management, international fixtures not yet done.
 
 #### NRL Standard League Mode
 - New game wizard "NRL Standard" preset: 17 real NRL clubs, real names/colours/stadiums, 27-round season, correct finals format.
 
-#### Magic Round
-- One round per season at a neutral venue over 3 days; all teams play; host club bids based on prestige/capacity; host receives revenue windfall; no home advantage for any team.
+#### Magic Round ✅ (already implemented)
+- Engine: `G.magicRound` assigned in `05-game.js` and refreshed in `11-offseason.js`; `simMatch` uses magic round venue; host club earns $1.5M windfall via `payClubWeekly`; fixtures/matchday pages show Magic Round banner. Moving to ✅ section.
 
-#### Crowd Vendor System
-- F&B and merchandise vendor revenue: facility-like upgrades (level 1–5), per-head spend scaling, price slider, shown in Club Management breakdown.
+#### Crowd Vendor System ✅ (already implemented)
+- Engine: `vendorRevenuePerHead()` in `08-progression.js`; F&B (L1–5: $3–$14/head) and Merch (L1–5: $1.5–$8/head) constants defined; revenue added to `payClubWeekly`. UI: `upgradeVendor()` in `club-management.js` with upgrade cards showing level, cost, and per-head yield. Moving to ✅ section.
 
 #### Weather Events & Tactical Adjustment
-- Richer weather effects on errors, handling, kick accuracy, injuries, and crowd; in-game tactical adjustment to conditions by coach and AI.
+- Weather already affects try rates, crowd, and error likelihood. Richer per-player effects (handling errors, kick accuracy) and in-game tactical response to conditions still to add.
 
 #### Lower Leagues & Expansion
 - Second-tier competition, promotion/relegation, club merger/dissolution.

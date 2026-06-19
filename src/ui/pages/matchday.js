@@ -91,6 +91,20 @@ Object.assign(UI, {
         </div>
       </div>`;
     }
+    const badWeather = m.projWeather === 'Heavy rain' || m.projWeather === 'Windy';
+    const weatherTacticsPref = (prefs.weatherTactics || 'normal');
+    const weatherTacticsCard = badWeather ? `<div class="card" style="border-color:var(--brass);margin-bottom:10px;padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="font-weight:700;font-size:13px;color:var(--brass)">Conditions: ${esc(m.projWeather)}</div>
+          <p style="font-size:12px;color:var(--muted);margin:3px 0 0">Adjust your game plan to suit the weather — fewer risky passes but better kicking accuracy and discipline.</p>
+        </div>
+        <div class="btnrow" style="margin:0;gap:6px;flex-shrink:0">
+          <button class="btn sm${weatherTacticsPref==='normal'?' primary':''}" onclick="myTeam().matchPrefs.weatherTactics='normal';UI.render()">Normal game plan</button>
+          <button class="btn sm${weatherTacticsPref==='conservative'?' primary':''}" onclick="myTeam().matchPrefs.weatherTactics='conservative';UI.render()">Adapt to conditions</button>
+        </div>
+      </div>
+    </div>` : '';
     const o = UI._matchOdds(m);
     const favTeam = o.favoured==='h' ? h : a;
     const oddsBar = `<div style="display:flex;gap:12px;align-items:center;margin:8px 0 4px;flex-wrap:wrap">
@@ -114,6 +128,7 @@ Object.assign(UI, {
       <div style="font-size:11px;color:var(--muted)">All fixtures at ${esc(G.magicRound.venue)} · Neutral ground — no home advantage for either side${mrHost&&mrHost.id===G.coach.teamId?' · Your club earns a $1.5M hosting fee':''}</div></div>
     </div>` : ''}
     ${coachLine}
+    ${weatherTacticsCard}
     ${oddsBar}
     <div class="btnrow"><button class="btn ${UI._matchMode==='result'?'primary':''}" onclick="UI._matchMode='result';UI.render()">Sim result</button><button class="btn ${UI._matchMode==='watch'?'primary':''}" onclick="UI._matchMode='watch';UI.render()">Watch game</button><button class="btn" onclick="UI.go('teamsheet')">Adjust team sheet</button></div>
     <div class="grid2">
@@ -244,11 +259,18 @@ Object.assign(UI, {
       const sh = document.getElementById('wg-scoreH');
       const sa = document.getElementById('wg-scoreA');
       const banner = document.getElementById('wg-banner');
+      const header = document.getElementById('wg-header');
       const allBtn = document.getElementById('wg-allResultsBtn');
       const postMatch = document.getElementById('wg-postMatch');
       if(sh){ sh.textContent = myM.hs; sh.style.color = won&&myM.h===G.coach.teamId?'var(--green)':drew?'var(--muted)':'var(--ink)'; }
       if(sa){ sa.textContent = myM.as; sa.style.color = won&&myM.a===G.coach.teamId?'var(--green)':drew?'var(--muted)':'var(--ink)'; }
-      if(banner){ banner.textContent = won?'🏆 WIN':drew?'DRAW':'LOSS'; banner.style.color = won?'var(--green)':drew?'var(--muted)':'var(--red)'; banner.style.fontWeight='700'; banner.style.fontSize='15px'; }
+      if(banner){ banner.textContent = won?'🏆 FULL TIME — WIN':drew?'⏱ FULL TIME — DRAW':'⏱ FULL TIME — LOSS'; banner.style.color = won?'var(--green)':drew?'var(--muted)':'var(--red)'; banner.style.fontWeight='700'; banner.style.fontSize='16px'; }
+      if(header){
+        const flashColor = won ? 'rgba(76,175,125,.18)' : drew ? 'rgba(144,151,162,.12)' : 'rgba(200,90,79,.14)';
+        header.style.transition = 'background .25s';
+        header.style.background = flashColor;
+        setTimeout(()=>{ if(header) header.style.background = ''; }, 900);
+      }
       if(allBtn) allBtn.style.display='';
       if(postMatch){
         G._lastPlayedMatch = myM;

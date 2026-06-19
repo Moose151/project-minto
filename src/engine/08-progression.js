@@ -832,9 +832,12 @@ function generateWeeklyMedia(round, myM){
 function generateStaffRecommendations(){
   if(!G.staff || !G.staff.length || !myTeam()) return;
   const mt = myTeam();
+  const topPlayers = mt.players.map(id=>G.players[id]).filter(p=>p && (p.squad==='top'||!p.squad));
+
+  // Fitness coach: fatigue rotation warning
   const fitnessCoach = G.staff.find(s=>s.role==='fitness');
   if(fitnessCoach && rnd() < 0.38){
-    const fatigued = mt.players.map(id=>G.players[id]).filter(p=>p && p.cond<73 && !p.injury && (p.squad==='top'||!p.squad)).sort((a,b)=>a.cond-b.cond);
+    const fatigued = topPlayers.filter(p=>p.cond<73 && !p.injury).sort((a,b)=>a.cond-b.cond);
     if(fatigued.length >= 2){
       addNews(
         `${fatigued[0].name} (${Math.round(fatigued[0].cond)}% cond) and ${fatigued[1].name} (${Math.round(fatigued[1].cond)}% cond) are showing fatigue — ${fitnessCoach.name} recommends rotation this week.`,
@@ -842,6 +845,8 @@ function generateStaffRecommendations(){
       );
     }
   }
+
+  // Development coach: youth ready for promotion
   const devCoach = G.staff.find(s=>s.role==='development');
   if(devCoach && G.round % 4 === 0){
     const prospects = mt.players.map(id=>G.players[id]).filter(p=>p && p.age<=21 && p.squad==='dev' && p.ovr>=56).sort((a,b)=>b.pot-a.pot);
@@ -850,6 +855,45 @@ function generateStaffRecommendations(){
       addNews(
         `${devCoach.name} recommends giving ${pr.name} (${pr.age} yo, OVR ${pr.ovr}, POT ${pr.pot}) top-squad exposure — development staff believe he is ready to step up.`,
         {title:'Development Report', type:'recommendation', tone:'good', playerId:pr.id, tag:'Staff', r:G.round+1, y:G.year}
+      );
+    }
+  }
+
+  // Attack coach: in-form player who isn't in the lineup
+  const attackCoach = G.staff.find(s=>s.role==='attack');
+  if(attackCoach && rnd() < 0.25){
+    const hotBench = topPlayers.filter(p=>!p.injury && p.form>80 && !mt.lineup.includes(p.id)).sort((a,b)=>b.form-a.form);
+    if(hotBench.length){
+      const p = hotBench[0];
+      addNews(
+        `${attackCoach.name} flags that ${p.name} (${p.pos}, form ${Math.round(p.form)}) is in excellent form but not currently in the run-on side — worth considering for selection.`,
+        {title:'Selection Tip', type:'recommendation', tone:'good', playerId:p.id, tag:'Staff', r:G.round+1, y:G.year}
+      );
+    }
+  }
+
+  // Defence coach: poor-morale key player — recommend man-management
+  const defCoach = G.staff.find(s=>s.role==='defence');
+  if(defCoach && rnd() < 0.22){
+    const struggling = topPlayers.filter(p=>!p.injury && (p.morale||70)<55 && mt.lineup.slice(0,13).includes(p.id)).sort((a,b)=>(a.morale||70)-(b.morale||70));
+    if(struggling.length){
+      const p = struggling[0];
+      addNews(
+        `${defCoach.name} notes that ${p.name} (${p.pos}) has been disengaged in training — morale sits at ${Math.round(p.morale||70)}. A one-on-one check-in is recommended before next week.`,
+        {title:'Player Welfare', type:'recommendation', tone:'bad', playerId:p.id, tag:'Staff', r:G.round+1, y:G.year}
+      );
+    }
+  }
+
+  // Medical physio: injury risk warning for high-load players
+  const physio = G.staff.find(s=>s.role==='medical');
+  if(physio && rnd() < 0.30){
+    const atRisk = topPlayers.filter(p=>!p.injury && (p.load||0)>70 && p.cond<78).sort((a,b)=>(b.load||0)-(a.load||0));
+    if(atRisk.length){
+      const p = atRisk[0];
+      addNews(
+        `${physio.name} warns that ${p.name} is carrying a high training load (${Math.round(p.load||0)}) with only ${Math.round(p.cond)}% condition — injury risk is elevated. Consider reducing his minutes this week.`,
+        {title:'Injury Risk Warning', type:'recommendation', tone:'bad', playerId:p.id, tag:'Staff', r:G.round+1, y:G.year}
       );
     }
   }

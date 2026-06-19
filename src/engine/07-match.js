@@ -77,18 +77,31 @@ function simMatch(m, isFinal){
   const crowd = m.projCrowd || matchCrowd(isMagicRound ? mrHost || th : th, isFinal);
   const ticketPrice = th.id===G.coach.teamId && G.club ? (G.club.ticketPrice || 28) : 28;
   const timeOfDayMod = isNight ? 0.97 : 1.03; // night slightly fewer tries (dew, handling), afternoon slight edge
-  const weatherTryMod = (weather==='Heavy rain' ? .84 : weather==='Light rain' ? .92 : weather==='Windy' ? .95 : weather==='Humid' ? .96 : 1) * timeOfDayMod;
-  const weatherKickMod = weather==='Heavy rain' ? .88 : weather==='Light rain' ? .93 : weather==='Windy' ? .90 : weather==='Humid' ? .97 : 1;
+  const baseWeatherTryMod = (weather==='Heavy rain' ? .84 : weather==='Light rain' ? .92 : weather==='Windy' ? .95 : weather==='Humid' ? .96 : 1) * timeOfDayMod;
+  const baseWeatherKickMod = weather==='Heavy rain' ? .88 : weather==='Light rain' ? .93 : weather==='Windy' ? .90 : weather==='Humid' ? .97 : 1;
+  const badWeather = weather === 'Heavy rain' || weather === 'Windy';
+  const coachId = G.coach ? G.coach.teamId : -1;
+  const coachTeam = G.teams.find(t => t.id === coachId);
+  const conservative = badWeather && coachTeam && coachTeam.matchPrefs && coachTeam.matchPrefs.weatherTactics === 'conservative';
+  const isCoachH = th.id === coachId, isCoachA = ta.id === coachId;
+  // Conservative weather play: sacrifice some try-scoring (×0.93) in exchange for halving the kick penalty
+  const adjTryMod = conservative ? 1 + (baseWeatherTryMod - 1) * 0.5 : baseWeatherTryMod;
+  const adjKickMod = conservative ? baseWeatherKickMod + (1 - baseWeatherKickMod) * 0.55 : baseWeatherKickMod;
+  const weatherTryMod = baseWeatherTryMod; // keep for det logging
+  const weatherKickMod = baseWeatherKickMod;
   const crowdHomeMod = (isFinal || isMagicRound) ? 1 : clamp(0.985 + crowd / 1200000, .985, 1.035);
   th._prevLineup = th.lineup.slice(0,13);
   ta._prevLineup = ta.lineup.slice(0,13);
   const ph = lineupPower(th), pa = lineupPower(ta);
   const hAdj = isMagicRound ? 1 : 1.035;
-  // Cap the dominance ratio to prevent runaway blowouts; exponent 1.65 vs old 2.6
   const ratH = Math.min((ph.atk*hAdj)/pa.def, 1.65);
   const ratA = Math.min(pa.atk/(ph.def*hAdj), 1.65);
-  const expH = clamp(2.85 * Math.pow(ratH, 1.65) * rf(.87,1.13) * weatherTryMod * crowdHomeMod, 0.7, 9);
-  const expA = clamp(2.85 * Math.pow(ratA, 1.65) * rf(.87,1.13) * weatherTryMod / Math.sqrt(crowdHomeMod), 0.7, 9);
+  const hTryMod = (isCoachH && conservative) ? adjTryMod * 0.93 : baseWeatherTryMod;
+  const aTryMod = (isCoachA && conservative) ? adjTryMod * 0.93 : baseWeatherTryMod;
+  const hKickMod = (isCoachH && conservative) ? adjKickMod : baseWeatherKickMod;
+  const aKickMod = (isCoachA && conservative) ? adjKickMod : baseWeatherKickMod;
+  const expH = clamp(2.85 * Math.pow(ratH, 1.65) * rf(.87,1.13) * hTryMod * crowdHomeMod, 0.7, 9);
+  const expA = clamp(2.85 * Math.pow(ratA, 1.65) * rf(.87,1.13) * aTryMod / Math.sqrt(crowdHomeMod), 0.7, 9);
   let triesH = poisson(expH), triesA = poisson(expA);
   if(isFinal && triesH===triesA && rnd()<.5) (rnd()<.5? triesH++ : triesA++);
   // Approximate half-time split for comeback detection (roughly 40-60% of tries in first half)
@@ -97,8 +110,8 @@ function simMatch(m, isFinal){
   const htGoalA = triesA > 0 ? Math.round((htSplitA / triesA) * (triesA * 0.65)) : 0;
   const htScore = {h: htSplitH*4 + htGoalH*2, a: htSplitA*4 + htGoalA*2};
   const det = {h:{}, a:{}, events:[], suspensions:[], venue, weather, crowd, ticketPrice, weatherTryMod, weatherKickMod, htScore, slot};
-  const goalsH = simTeamStats(th, triesH, det.h, ph.kick * weatherKickMod);
-  const goalsA = simTeamStats(ta, triesA, det.a, pa.kick * weatherKickMod);
+  const goalsH = simTeamStats(th, triesH, det.h, ph.kick * hKickMod);
+  const goalsA = simTeamStats(ta, triesA, det.a, pa.kick * aKickMod);
   // Infringements (after stats so they don't affect scoring math)
   genInfringements(th, det, det.h);
   genInfringements(ta, det, det.a);
