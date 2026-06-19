@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Coach profile career context — profile now shows current-season W-L-D and career win rate; offseason history stores each season's W-L-D and the coaching history table displays the record.
 - Facility board expectations — Club Management board card now shows whether current facility standard meets prestige-tier expectations (Dynasty/Elite → avg Lv 4+, Strong → Lv 3+, Solid → Lv 2+); failing facilities listed by name in red.
 - Win confetti animation — CSS confetti (55 particles, 7 colours, 1.8–3.8s fall) fires on full-time win; auto-removed after 4.5s.
 - Personality-based contracts — `p.personality` ('money'/'winner'/'loyal'/'ambitious'/'homesick'/'balanced') assigned at player generation; affects salary demand in `demandFor()` and signing probability in `contractSignChance()`; shown on player modal, contract ledger, and signing modal.

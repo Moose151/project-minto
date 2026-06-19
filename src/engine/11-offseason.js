@@ -50,7 +50,8 @@ function startOffseason(){
     myPos,
     ladder: lad.map(r=>({id:r.id, pts:r.pts})),
   });
-  G.coach.history.unshift({year:G.year, team:teamName(myTeam()), pos:myPos, premier:G.finals.premier===G.coach.teamId});
+  const myLadRow = lad.find(r=>r.id===G.coach.teamId)||{w:0,l:0,d:0};
+  G.coach.history.unshift({year:G.year, team:teamName(myTeam()), pos:myPos, premier:G.finals.premier===G.coach.teamId, w:myLadRow.w, l:myLadRow.l, d:myLadRow.d});
   checkAchievements('season', {lad, best, rookie, myPos});
   for(const id in G.players) recordPlayerSeason(G.players[id]);
   // retirements

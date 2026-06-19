@@ -27,10 +27,16 @@ Object.assign(UI, {
         <p style="color:var(--muted);font-size:12px">Spend coaching salary/cash to improve your skills.</p>
         <div class="btnrow">${upgrade('development','Development')}${upgrade('manMgmt','Man Management')}${upgrade('fitness','Fitness')}${upgrade('tactics','Tactics')}</div>
       </div>` : '';
+    const totalGames = (c.careerW||0) + (c.careerL||0);
+    const winRate = totalGames > 0 ? Math.round((c.careerW||0) / totalGames * 100) : 0;
+    const winRateColour = winRate >= 60 ? 'var(--green)' : winRate >= 45 ? 'var(--ink)' : 'var(--red)';
+    const lad = ladder();
+    const myRow = lad.find(r=>r.id===G.coach.teamId)||{w:0,l:0,d:0,p:0};
+    const seasonRecord = myRow.p > 0 ? `${myRow.w}W ${myRow.l}L${myRow.d?' '+myRow.d+'D':''}` : 'Season not started';
     return `<h1 class="page">Coach Profile</h1><p class="page-sub">${esc(c.name)} · ${esc(teamName(myTeam()))}</p>
     <div class="grid3">
       <div class="card"><div class="navsep" style="margin:0">Reputation</div><div style="font-family:var(--disp);font-size:42px;font-weight:700;color:var(--brass)">${Math.round(c.rep)}</div><div class="bar"><i style="width:${c.rep}%"></i></div><p style="color:var(--muted);font-size:12px;margin-top:8px">${esc(badge)}</p></div>
-      <div class="card"><div class="navsep" style="margin:0">Career record</div><div style="font-family:var(--disp);font-size:42px;font-weight:700">${c.careerW||0}–${c.careerL||0}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.prems||0} premiership${(c.prems||0)===1?'':'s'} · season ${G.season}</p></div>
+      <div class="card"><div class="navsep" style="margin:0">Career record</div><div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:var(--disp);font-size:38px;font-weight:700">${c.careerW||0}–${c.careerL||0}</div><div style="font-size:20px;font-weight:700;color:${winRateColour}">${winRate}%</div></div><p style="color:var(--muted);font-size:12px;margin-top:4px">${c.prems||0} prem${(c.prems||0)===1?'':'s'} · ${seasonRecord} this season</p></div>
       <div class="card"><div class="navsep" style="margin:0">Board confidence</div><div style="font-family:var(--disp);font-size:42px;font-weight:700;color:${c.conf<30?'var(--red)':c.conf>70?'var(--green)':'var(--ink)'}">${Math.round(c.conf)}%</div><p style="color:var(--muted);font-size:12px;margin-top:8px">Expectation: ${esc(c.expect.label)}</p></div>
       <div class="card"><div class="navsep" style="margin:0">Contract</div><div style="font-family:var(--disp);font-size:32px;font-weight:700">${money(c.salary||0)}</div><p style="color:var(--muted);font-size:12px;margin-top:8px">${c.contractYears||0} year${(c.contractYears||0)===1?'':'s'} remaining · cash ${money(c.cash||0)}</p>${(c.contractYears||0)<=1?`<button class="btn sm primary" style="margin-top:8px" onclick="UI.coachContractExtension()">Negotiate Extension</button>`:''}</div>
     </div>
@@ -40,8 +46,8 @@ Object.assign(UI, {
     </div>
     ${attrsHtml}
     <h2 class="sec">Coaching history</h2>
-    <div class="card" style="padding:6px"><table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick num">Finish</th><th class="noclick"></th></tr></thead><tbody>
-    ${c.history.map(h=>`<tr><td>${h.year}</td><td>${esc(h.team)}</td><td class="num">${ord(h.pos)}</td><td>${h.premier?'★ Premiers':''}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted)">First season underway.</td></tr>'}
+    <div class="card" style="padding:6px"><table><thead><tr><th class="noclick">Year</th><th class="noclick">Club</th><th class="noclick num">W-L</th><th class="noclick num">Finish</th><th class="noclick"></th></tr></thead><tbody>
+    ${c.history.map(h=>`<tr><td>${h.year}</td><td>${esc(h.team)}</td><td class="num" style="color:var(--muted)">${h.w!=null?`${h.w}–${h.l}`:'-'}</td><td class="num">${ord(h.pos)}</td><td>${h.premier?'<span style="color:var(--gold)">★ Premiers</span>':''}</td></tr>`).join('')||'<tr><td colspan="5" style="color:var(--muted)">First season underway.</td></tr>'}
     </tbody></table></div>`;
   },
   coachContractExtension(){
