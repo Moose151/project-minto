@@ -68,6 +68,7 @@ function startNewGame(cfg){
   G = { v:1, year:2026, season:1, round:0, phase:'regular', godMode:false, achievementsLocked:false,
     config:{ nTeams:cfg.nTeams, cap:cfg.cap, capGrowth:.03, leagueName: cfg.leagueName || 'Minto Premiership' },
     players:{}, teams:[], freeAgents:[], news:[], history:[], hallOfFame:[], achievements:[], finals:null, offseason:null,
+    calendar:{day:0, startISO:'2026-03-02', lastStop:{key:'training', label:'Training review', page:'training', tone:'neutral'}},
     staff: [genStaff('attacking', 52), genStaff('defensive', 52), genStaff('fitness', 48)],
     club: { funds: 1500000, seasonRevenue: 0, seasonWages: 0, gateRevenue: 0, broadcastRevenue: 0,
       currency:'AUD', ticketPrice:28, membershipPrice:160,

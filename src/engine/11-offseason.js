@@ -868,6 +868,7 @@ function generateJobOffers(){
 }
 function startNewSeason(){
   G.year++; G.season++; G.round=0; G.phase='regular'; G.finals=null; G.offseason=null;
+  G.calendar = {day:0, startISO:`${G.year}-03-02`, lastStop:{key:'training', label:'Training review', page:'training', tone:'neutral'}};
   ensureClubFacilities();
   // Facility degradation: each facility above level 1 has a chance to drop each season
   const fac = G.club.facilities;

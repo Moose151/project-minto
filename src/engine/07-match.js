@@ -240,9 +240,13 @@ function simTeamStats(t, tries, out, kickSkill){
     x.p.career.km += line.km || 0;
     x.p.career.rSum += line.r || 0;
     addLineToStatBucket(playerClubStatBucket(x.p, t), line);
-    x.p.cond = clamp(x.p.cond - (26 - x.p.attrs.stamina/6) * mins/80, 20, 100);
+    const workload = mins/80*42 + (line.tk||0)/5 + (line.runs||0)/8 + (line.m||0)/180;
+    x.p.load = clamp((x.p.load || 0) * 0.62 + workload, 0, 100);
+    x.p.fatigue = clamp((100 - x.p.cond) * 0.72 + x.p.load * 0.48, 0, 100);
+    x.p.lastPlayedDay = G.calendar ? G.calendar.day : G.round * 7 + 5;
+    x.p.cond = clamp(x.p.cond - (26 - x.p.attrs.stamina/6) * mins/80 - x.p.load/32, 20, 100);
     const carrying = x.p.injury && x.p.playInjured;
-    const injChance = .035 * (1 + (100 - x.p.attrs.injury)/70) * (x.p.cond<55 ? 1.5 : 1) * (carrying ? 3.2 : 1);
+    const injChance = .035 * (1 + (100 - x.p.attrs.injury)/70) * (x.p.cond<55 ? 1.5 : 1) * (1 + Math.max(0, x.p.load - 70)/120) * (carrying ? 3.2 : 1);
     if(rnd() < injChance){
       const inj = pick(INJURIES);
       x.p.injury = {n:inj.n, weeks: ri(inj.w[0], inj.w[1])};

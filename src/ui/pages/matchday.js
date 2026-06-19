@@ -24,7 +24,8 @@ Object.assign(UI, {
               <div style="font-size:56px;font-weight:900;font-family:var(--disp);color:var(--brass);letter-spacing:.08em">BYE</div>
               <p class="page-sub" style="margin:6px 0 14px">Round ${G.round+1} — your team has no match this week. Players rest and recover.</p>
               <div class="btnrow" style="justify-content:center">
-                <button class="btn primary" onclick="UI.advance()">Advance (Bye)</button>
+                <button class="btn primary" onclick="UI.advance()">Next day</button>
+                <button class="btn" onclick="UI.go('calendar')">Calendar</button>
                 <button class="btn" onclick="UI.go('fixtures')">View round fixtures</button>
                 <button class="btn" onclick="UI.go('training')">Training</button>
               </div>

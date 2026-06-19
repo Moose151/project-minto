@@ -12,6 +12,8 @@ Updated every session.
 - Updated Train & Trial contracts to 1 year, max $150k, 6-game limit, salary-cap exempt, with small breakout/potential spikes during match play.
 - Youth squad is now under-21 only, salary-cap exempt, and players cannot return to youth once promoted to the main squad.
 - Updated recruitment, contracts, scouting, team sheet, squad page, offseason signing (including T&T offers), AI free-agent signing, player editor, and club God Mode paths to enforce the new squad rules.
+- Added day-by-day calendar flow: current date in topbar, Next Day advance, Tuesday team-list stop, training/recovery stops, travel day, Saturday match day, and Calendar page.
+- Added player load/fatigue tracking from match workload, daily recovery, and low-condition/high-load injury risk.
 - Added Recruitment > Free Agents tab with sortable columns, typed age/OVR/salary filters, affordable-only toggle, configured age/OVR threshold toggle, and reset filters.
 - Added position-weighted contract demand premiums for spine/key positions plus youth upside scaling.
 - Rebalanced match ratings and fixed a missing `stepSkill` reference that could produce `NaN` ratings.
@@ -56,6 +58,7 @@ cd api && node server.js
 | `src/engine/06-selection.js` | `autoPick`, `validateLineup`, `familiarity`, position fit |
 | `src/engine/07-match.js` | `simMatch`, venue uses home stadium, GF uses "Grand Final Stadium", crowd uses forecast/capacity |
 | `src/engine/08-progression.js` | Training, dev, morale, injuries (medical staff/facility bonus), facilities helpers, `payCoachWeekly`, `payClubWeekly`, `advanceScouting` |
+| `src/engine/09-calendar.js` | Daily calendar helpers, date labels, auto-stops, daily recovery/load injury risk |
 | `src/engine/09-ladder.js` | `ladder()` |
 | `src/engine/10-finals.js` | NRL top-8 finals: QF/EF week 1, Semis week 2, Prelims week 3, GF week 4 |
 | `src/engine/11-offseason.js` | Awards (topTry, coachYear, gfScore), contracts, retirements, rookies, board verdict, roster-cap helpers |
@@ -68,6 +71,7 @@ cd api && node server.js
 | `src/ui/pages/dashboard.js` | Status strip (incl. Club Funds), alerts, next match, mini ladder |
 | `src/ui/pages/matchday.js` | Match Day: pre-match, lineups, compact odds bar, live feed |
 | `src/ui/pages/predictions.js` | Bookie odds (fixed formula), projected ladder, award frontrunners |
+| `src/ui/pages/calendar.js` | Daily calendar: current date, deadlines, travel, match day, recovery, fatigue watch |
 | `src/ui/pages/fixtures.js` | Paginated by round; stadium/crowd per match; finals bracket |
 | `src/ui/pages/player-modal.js` | Player profile: quality tier, nationality, key attrs, filterable/sortable career history |
 | `src/ui/pages/teamsheet.js` | Drag/drop field, effective OVR delta, pick-slot modal, drag-highlight by fit quality |
@@ -184,6 +188,13 @@ cd api && node server.js
 - Odd-team fixtures use phantom bye slot; `G.byes[]` per round
 - Dashboard, Match Day, Fixtures, Topbar all show bye state; +8 condition boost for coached team
 
+#### Daily Calendar & Fatigue
+- Season runs day-by-day from Monday; topbar shows current date and the advance button moves one day at a time
+- Saturday is match day and plays the current round; bye weekends advance through the calendar without team-sheet validation
+- Auto-stop routing: Monday training review, Tuesday team-list deadline, away travel day, Saturday match/bye, Sunday recovery and judiciary review
+- Calendar page shows next 14 days, match/bye context, travel, recovery, deadlines, injury count, and load watch
+- Match minutes/workload add player load; daily recovery reduces load and improves condition; overloaded or low-condition players have extra injury risk
+
 #### Inbox & News
 - Inbox page: category filter tabs, item counts, expand/collapse, post-match analysis news item, player quick-link
 
@@ -259,10 +270,6 @@ cd api && node server.js
 
 #### Crowd Vendor System
 - F&B and merchandise vendor revenue: facility-like upgrades (level 1–5), per-head spend scaling, price slider, shown in Club Management breakdown.
-
-#### Daily Calendar & Fatigue Management
-- Day-by-day simulation; current date in topbar; auto-stop for decisions (judiciary, training review, squad selection by Tuesday).
-- Building fatigue across matches; injury risk for fatigued/overloaded players; Calendar view showing matches, deadlines, travel, recovery days.
 
 #### Weather Events & Tactical Adjustment
 - Richer weather effects on errors, handling, kick accuracy, injuries, and crowd; in-game tactical adjustment to conditions by coach and AI.

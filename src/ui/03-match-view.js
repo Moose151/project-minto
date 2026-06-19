@@ -4,7 +4,10 @@ Object.assign(UI, {
   /* ---------- advance ---------- */
   advance(){
     if(!G || G.phase==='offseason') return;
-    const issues = lineupIssues(myTeam());
+    const stop = G.phase === 'regular' && typeof calendarStopForDay === 'function' ? calendarStopForDay(ensureCalendar().day) : null;
+    const onBye = G.phase === 'regular' && ((G.byes && G.byes[G.round]) || []).includes(G.coach.teamId);
+    const isMatchDay = G.phase !== 'regular' || (stop && stop.key === 'match' && !onBye);
+    const issues = isMatchDay ? lineupIssues(myTeam()) : [];
     if(issues.length){
       UI.modal(`<h3>Team Sheet Not Compliant</h3>
         <p class="page-sub">Fix these issues before advancing to the match.</p>
@@ -12,9 +15,14 @@ Object.assign(UI, {
         <div class="btnrow"><button class="btn primary" onclick="UI.closeModal();UI.go('teamsheet')">Fix team sheet</button><button class="btn" onclick="UI.closeModal()">Close</button></div>`);
       return;
     }
-    const res = advanceRound();
+    const res = G.phase === 'regular' && typeof advanceCalendarDay === 'function' ? advanceCalendarDay() : advanceRound();
     autoSave();
+    if(res && res.type === 'day' && res.stop && res.stop.page && UI.page !== res.stop.page){
+      UI.page = res.stop.page;
+      UI._forceTop = true;
+    }
     UI.render();
+    if(res && res.type === 'day' && res.stop) UI.toast(res.stop.label);
     if(res && res.type==='round') UI.showRoundResults(res.round, `Round ${G.round} results`);
     if(res && res.type==='finals') UI.showRoundResults(res.games, res.label);
   },

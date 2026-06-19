@@ -355,7 +355,7 @@ function weeklyRecoveryAndDev(){
     for(const id of t.players){
       const p = G.players[id];
       const facilityRecovery = isMine ? (facilityLevel('gym') - 1) * 1.4 : 0;
-      const recBase = (t.focus==='recovery' ? 24 : 17) + facilityRecovery;
+      const recBase = (t.focus==='recovery' ? 5 : 2) + facilityRecovery;
       p.cond = clamp(p.cond + recBase + p.attrs.stamina/20 + fitnessBonus*10, 0, 100);
       if(p.injury){
         p.injury.weeks--;

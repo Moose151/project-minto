@@ -62,7 +62,7 @@ Object.assign(UI, {
       nextHtml = `<div style="text-align:center;padding:16px 0 8px">
         <div style="font-size:40px;font-weight:900;font-family:var(--disp);color:var(--brass);letter-spacing:.06em">BYE</div>
         <p class="page-sub" style="margin:4px 0 10px">Round ${G.round+1} — rest week. Players get a bonus conditioning boost.</p>
-        <div class="btnrow" style="justify-content:center"><button class="btn primary" onclick="UI.advance()">Advance (Bye)</button><button class="btn" onclick="UI.go('fixtures')">View fixtures</button></div>
+        <div class="btnrow" style="justify-content:center"><button class="btn primary" onclick="UI.advance()">Next day</button><button class="btn" onclick="UI.go('calendar')">Calendar</button><button class="btn" onclick="UI.go('fixtures')">View fixtures</button></div>
       </div>`;
     } else if(next){
       const opp = G.teams[next.h===t.id ? next.a : next.h];
@@ -82,7 +82,7 @@ Object.assign(UI, {
         }
         return `<p style="text-align:center; color:var(--muted); font-size:12px">${home?'Home':'Away'} · Round ${G.round+1}</p>`;
       })()}
-      <div class="btnrow" style="justify-content:center"><button class="btn" onclick="UI.go('teamsheet')">Set team</button><button class="btn primary" onclick="UI.advance()">Play round</button></div>`;
+      <div class="btnrow" style="justify-content:center"><button class="btn" onclick="UI.go('teamsheet')">Set team</button><button class="btn" onclick="UI.go('calendar')">Calendar</button><button class="btn primary" onclick="UI.advance()">${calendarStopForDay(ensureCalendar().day)?.key==='match'?'Play match day':'Next day'}</button></div>`;
     }
     if(G.phase==='finals'){
       const btn = G.finals.useTop8
