@@ -197,6 +197,7 @@ function simTeamStats(t, tries, out, kickSkill){
     line.r = clamp(5 + line.t*1.6 + line.ta*1.1 + line.gl*.25 + line.fg*.35 + line.tk/14 + line.m/65 + line.runs/18 + line.k4020*.45 + (line.fdo||0)*.35 - line.err*.8 + (x.p.attrs.lastDitch-55)/90 + formAdj*.55 + gauss(0,.7), 1, 10);
     line.fp = line.t*4 + line.ta*2 + line.gl*2 + line.fg*2 + line.k4020*3 + (line.fdo||0)*2 + Math.floor(line.tk/10) + Math.floor(line.m/25) + Math.floor(line.runs/8) - line.err*2;
     const s = x.p.s; s.g++; s.t+=line.t; s.runs+=(line.runs||0); s.gl+=line.gl; s.ga+=(line.ga||0); s.fg+=(line.fg||0); s.ta+=line.ta; s.tk+=line.tk; s.m+=line.m; s.err+=line.err; s.k4020+=(line.k4020||0); s.fdo=(s.fdo||0)+(line.fdo||0); s.rSum+=line.r; s.fpts+=(line.fp||0); s.mins=(s.mins||0)+mins; s.mt=(s.mt||0)+line.mt; s.lb=(s.lb||0)+line.lb; s.lba=(s.lba||0)+line.lba; s.ks=(s.ks||0)+line.ks; s.km=(s.km||0)+line.km;
+    if(x.p.squad === 'trial') x.p.trialGames = (x.p.trialGames || 0) + 1;
     ensurePlayerCareerStats(x.p);
     x.p.career.games++;
     x.p.career.tries += line.t;

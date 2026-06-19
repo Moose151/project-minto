@@ -838,6 +838,19 @@ function startNewSeason(){
   G.club.seasonRevenue = 0; G.club.seasonWages = 0; G.club.gateRevenue = 0; G.club.broadcastRevenue = 0; G.club.membershipRevenue = 0; G.club.sponsorshipRevenue = 0; G.club.vendorRevenue = 0; G.club.magicRoundRevenue = 0;
   G.club.sponsorships = (G.club.sponsorships || []).map(s=>({...s, yearsLeft:Math.max(0,(s.yearsLeft||1)-1)})).filter(s=>s.yearsLeft>0);
   G.config.cap = Math.round(G.config.cap * (1+G.config.capGrowth) / 10000)*10000;
+  // Expire all Train & Trial contracts — release to free agency
+  for(const t of G.teams){
+    const trialIds = t.players.filter(id=>{ const p=G.players[id]; return p && p.squad==='trial'; });
+    for(const id of trialIds){
+      const p = G.players[id];
+      t.players = t.players.filter(pid=>pid!==id);
+      t.lineup = (t.lineup||[]).map(pid=>pid===id?null:pid);
+      p.squad = null; p.trialGames = 0;
+      if(!G.freeAgents) G.freeAgents = [];
+      if(!G.freeAgents.includes(id)) G.freeAgents.push(id);
+      if(t.id===G.coach.teamId) addNews(`${p.name}'s train & trial contract has expired — released to free agency.`,{type:'contract',tone:'neutral',tag:'Contracts',teamId:t.id});
+    }
+  }
   for(const id in G.players){ const p=G.players[id]; resetSeasonStats(p); p.morale=clamp(p.morale, 45, 90); p.form=clamp(Math.round((p.form == null ? 50 : p.form)*0.72 + 50*0.28), 25, 85); p.ovr=calcOvr(p); p.pot=Math.max(p.pot,p.ovr); p.seasonStartOvr=p.ovr; p.seasonStartPot=p.pot; p.seasonStartGames=p.career.games; p.seasonStartAttrs={...p.attrs}; delete p.approachTeam; if(p.ovrHistory){ p.ovrHistory.push({year:G.year, ovr:p.ovr}); if(p.ovrHistory.length>20) p.ovrHistory.shift(); } }
   for(const t of G.teams){ t.rep = Math.round(squadStrength(t)); autoPick(t); }
   const fixtResult = genFixtures(G.teams.map(t=>t.id));

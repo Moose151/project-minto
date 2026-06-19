@@ -64,6 +64,7 @@ Object.assign(UI, {
           <div class="btnrow" style="margin:0;gap:4px">
             <button class="btn sm${onSl?' primary':''}" onclick="event.stopPropagation();UI.toggleShortlist(${p.id})" title="${onSl?'Remove from shortlist':'Add to shortlist'}">${onSl?'★':'☆'}</button>
             ${isFA?`<button class="btn sm primary" onclick="event.stopPropagation();UI.signFreeAgent(${p.id})">Sign</button>`:''}
+            ${isFA?`<button class="btn sm" onclick="event.stopPropagation();UI.signTrialContract(${p.id})" title="Train & Trial: 1-year low-salary cover deal, up to 8 games">T&T</button>`:''}
             ${canApproach && !isFA?`<button class="btn sm" onclick="event.stopPropagation();UI.doApproach(${p.id})">Approach</button>`:''}
             ${approachExhausted && !isFA?`<span style="font-size:10px;color:var(--dim)" title="${MAX_APPROACHES} approach limit reached">Limit reached</span>`:''}
           </div>
@@ -129,10 +130,69 @@ Object.assign(UI, {
 
   signFreeAgent(id){
     const p = G.players[id]; if(!p) return;
+    const t = myTeam();
+    const topCount = t.players.filter(id=>{ const q=G.players[id]; return q&&(q.squad==='top'||!q.squad); }).length;
+    if(topCount >= 30){ UI.modal(`<h3>Top Squad Full</h3><p>Your top squad has 30 players — the maximum. Release or move a player before signing another to the top squad.</p><p style="color:var(--muted);font-size:12px">You can still sign players on a <b>Train & Trial</b> contract (T&T button) without needing a squad spot.</p><div class="btnrow"><button class="btn primary" onclick="UI.closeModal();UI.go('squad')">Go to Squad</button><button class="btn" onclick="UI.closeModal()">Cancel</button></div>`); return; }
     // Show full negotiation modal rather than auto-signing
-    const demand = demandFor(p, myTeam());
+    const demand = demandFor(p, t);
     UI._contractOffer = {pid:id, salary:demand, years:1, promises:{role:'none', captain:false, contractType:'flat'}, demand, isFreeAgent:true};
     UI.renderFreeAgentOffer();
+  },
+
+  signTrialContract(id){
+    const p = G.players[id]; if(!p) return;
+    const t = myTeam();
+    const existingTrial = t.players.filter(pid=>{ const q=G.players[pid]; return q&&q.squad==='trial'; }).length;
+    if(existingTrial >= 6){ UI.toast('You already have 6 train & trial players (maximum).'); return; }
+    // T&T salary: 40% of market rate, capped at $75k, rounded to $5k
+    const TRIAL_CAP = 75000;
+    const demand = demandFor(p, t);
+    const trialSalary = Math.min(TRIAL_CAP, Math.round(demand * 0.4 / 5000) * 5000);
+    const firstYearCap = trialSalary;
+    const capAfter = G.config.cap - teamSalary(t) - firstYearCap;
+    // High-ambition players unlikely to accept
+    const willAccept = p.ambition < 60 || p.ovr < 65 || p.age >= 32;
+    UI.modal(`<h3>Train & Trial Contract</h3>
+      <p class="page-sub">${esc(p.name)} · ${p.pos} · Age ${p.age} · OVR ${p.ovr}</p>
+      <div class="card" style="padding:10px 14px;margin-bottom:12px">
+        <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:var(--brass)">T&T Terms (non-negotiable)</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+          <span>Salary: <b style="color:var(--ink)">${money(trialSalary)}/yr</b> (market: ${money(demand)})</span>
+          <span>Length: <b style="color:var(--ink)">1 year</b></span>
+          <span>Game limit: <b style="color:var(--ink)">8 games</b> before upgrade required</span>
+        </div>
+        <p style="margin:8px 0 0;font-size:11px;color:var(--muted)">Cap after signing: <b style="color:${capAfter<0?'var(--red)':'var(--ink)'}">${money(capAfter)}</b> · No release payout.</p>
+      </div>
+      ${!willAccept?`<p style="color:var(--red);font-size:12px">⚠ This player may be reluctant to accept a T&T deal given their ability and ambition.</p>`:''}
+      <p style="font-size:12px;color:var(--muted)">T&T players can be selected in the match-day 19 but cannot play more than 8 games this season without a contract upgrade.</p>
+      <div class="btnrow">
+        <button class="btn primary" onclick="UI._confirmTrialSign(${id},${trialSalary})">Sign T&T</button>
+        <button class="btn" onclick="UI.closeModal()">Cancel</button>
+      </div>`);
+  },
+
+  _confirmTrialSign(id, trialSalary){
+    const p = G.players[id]; if(!p) return;
+    const t = myTeam();
+    if(teamSalary(t) + trialSalary > G.config.cap){ UI.toast('Signing would exceed the salary cap.'); return; }
+    // Check if player accepts (high-ambition/quality players may decline)
+    const willAccept = p.ambition < 60 || p.ovr < 65 || p.age >= 32 || Math.random() < 0.55;
+    if(!willAccept){
+      UI.toast(`${p.name} turned down the T&T offer — seek a better deal.`);
+      UI.closeModal(); return;
+    }
+    p.squad = 'trial';
+    p.salary = trialSalary;
+    p.years = 1;
+    p.contractType = 'flat';
+    p.contractSchedule = [trialSalary];
+    p.trialGames = 0;
+    t.players.push(id);
+    G.freeAgents = (G.freeAgents || []).filter(pid => pid !== id);
+    addNews(`${p.name} joins ${t.nick} on a train & trial contract.`, {title:'T&T Signing', type:'recruitment', tone:'good', playerId:id, teamId:t.id, tag:'Recruitment'});
+    UI.closeModal();
+    UI.toast(`${p.name} signed on a T&T deal at ${money(trialSalary)}/yr.`);
+    UI.render();
   },
 
   renderFreeAgentOffer(){
@@ -166,14 +226,22 @@ Object.assign(UI, {
   submitFreeAgentOffer(){
     const o = UI._contractOffer, p = G.players[o.pid], t = myTeam();
     const firstYear = contractScheduleFor(o.salary, o.years, o.promises.contractType)[0] || o.salary;
-    if(teamSalary(t) + firstYear > G.config.cap){ UI.toast('That signing would exceed the cap.'); return; }
+    // For trial upgrades: subtract the existing T&T salary from cap check since it's being replaced
+    const existingSal = o.isTrialUpgrade ? (p.salary || 0) : 0;
+    if(teamSalary(t) - existingSal + firstYear > G.config.cap){ UI.toast('That signing would exceed the cap.'); return; }
     const res = offerContract(p, o.salary, o.years, t, o.promises, o.demand);
     if(res.ok){
       p.squad = 'top';
-      t.players.push(p.id);
-      G.freeAgents = (G.freeAgents || []).filter(pid=>pid!==p.id);
+      p.trialGames = undefined;
+      if(o.isTrialUpgrade){
+        // Already on the team — just update contract terms
+        addNews(`${p.name} upgraded from train & trial to a full contract at ${money(o.salary)}/yr.`, {title:'Contract Upgrade', type:'contract', tone:'good', playerId:p.id, teamId:t.id, tag:'Contracts'});
+      } else {
+        t.players.push(p.id);
+        G.freeAgents = (G.freeAgents || []).filter(pid=>pid!==p.id);
+        addNews(`${p.name} joins the ${t.nick} as a free agent.`, {title:'Free Agent Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Recruitment'});
+      }
       UI.toast(`${p.name} signed for ${money(o.salary)}.`);
-      addNews(`${p.name} joins the ${t.nick} as a free agent.`, {title:'Free Agent Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Recruitment'});
       UI.closeModal(); UI.render();
     } else {
       UI.toast(`${p.name} rejected the offer.`);

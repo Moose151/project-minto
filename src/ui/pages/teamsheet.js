@@ -2,9 +2,9 @@
 
 /* Team sheet — pitch layout plus bench/reserves */
 const FIELD_SLOT_POS = {
-  0:{x:50,y:90},                              // 1 FB — fullback
-  1:{x:85,y:80}, 4:{x:15,y:80},              // 2 WG right, 5 WG left — wide
-  2:{x:70,y:71}, 3:{x:30,y:71},              // 3 CE right, 4 CE left
+  0:{x:50,y:93},                              // 1 FB — fullback (deep, clear of wingers)
+  1:{x:87,y:82}, 4:{x:13,y:82},              // 2 WG right, 5 WG left — pushed wider + lower
+  2:{x:71,y:71}, 3:{x:29,y:71},              // 3 CE right, 4 CE left
   5:{x:63,y:59}, 6:{x:37,y:59},              // 6 FE, 7 HB — halves spread wide (was 60/44, now 26% gap)
   9:{x:74,y:44}, 7:{x:26,y:44}, 8:{x:50,y:44}, // 10 PR, 8 PR, 9 HK — front row spread (was 68/32, now 24% gap)
   11:{x:68,y:30}, 10:{x:32,y:30},            // 12 SR, 11 SR — second row
@@ -48,7 +48,7 @@ Object.assign(UI, {
       const pos = FIELD_SLOT_POS[i];
       const fit = p ? positionFitLevel(p, i).level : 'empty';
       const jerseyBg = p ? fitColour(fit) : '#707783';
-      return `<button class="pitch-player fit-${fit}" style="left:${pos.x}%;top:${pos.y}%" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})" ${p?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})"`:''}>
+      return `<button class="pitch-player fit-${fit}" data-slot-idx="${i}" data-slot-pos="${s.pos}" style="left:${pos.x}%;top:${pos.y}%" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault();event.dataTransfer.dropEffect='move'" ondragenter="this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="this.classList.remove('drag-over');UI.dropOnSlot(event,${i})" ${p?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()"`:''}>
         <span class="status-stack">${p?playerStatusIcons(p):''}</span>
         ${p
           ? `<span class="pitch-avatar">${playerAvatar(p,30)}</span>
@@ -76,7 +76,7 @@ Object.assign(UI, {
       if(!p) return `<div class="sheet-row empty" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})"><span class="jersey" style="background:#707783;color:#111">${s.n}</span><span class="pname">Select player...</span><span class="pmeta">${s.pos}</span></div>`;
       const fit = positionFitLevel(p,i).level;
       const jerseyBg = fitColour(fit);
-      return `<div class="sheet-row fit-${positionFitLevel(p,i).level}" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})" draggable="true" ondragstart="UI.dragPlayer(event,${p.id})">
+      return `<div class="sheet-row fit-${positionFitLevel(p,i).level}" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})" draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()">
         <span class="jersey" style="background:${jerseyBg};color:${contrastText(jerseyBg)}">${s.n}</span>
         <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)} ${roleBits(p)}</span>
         <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}${playerMeta(p, i)}</span>
@@ -84,11 +84,13 @@ Object.assign(UI, {
     };
     const squadRow = p => {
       const inIdx = t.lineup.indexOf(p.id);
-      const canDrag = (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && !p.repDuty && (p.squad === 'top' || !p.squad);
-      return `<div class="squad-drag-row ${canDrag?'':'disabled'}" ${canDrag?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})"`:''} onclick="UI.playerModal(${p.id})">
+      const isTrial = p.squad === 'trial';
+      const canDrag = (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && !p.repDuty && (p.squad === 'top' || p.squad === 'trial' || !p.squad);
+      const trialBadge = isTrial ? `<span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--brass);background:rgba(210,165,62,.18);padding:1px 5px;border-radius:8px;margin-left:3px">T&T</span>` : '';
+      return `<div class="squad-drag-row ${canDrag?'':'disabled'}" ${canDrag?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()"`:''} onclick="UI.playerModal(${p.id})">
         <span class="pos-tag">${p.pos}${p.pos2?`/${p.pos2}`:''}</span>
-        <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)}${inIdx>=0?` <span style="color:var(--brass);font-size:11px">#${SLOTS[inIdx].n}</span>`:''}</span>
-        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'dev':Math.round(p.cond)+'%'}</span>
+        <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)}${trialBadge}${inIdx>=0?` <span style="color:var(--brass);font-size:11px">#${SLOTS[inIdx].n}</span>`:''}</span>
+        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'dev':isTrial?`T&T ${p.trialGames||0}/8g`:Math.round(p.cond)+'%'}</span>
       </div>`;
     };
 
@@ -176,7 +178,7 @@ Object.assign(UI, {
     const isReserve = slotIdx >= 17;
     const cands = t.players
       .map(id=>G.players[id])
-      .filter(p=>p && (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && (p.squad==='top' || !p.squad))
+      .filter(p=>p && (!p.injury || p.playInjured) && !(p.suspended && p.suspended.weeks>0) && (p.squad==='top' || p.squad==='trial' || !p.squad))
       .sort((a,b)=> b.ovr*familiarity(b,s.pos)*slotSpecialistFit(b,slotIdx) - a.ovr*familiarity(a,s.pos)*slotSpecialistFit(a,slotIdx));
 
     const currOccupant = t.lineup[slotIdx] != null ? G.players[t.lineup[slotIdx]] : null;
@@ -210,7 +212,7 @@ Object.assign(UI, {
   assignSlot(slotIdx, pid){
     const t = myTeam();
     const p = G.players[pid];
-    if(!p || (p.injury && !p.playInjured) || (p.suspended && p.suspended.weeks>0) || p.repDuty || (p.squad && p.squad !== 'top')){ UI.toast('That player is not available for the match-day squad.'); return; }
+    if(!p || (p.injury && !p.playInjured) || (p.suspended && p.suspended.weeks>0) || p.repDuty || (p.squad && p.squad !== 'top' && p.squad !== 'trial')){ UI.toast('That player is not available for the match-day squad.'); return; }
     const existing = t.lineup.indexOf(pid);
     if(existing>=0) t.lineup[existing] = t.lineup[slotIdx];
     t.lineup[slotIdx] = pid;
@@ -219,9 +221,27 @@ Object.assign(UI, {
   dragPlayer(event, pid){
     event.dataTransfer.setData('text/plain', String(pid));
     event.dataTransfer.effectAllowed = 'move';
+    UI._draggingPid = pid;
+    // Highlight slots after a brief delay so drag preview renders first
+    requestAnimationFrame(() => {
+      const p = G.players[pid];
+      if(!p) return;
+      document.querySelectorAll('.pitch-player[data-slot-idx]').forEach(el => {
+        const sIdx = +el.dataset.slotIdx;
+        if(isNaN(sIdx)) return;
+        el.dataset.dragFit = positionFitLevel(p, sIdx).level;
+      });
+      document.querySelector('.rl-pitch')?.classList.add('drag-active');
+    });
+  },
+  dragEnd(){
+    UI._draggingPid = null;
+    document.querySelectorAll('.pitch-player[data-slot-idx]').forEach(el => delete el.dataset.dragFit);
+    document.querySelector('.rl-pitch')?.classList.remove('drag-active');
   },
   dropOnSlot(event, slotIdx){
     event.preventDefault();
+    UI.dragEnd();
     const pid = +(event.dataTransfer.getData('text/plain') || 0);
     if(pid) UI.assignSlot(slotIdx, pid);
   },

@@ -69,9 +69,13 @@ const UI = {
     UI._forceTop = false;
     UI._lastPage = UI.page;
     UI.nav();
-    // Defer scroll restoration one frame so layout is fully computed before scrolling
-    if(prevTop > 0) requestAnimationFrame(()=>{ m.scrollTop = prevTop; });
-    else m.scrollTop = 0;
+    // Restore scroll synchronously (same task as innerHTML swap = no paint in between = no flash)
+    if(prevTop > 0){
+      m.scrollTop = prevTop;
+      requestAnimationFrame(()=>{ if(m.scrollTop !== prevTop) m.scrollTop = prevTop; });
+    } else {
+      m.scrollTop = 0;
+    }
   },
   toast(txt){
     const d = document.createElement('div'); d.className='toast'; d.textContent=txt;

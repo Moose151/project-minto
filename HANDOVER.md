@@ -250,6 +250,24 @@ cd api && node server.js
 
 Items marked **[REPEAT]** have been requested in previous sessions and remain outstanding.
 
+#### Train & Trial Squad ✅ IMPLEMENTED
+- `squad:'trial'` — new category distinct from top squad (30 max), dev squad, and free agents.
+- T&T contracts: always 1 year, salary = 40% of market demand capped at $75,000. No release payout.
+- **Recruitment page**: free agent rows now show a "T&T" button alongside "Sign". Opens a simple confirmation modal (non-negotiable terms: T&T salary, 1 year, 8-game cap). High-ambition/high-OVR players may decline. Squad-full check on regular "Sign" shows error and suggests T&T.
+- **Squad page**: dedicated "Train & Trial" section between top squad and dev squad. Each row shows games played (X/8) with a coloured progress bar and a "MUST UPGRADE" alert at 8 games. "Upgrade" opens the normal free-agent offer modal to negotiate a full deal (trial salary excluded from cap check during upgrade). "Release" immediately releases with no payout.
+- **Teamsheet**: T&T players appear in the squad drag-list with a brass "T&T" badge; they can be dragged and selected for the match-day 19.
+- **Match engine**: each appearance by a T&T player increments `p.trialGames`.
+- **Season end** (`startNewSeason`): all T&T contracts expire; players released to free agency, squad set to null, trialGames reset.
+- Max 6 T&T players at a time enforced on signing.
+
+#### Drag & Drop — Team Sheet Position Highlighting + No Blink ✅ IMPLEMENTED
+- Pitch chips (`chip(i)`) now carry `data-slot-idx` and `data-slot-pos` attributes.
+- `dragPlayer` sets `UI._draggingPid` and in `requestAnimationFrame` applies `data-drag-fit` to every pitch slot (green/yellow/orange/red/empty per `positionFitLevel`) and adds `.drag-active` to `.rl-pitch`.
+- CSS: `.rl-pitch.drag-active` dims all pitch cards to 28% opacity; slots with matching `data-drag-fit` are brought to full opacity with colour-coded glow outlines.
+- `ondragenter`/`ondragleave` on each pitch button toggle `.drag-over` (bright white outline ring).
+- `dragEnd()` clears all `data-drag-fit` attributes and removes `.drag-active` — called on `ondragend` (all draggable rows/cards) and at the start of `dropOnSlot`.
+- Scroll blink fix: `render()` now sets `m.scrollTop = prevTop` synchronously (same JS task as `innerHTML` swap) before the browser can paint, preventing the one-frame scroll flash on same-page re-renders.
+
 #### UI Overhaul **[REPEAT]**
 - **Full UI overhaul from the ground up**: redesign layout, spacing, page hierarchy, component system, typography, colour scheme, and visual language across the whole app.
 - Add dark/light theme support with a proper theme toggle, accessible contrast, and consistent status colours.
@@ -544,6 +562,25 @@ Items marked **[REPEAT]** have been requested in previous sessions and remain ou
 - Staff in their final year show a red "CONTRACT EXPIRING" badge.
 - Extend button appears on expiring staff: opens a modal showing current vs demand salary (ability-weighted multiplier 1.05–1.23), with 1/2/3-year length choice. Updates `s.yearsLeft` and `s.salary`.
 - Still to do: richer demand negotiation (counter-offers, market comparison), staff requesting their own release waiving the payout, board pressure around retaining key staff.
+
+#### Staff Page — Type Clarity, Hire Page Labels & Filter/Search ✅ IMPLEMENTED
+- Colored type badges (COACH / MEDICAL / SCOUT) now appear at the top of every staff card — color-coded blue / green / brass.
+- Current staff section split into three clearly labeled groups: Coaches, Medical Staff, Scouts.
+- Filter bar at the top (All / Coaches / Medical / Scouts) + name search input filter both current staff cards and the hire market table.
+- Market table gains a dedicated Type column with the same colored badges; filtered by the same category filter.
+- Scouts tab hides the hire market (scouts are hired from the Scouting page).
+
+#### Medical Staff — Visibility in Injury Ward ✅ IMPLEMENTED
+- Injury Ward now shows a "Medical Staff (N)" section above the injuries table.
+- Each physio shows as a card: name, ability, per-week extra recovery chance (ability/220 × 100%), and a list of the injured players currently being treated.
+- Multiple physios are all listed; combined bonus is shown when >1 physio is employed.
+- When no medical staff are hired but players are injured, a prompt links to the Staff hire page.
+
+#### Squad List — Season OVR Change ✅ FIXED
+- OVR column in squad list now shows a `+X` / `−X` delta badge on a new line below the OVR number, in bold green/red at 11px. Visible whenever a player's OVR differs from their `seasonStartOvr`.
+
+#### Squad Page Field View — Wingers & Centres Overlap ✅ FIXED
+- WG y-position moved from 80% to 82% (pushed toward own goal line) and WG x-positions spread from 85%/15% to 87%/13% (wider). FB moved from 90% to 93% to maintain gap with wingers. At min pitch height (860px) WG and CE cards now have ~13px clear vertical gap and do not overlap.
 
 #### Scouts & Medical Staff on Staff Page — Contract Payout on Release **[NEW]**
 - Scouts (from `G.scouting.scouts`) and Medical/Physio staff (role `'medical'` in `G.staff`) should be visible on the Staff page alongside assistant coaches, so all contracted personnel are managed in one place.

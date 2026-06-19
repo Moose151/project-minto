@@ -149,6 +149,14 @@ td.num,th.num{text-align:right}
 .pitch-player.fit-orange{box-shadow:0 0 0 2px rgba(217,138,56,.95),0 3px 12px rgba(0,0,0,.55)}
 .pitch-player.fit-red{box-shadow:0 0 0 2px rgba(200,90,79,.95),0 3px 12px rgba(0,0,0,.55)}
 .pitch-player.fit-empty{box-shadow:0 0 0 1px rgba(180,180,180,.3),0 3px 10px rgba(0,0,0,.4)}
+/* Drag-and-drop position highlighting */
+.rl-pitch.drag-active .pitch-player{opacity:.28; transition:opacity .12s, box-shadow .12s}
+.rl-pitch.drag-active .pitch-player[data-drag-fit="green"]{opacity:1; box-shadow:0 0 0 3px rgba(76,175,125,.95),0 4px 14px rgba(0,0,0,.6)}
+.rl-pitch.drag-active .pitch-player[data-drag-fit="yellow"]{opacity:.88; box-shadow:0 0 0 3px rgba(216,190,84,.95),0 4px 14px rgba(0,0,0,.6)}
+.rl-pitch.drag-active .pitch-player[data-drag-fit="orange"]{opacity:.72; box-shadow:0 0 0 3px rgba(217,138,56,.9),0 4px 14px rgba(0,0,0,.6)}
+.rl-pitch.drag-active .pitch-player[data-drag-fit="red"]{opacity:.48; box-shadow:0 0 0 3px rgba(200,90,79,.8),0 4px 14px rgba(0,0,0,.6)}
+.rl-pitch.drag-active .pitch-player[data-drag-fit="empty"]{opacity:.72; box-shadow:0 0 0 2px rgba(140,150,160,.7),0 4px 14px rgba(0,0,0,.5)}
+.pitch-player.drag-over{outline:3px solid rgba(255,255,255,.92) !important; z-index:10 !important}
 .pitch-jersey{width:32px; height:35px; margin:0 auto 2px; display:block}
 .pitch-name{display:flex; align-items:center; justify-content:center; gap:0; font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:.01em; line-height:1.2; max-width:100%}
 .pitch-sub{display:flex; align-items:center; justify-content:center; gap:5px; margin-top:4px}

@@ -20,7 +20,7 @@ Object.assign(UI, {
       if(wk >= 3)  return {label:'Short term', cls:'var(--brass)'};
       return {label:'Minor', cls:'var(--green)'};
     };
-    const medStaff = (G.staff||[]).find(s=>s.role==='medical');
+    const medStaffList = (G.staff||[]).filter(s=>s.role==='medical');
     const row = p => {
       const ok = canPlay(p);
       const sev = severeLabel(p);
@@ -33,13 +33,31 @@ Object.assign(UI, {
         <td onclick="event.stopPropagation()">${ok?`<button class="btn sm ${p.playInjured?'primary':''}" onclick="UI.togglePlayInjured(${p.id})">${p.playInjured?'Playing hurt':'Allow'}</button>`:''}</td>
       </tr>`;
     };
-    const medCard = medStaff ? `<div class="card" style="padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
-      <div style="flex:1">
-        <b style="font-size:13px">${esc(medStaff.name)}</b>
-        <span style="font-size:10px;color:var(--brass);font-weight:700;margin-left:6px">PHYSIO</span>
-        <p style="margin:2px 0;font-size:12px;color:var(--muted)">Ability ${medStaff.ability} — gives injured players a ${Math.round(medStaff.ability/220*100)}% weekly chance of an extra week's recovery.</p>
+    const combinedRecoveryChance = medStaffList.reduce((sum, s) => sum + s.ability/220, 0);
+    const medCard = medStaffList.length ? `<div style="margin-bottom:12px">
+      <h2 class="sec" style="margin-bottom:8px">Medical Staff (${medStaffList.length})</h2>
+      <div class="grid3">
+      ${medStaffList.map(s => {
+        const chanceEach = Math.round(s.ability/220*100);
+        const treatingList = injured.length
+          ? `<p style="margin:6px 0 0;font-size:11px;color:var(--muted)">Treating: ${injured.map(p=>esc(p.name.split(' ').slice(-1)[0])).join(', ') || 'nobody'}</p>`
+          : `<p style="margin:6px 0 0;font-size:11px;color:var(--green)">No injuries — all players fit.</p>`;
+        const expiring = s.yearsLeft <= 1;
+        return `<div class="card" style="padding:10px 14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div>
+              <b style="font-size:14px">${esc(s.name)}</b>
+              ${expiring ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 5px;border-radius:8px">EXPIRING</span>` : ''}
+              <p style="margin:2px 0;font-size:11px;font-weight:700;color:var(--brass)">PHYSIO · Ability ${s.ability}</p>
+              <p style="margin:2px 0;font-size:11px;color:var(--muted)"><b style="color:var(--green)">${chanceEach}% per week</b> extra recovery chance per injured player</p>
+            </div>
+            <button class="btn sm" onclick="UI.go('staff')" style="flex-shrink:0;font-size:10px">Manage</button>
+          </div>
+          ${treatingList}
+        </div>`;
+      }).join('')}
       </div>
-      <div style="font-size:22px;color:var(--green)">+</div>
+      ${medStaffList.length > 1 ? `<p style="font-size:11px;color:var(--muted);margin:6px 0 0">Combined recovery bonus: <b style="color:var(--green)">${Math.round(combinedRecoveryChance*100)}% per week</b> (stacked across all physios).</p>` : ''}
     </div>` : injured.length ? `<div class="card" style="padding:10px 14px;margin-bottom:12px"><p style="color:var(--muted);font-size:12px;margin:0">No medical staff hired. A Physio on staff gives injured players a weekly chance of accelerated recovery. <span class="click" style="color:var(--brass);cursor:pointer" onclick="UI.go('staff')">Hire one →</span></p></div>` : '';
     return `<h1 class="page">Injury Ward</h1>
     <p class="page-sub">Manage unavailable players. Playing through minor injuries allows selection, but increases re-injury risk and can worsen the injury.</p>

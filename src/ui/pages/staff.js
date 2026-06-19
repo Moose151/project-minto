@@ -3,9 +3,12 @@
 /* Staff — assistant coaches, fitness & kicking coaches */
 Object.assign(UI, {
   _staffMarket: null,
+  _staffFilter: 'all',
+  _staffSearch: '',
 
   p_staff(){
     const staff = G.staff || [];
+    const scouts = (G.scouting && G.scouting.scouts) || [];
     const weeks = Math.max(1, (G.fixtures ? G.fixtures.length : 24) + 3);
 
     const roleInfo = key => STAFF_ROLES.find(r => r.key === key) || {label: key, desc: '', trainingKeys: []};
@@ -19,7 +22,8 @@ Object.assign(UI, {
       </div>`;
     };
 
-    const scouts = (G.scouting && G.scouting.scouts) || [];
+    const coachStaff  = staff.filter(s => s.role !== 'medical');
+    const medStaff    = staff.filter(s => s.role === 'medical');
     const totalStaffSal = staff.reduce((s, x) => s + (x.salary || 0), 0) + scouts.reduce((s, x) => s + (x.salary || 0), 0);
     const weeklyStaffCost = (staff.length + scouts.length) ? Math.round(totalStaffSal / weeks) : 0;
 
@@ -32,7 +36,48 @@ Object.assign(UI, {
       return [base, spec].filter(Boolean).join(' · ');
     };
 
-    const scoutCards = scouts.length ? scouts.map(s => {
+    // Type badge helpers
+    const typeBadge = (label, color) =>
+      `<span style="font-size:10px;font-weight:800;letter-spacing:.06em;color:${color};background:${color}22;padding:2px 7px;border-radius:10px;border:1px solid ${color}55">${label}</span>`;
+    const coachBadge  = () => typeBadge('COACH', '#4A9EFF');
+    const medBadge    = () => typeBadge('MEDICAL', 'var(--green)');
+    const scoutBadge  = () => typeBadge('SCOUT', 'var(--brass)');
+
+    // Shared card renderer for coaches and medical
+    const staffCard = (s, badgeFn) => {
+      const info = roleInfo(s.role);
+      const affects = staffAffects(s, info);
+      const specLbl = specialtyLabel(s);
+      const expiring = s.yearsLeft <= 1;
+      const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
+      const payout = payoutYears * (s.salary || 0);
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+              ${badgeFn()}
+              ${expiring ? `<span style="font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px">CONTRACT EXPIRING</span>` : ''}
+            </div>
+            <b style="font-size:15px">${esc(s.name)}</b>
+            <p style="margin:2px 0;color:var(--brass);font-size:12px;font-weight:600">${esc(info.label)}${specLbl?` <span style="color:#4A9EFF;font-weight:500">· ${esc(specLbl)}</span>`:''}</p>
+            <p style="margin:2px 0;color:var(--muted);font-size:11px">${esc(info.desc)}</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            ${expiring ? `<button class="btn sm primary" onclick="UI.extendStaff(${s.id})">Extend</button>` : ''}
+            <button class="btn sm" style="color:var(--red)" onclick="UI.fireStaff(${s.id})">${payout > 0 ? `Fire (${money(payout)})` : 'Release'}</button>
+          </div>
+        </div>
+        <div style="margin:6px 0">${abilityBar(s.ability)}</div>
+        <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--muted)">Contract: <b>${s.yearsLeft} yr${s.yearsLeft===1?'':'s'}</b></span>
+          <span style="font-size:12px;color:var(--muted)">Salary: <b>${money(s.salary)}</b></span>
+          ${payout > 0 ? `<span style="font-size:12px;color:var(--dim)">Release payout: <b>${money(payout)}</b></span>` : ''}
+        </div>
+        ${affects ? `<p style="margin:6px 0 0;font-size:11px;color:var(--dim)">Boosts: ${esc(affects)}</p>` : ''}
+      </div>`;
+    };
+
+    const scoutCard = s => {
       const expiring = s.yearsLeft <= 1;
       const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
       const payout = payoutYears * (s.salary || 0);
@@ -44,8 +89,8 @@ Object.assign(UI, {
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
           <div style="min-width:0;flex:1">
+            <div style="margin-bottom:3px">${scoutBadge()}${expiring?` <span style="font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px;margin-left:4px">CONTRACT EXPIRING</span>`:''}</div>
             <b style="font-size:15px">${esc(s.name)}</b>
-            ${expiring ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px">CONTRACT EXPIRING</span>` : ''}
             <p style="margin:2px 0;color:var(--brass);font-size:12px;font-weight:600">Scout</p>
             <p style="margin:2px 0;color:var(--muted);font-size:11px">Finds young talent in regional scouting areas</p>
           </div>
@@ -62,37 +107,29 @@ Object.assign(UI, {
         </div>
         <p style="margin:6px 0 0;font-size:11px;color:${statusColor}">${statusLine}</p>
       </div>`;
-    }).join('') : `<div class="card"><p style="color:var(--muted)">No scouts on payroll. Manage scouts on the <span class="click" onclick="UI.go('scouting')" style="color:var(--brass);cursor:pointer">Scouting page</span>.</p></div>`;
+    };
 
-    const staffCards = staff.length ? staff.map(s => {
-      const info = roleInfo(s.role);
-      const affects = staffAffects(s, info);
-      const specLbl = specialtyLabel(s);
-      const expiring = s.yearsLeft <= 1;
-      const payoutYears = Math.max(0, (s.yearsLeft || 1) - 1);
-      const payout = payoutYears * (s.salary || 0);
-      return `<div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-          <div style="min-width:0;flex:1">
-            <b style="font-size:15px">${esc(s.name)}</b>
-            ${expiring ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px">CONTRACT EXPIRING</span>` : ''}
-            <p style="margin:2px 0;color:var(--brass);font-size:12px;font-weight:600">${esc(info.label)}${specLbl?` <span style="color:var(--blue);font-weight:500">· ${esc(specLbl)}</span>`:''}</p>
-            <p style="margin:2px 0;color:var(--muted);font-size:11px">${esc(info.desc)}</p>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            ${expiring ? `<button class="btn sm primary" onclick="UI.extendStaff(${s.id})">Extend</button>` : ''}
-            <button class="btn sm" style="color:var(--red)" onclick="UI.fireStaff(${s.id})">${payout > 0 ? `Fire (${money(payout)})` : 'Release'}</button>
-          </div>
-        </div>
-        <div style="margin:6px 0">${abilityBar(s.ability)}</div>
-        <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">
-          <span style="font-size:12px;color:var(--muted)">Contract: <b>${s.yearsLeft} yr${s.yearsLeft===1?'':'s'}</b></span>
-          <span style="font-size:12px;color:var(--muted)">Salary: <b>${money(s.salary)}</b></span>
-          ${payout > 0 ? `<span style="font-size:12px;color:var(--dim)">Release payout: <b>${money(payout)}</b></span>` : ''}
-        </div>
-        <p style="margin:6px 0 0;font-size:11px;color:var(--dim)">Boosts: ${esc(affects)}</p>
-      </div>`;
-    }).join('') : `<div class="card"><p style="color:var(--muted)">No assistant staff hired. Browse the market below to hire coaches.</p></div>`;
+    // Filter + search state
+    const filt = UI._staffFilter || 'all';
+    const srch = (UI._staffSearch || '').toLowerCase();
+    const matchName = (s) => !srch || s.name.toLowerCase().includes(srch);
+
+    const showCoach  = filt === 'all' || filt === 'coaches';
+    const showMed    = filt === 'all' || filt === 'medical';
+    const showScout  = filt === 'all' || filt === 'scouts';
+
+    const filtCoach  = coachStaff.filter(matchName);
+    const filtMed    = medStaff.filter(matchName);
+    const filtScout  = scouts.filter(matchName);
+
+    const filterBar = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <input type="text" placeholder="Search staff..." value="${esc(UI._staffSearch||'')}"
+        oninput="UI._staffSearch=this.value;UI.render()"
+        style="padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--card2);color:var(--ink);font-size:13px;width:200px">
+      ${['all','coaches','medical','scouts'].map(f =>
+        `<button class="btn sm ${filt===f?'primary':''}" onclick="UI._staffFilter='${f}';UI.render()">${{all:'All',coaches:'Coaches',medical:'Medical',scouts:'Scouts'}[f]}</button>`
+      ).join('')}
+    </div>`;
 
     // Generate market if not cached or stale
     if(!UI._staffMarket || UI._staffMarket.year !== G.year){
@@ -100,17 +137,26 @@ Object.assign(UI, {
     }
     const market = UI._staffMarket.list.filter(s => !staff.some(x => x.id === s.id));
 
-    const marketRows = market.map(s => {
+    const marketBadgeFor = s => s.role === 'medical' ? medBadge() : coachBadge();
+    const filteredMarket = market.filter(s => {
+      const catOk = filt === 'all'
+        || (filt === 'coaches' && s.role !== 'medical')
+        || (filt === 'medical' && s.role === 'medical');
+      return catOk && (!srch || s.name.toLowerCase().includes(srch));
+    });
+
+    const marketRows = filteredMarket.map(s => {
       const info = roleInfo(s.role);
       const alreadyHaveRole = staff.some(x => x.role === s.role);
       const affects = staffAffects(s, info);
       const specLbl = specialtyLabel(s);
       return `<tr>
+        <td style="white-space:nowrap">${marketBadgeFor(s)}</td>
         <td><b>${esc(s.name)}</b><br><span style="font-size:11px;color:var(--brass)">${esc(info.label)}${specLbl?` · ${esc(specLbl)}`:''}</span></td>
         <td style="min-width:100px">${abilityBar(s.ability)}</td>
         <td class="num" style="white-space:nowrap">${money(s.salary)}</td>
         <td class="num" style="white-space:nowrap">${s.yearsLeft}yr</td>
-        <td style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(affects)}</td>
+        <td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(affects)}</td>
         <td style="white-space:nowrap">
           ${alreadyHaveRole
             ? `<span style="font-size:11px;color:var(--dim)" title="You already have a ${info.label}">Role filled</span>`
@@ -119,46 +165,67 @@ Object.assign(UI, {
       </tr>`;
     }).join('');
 
+    const coachSection = showCoach ? `
+      <h2 class="sec">Coaches (${filtCoach.length}${filtCoach.length!==coachStaff.length?` of ${coachStaff.length}`:''})</h2>
+      <div class="grid3" style="margin-bottom:16px">${filtCoach.length ? filtCoach.map(s=>staffCard(s,coachBadge)).join('') : `<div class="card"><p style="color:var(--muted)">${srch?'No coaches match your search.':'No assistant coaches hired.'}</p></div>`}</div>` : '';
+
+    const medSection = showMed ? `
+      <h2 class="sec">Medical Staff (${filtMed.length}${filtMed.length!==medStaff.length?` of ${medStaff.length}`:''})</h2>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Physios give each injured player a weekly chance of extra recovery. Stack multiple physios for a larger combined bonus.</p>
+      <div class="grid3" style="margin-bottom:16px">${filtMed.length ? filtMed.map(s=>staffCard(s,medBadge)).join('') : `<div class="card"><p style="color:var(--muted)">${srch?'No medical staff match your search.':'No medical staff hired — find a Physio on the market below.'}</p></div>`}</div>` : '';
+
+    const scoutSection = showScout ? `
+      <h2 class="sec">Scouts (${filtScout.length}${filtScout.length!==scouts.length?` of ${scouts.length}`:''})</h2>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Contracts and releases managed here. Dispatch scouts on the <span class="click" onclick="UI.go('scouting')" style="color:var(--brass);cursor:pointer">Scouting page</span>.</p>
+      <div class="grid3" style="margin-bottom:16px">${filtScout.length ? filtScout.map(scoutCard).join('') : `<div class="card"><p style="color:var(--muted)">${srch?'No scouts match your search.':'No scouts on payroll.'}</p></div>`}</div>` : '';
+
+    const marketSection = (filt !== 'scouts') ? `
+      <h2 class="sec">Hire — Available on Market</h2>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Market refreshes each season. You can only hold one coach per role.</p>
+      <div class="card" style="padding:6px;overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th class="noclick">Type</th>
+            <th class="noclick">Name / Role</th>
+            <th class="noclick" style="min-width:100px">Ability</th>
+            <th class="noclick num">Salary</th>
+            <th class="noclick num">Length</th>
+            <th class="noclick">Boosts</th>
+            <th class="noclick"></th>
+          </tr></thead>
+          <tbody>${marketRows || '<tr><td colspan="7" style="color:var(--muted)">No staff match your current filter.</td></tr>'}</tbody>
+        </table>
+      </div>` : '';
+
     return `<h1 class="page">Staff</h1>
-    <p class="page-sub">Assistant coaches improve player development in their specialty area. Staff and scout salaries are paid from club funds.</p>
+    <p class="page-sub">Assistant coaches improve player development. Medical staff accelerate recovery. All staff salaries paid from club funds.</p>
     <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">
-      <div class="card" style="padding:10px 16px;flex:1;min-width:140px">
-        <span style="font-size:11px;color:var(--muted)">Coaches employed</span>
-        <div style="font-size:22px;font-weight:700;font-family:var(--disp)">${staff.length}</div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Coaches</span>
+        <div style="font-size:22px;font-weight:700;font-family:var(--disp)">${coachStaff.length}</div>
       </div>
-      <div class="card" style="padding:10px 16px;flex:1;min-width:140px">
-        <span style="font-size:11px;color:var(--muted)">Scouts employed</span>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Medical</span>
+        <div style="font-size:22px;font-weight:700;font-family:var(--disp)">${medStaff.length}</div>
+      </div>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Scouts</span>
         <div style="font-size:22px;font-weight:700;font-family:var(--disp)">${scouts.length}</div>
       </div>
-      <div class="card" style="padding:10px 16px;flex:1;min-width:140px">
-        <span style="font-size:11px;color:var(--muted)">Total personnel salary</span>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Total salary</span>
         <div style="font-size:22px;font-weight:700;font-family:var(--disp)">${money(totalStaffSal)}</div>
       </div>
-      <div class="card" style="padding:10px 16px;flex:1;min-width:140px">
-        <span style="font-size:11px;color:var(--muted)">Weekly personnel cost</span>
+      <div class="card" style="padding:10px 16px;flex:1;min-width:120px">
+        <span style="font-size:11px;color:var(--muted)">Weekly cost</span>
         <div style="font-size:22px;font-weight:700;font-family:var(--disp)">${money(weeklyStaffCost)}</div>
       </div>
     </div>
-    <h2 class="sec">Coaches (${staff.length})</h2>
-    <div class="grid3" style="margin-bottom:16px">${staffCards}</div>
-    <h2 class="sec">Scouts (${scouts.length})</h2>
-    <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Scout contracts and releases are managed here. Dispatch scouts to find talent on the <span class="click" onclick="UI.go('scouting')" style="color:var(--brass);cursor:pointer">Scouting page</span>.</p>
-    <div class="grid3" style="margin-bottom:16px">${scoutCards}</div>
-    <h2 class="sec">Available on Market</h2>
-    <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Market refreshes each season. You can only have one coach per role.</p>
-    <div class="card" style="padding:6px;overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th class="noclick">Name</th>
-          <th class="noclick" style="min-width:100px">Ability</th>
-          <th class="noclick num">Salary</th>
-          <th class="noclick num">Length</th>
-          <th class="noclick">Boosts</th>
-          <th class="noclick"></th>
-        </tr></thead>
-        <tbody>${marketRows || '<tr><td colspan="6" style="color:var(--muted)">No available staff on the market.</td></tr>'}</tbody>
-      </table>
-    </div>`;
+    ${filterBar}
+    ${coachSection}
+    ${medSection}
+    ${scoutSection}
+    ${marketSection}`;
   },
 
   _genStaffMarket(){
