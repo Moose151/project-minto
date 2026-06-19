@@ -110,9 +110,12 @@ function simMatch(m, isFinal){
   const htGoalH = triesH > 0 ? Math.round((htSplitH / triesH) * (triesH * 0.65)) : 0;
   const htGoalA = triesA > 0 ? Math.round((htSplitA / triesA) * (triesA * 0.65)) : 0;
   const htScore = {h: htSplitH*4 + htGoalH*2, a: htSplitA*4 + htGoalA*2};
-  const det = {h:{}, a:{}, events:[], suspensions:[], venue, weather, crowd, ticketPrice, weatherTryMod, weatherKickMod, htScore, slot};
-  const goalsH = simTeamStats(th, triesH, det.h, ph.kick * hKickMod);
-  const goalsA = simTeamStats(ta, triesA, det.a, pa.kick * aKickMod);
+  const hConservative = isCoachH && conservative;
+  const aConservative = isCoachA && conservative;
+  const det = {h:{}, a:{}, events:[], suspensions:[], venue, weather, crowd, ticketPrice, weatherTryMod, weatherKickMod, htScore, slot,
+    weatherEffects: weatherMatchEffects(weather)};
+  const goalsH = simTeamStats(th, triesH, det.h, ph.kick * hKickMod, {weather, conservative:hConservative, kickMod:hKickMod});
+  const goalsA = simTeamStats(ta, triesA, det.a, pa.kick * aKickMod, {weather, conservative:aConservative, kickMod:aKickMod});
   // Infringements (after stats so they don't affect scoring math)
   genInfringements(th, det, det.h);
   genInfringements(ta, det, det.a);
@@ -135,13 +138,21 @@ function simMatch(m, isFinal){
   applyTribunalBans(det);
   return m;
 }
-function simTeamStats(t, tries, out, kickSkill){
+function weatherMatchEffects(weather){
+  const handling = weather==='Heavy rain' ? 1.55 : weather==='Light rain' ? 1.25 : weather==='Windy' ? 1.14 : weather==='Humid' ? 1.10 : 1;
+  const kickMeters = weather==='Heavy rain' ? 0.92 : weather==='Light rain' ? 0.96 : weather==='Windy' ? 0.88 : weather==='Humid' ? 0.98 : 1;
+  const territoryKick = weather==='Heavy rain' ? 0.86 : weather==='Light rain' ? 0.93 : weather==='Windy' ? 0.78 : weather==='Humid' ? 0.96 : 1;
+  return {handling, kickMeters, territoryKick};
+}
+function simTeamStats(t, tries, out, kickSkill, weatherCtx){
   const players = t.lineup.slice(0,17).map((id,i)=>({p:G.players[id], slot:i})).filter(x=>x.p);
   if(!t.roles) assignDefaultTeamRoles(t);
   const tryW = {FB:1.4, WG:2.1, CE:1.5, FE:.9, HB:.8, PR:.45, HK:.6, SR:.95, LK:.7, BE:.4};
   let goals = 0;
   const kicker = rolePlayer(t, 'goalKicker', players.map(x=>x.p), 'goalKicker');
-  simTerritoryKicks(t, players, out);
+  const weatherEffects = weatherMatchEffects(weatherCtx && weatherCtx.weather);
+  const handlingMod = weatherCtx && weatherCtx.conservative ? 1 + (weatherEffects.handling - 1) * 0.45 : weatherEffects.handling;
+  simTerritoryKicks(t, players, out, weatherCtx);
   for(let i=0;i<tries;i++){
     const pool = players.map(x=>({x, w: (tryW[SLOTS[x.slot].pos]||.5) * (x.p.attrs.finishing+x.p.attrs.ballRunning+x.p.attrs.speed+x.p.attrs.acceleration)/240 }));
     const total = pool.reduce((s,e)=>s+e.w,0);
@@ -203,8 +214,8 @@ function simTeamStats(t, tries, out, kickSkill){
     const mBase = {fwd:130, hk:80, half:70, back:140}[grp];
     line.m = Math.max(0, Math.round(mBase * mins/80 * (x.p.attrs.strength+x.p.attrs.speed+x.p.attrs.ballRunning)/195 * rf(.65,1.4)));
     const formAdj = ((x.p.form == null ? 50 : x.p.form) - 50) / 100;
-    const errChance = (1 - (x.p.attrs.ballSecurity*.55+x.p.attrs.catching*.25+x.p.attrs.composure*.20)/130) * clamp(1 - formAdj*.55, .72, 1.28);
-    line.err = rnd() < errChance ? ri(1,2) : 0;
+    const errChance = (1 - (x.p.attrs.ballSecurity*.55+x.p.attrs.catching*.25+x.p.attrs.composure*.20)/130) * clamp(1 - formAdj*.55, .72, 1.28) * handlingMod;
+    line.err = rnd() < errChance ? ri(1, weatherEffects.handling >= 1.45 && rnd() < .22 ? 3 : 2) : 0;
     // Missed tackles
     const mtRate = clamp((90 - (x.p.attrs.tackling*0.55 + x.p.attrs.markerDef*0.35 + x.p.attrs.workRate*0.10)) / 120, 0.04, 0.35);
     line.mt = Math.max(0, Math.round(line.tk * mtRate * rf(0.5, 1.5)));
@@ -223,7 +234,8 @@ function simTeamStats(t, tries, out, kickSkill){
     const isPrimaryKicker = kicker && kicker.id === x.p.id;
     const ksBase = {half: isPrimaryKicker ? 22 : 14, hk: 4, back: 2, fwd: 1}[grp] || 1;
     line.ks = Math.max(0, Math.round(ksBase * rf(0.6, 1.4)));
-    const avgKickM = clamp(30 + (x.p.attrs.kickPower*0.25 + x.p.attrs.kickAccuracy*0.15), 30, 70);
+    const kickMeterMod = weatherEffects.kickMeters * (weatherCtx && weatherCtx.conservative ? 1.02 : 1);
+    const avgKickM = clamp((30 + (x.p.attrs.kickPower*0.25 + x.p.attrs.kickAccuracy*0.15)) * kickMeterMod, 25, 70);
     line.km = Math.max(0, Math.round(line.ks * avgKickM * rf(0.8, 1.2)));
     const baseline = x.slot < 13 ? 5.15 : 4.85;
     line.r = clamp(baseline + line.t*1.05 + line.ta*.75 + line.gl*.08 + line.fg*.28 + line.tk/30 + line.m/115 + line.runs/38 + line.lb*.35 + line.lba*.22 + line.k4020*.35 + (line.fdo||0)*.22 - line.err*1.05 - line.mt*.16 + (x.p.attrs.lastDitch-55)/150 + formAdj*.35 + gauss(0,.55), 1, 10);
@@ -321,20 +333,22 @@ function rolePlayer(t, key, pool, scoreRole){
   if(wanted && pool.some(p=>p.id===wanted.id) && (!wanted.injury || wanted.playInjured)) return wanted;
   return pool.filter(p=>!p.injury || p.playInjured).sort((a,b)=>roleScore(b,scoreRole)-roleScore(a,scoreRole))[0] || null;
 }
-function simTerritoryKicks(t, players, out){
+function simTerritoryKicks(t, players, out, weatherCtx){
   const pool = players.map(x=>x.p);
   const primary = rolePlayer(t, 'primaryKicker', pool, 'kicker');
   const secondary = rolePlayer(t, 'secondaryKicker', pool.filter(p=>!primary || p.id!==primary.id), 'kicker');
+  const weatherEffects = weatherMatchEffects(weatherCtx && weatherCtx.weather);
+  const territoryMod = weatherEffects.territoryKick * (weatherCtx && weatherCtx.conservative ? 1.08 : 1);
   for(const k of [primary, secondary].filter(Boolean)){
     const skill = k.attrs.kickPower*.45 + k.attrs.kickAccuracy*.35 + k.attrs.decisionMaking*.12 + k.attrs.composure*.08;
     const attempts = k===primary ? 1.2 : .45;
-    if(rnd() < attempts * clamp((skill-62)/260, .005, .055)){
+    if(rnd() < attempts * clamp((skill-62)/260, .005, .055) * territoryMod){
       out[k.id]=out[k.id]||mkLine(); out[k.id].k4020++;
     }
-    if(rnd() < attempts * clamp((skill-68)/420, .002, .028)){
+    if(rnd() < attempts * clamp((skill-68)/420, .002, .028) * territoryMod){
       out[k.id]=out[k.id]||mkLine(); out[k.id].k4020++;
     }
-    const repeatSetPressure = attempts * clamp((skill-58)/150, .015, .24);
+    const repeatSetPressure = attempts * clamp((skill-58)/150, .015, .24) * territoryMod;
     if(rnd() < repeatSetPressure){
       out[k.id]=out[k.id]||mkLine();
       out[k.id].fdo++;

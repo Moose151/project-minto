@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Weather engine depth — match weather now flows into player stat lines: rain/wind/humidity increase individual handling-error risk, reduce kick metres, and make 40/20s/repeat-set kicks harder; conservative bad-weather tactics reduce the coached side's handling penalty.
 - Historical match reports widened — every completed fixture on the Fixtures page now has a "Match report" button; the full analysis page renders coached-team matches from coach perspective and neutral AI matches as a final report.
 - Multi-day match calendar completed — fixture slots are now unique Thu Night/Fri Night/Sat Afternoon/Sat Twilight/Sat Night/Sun Afternoon/Sun Twilight/Sun Night windows; daily advance simulates only the current day; coached-team matches play on their assigned slot day; rounds close only after the final scheduled game; Calendar now has a round games/results table.
 - Coach profile career context — profile now shows current-season W-L-D and career win rate; offseason history stores each season's W-L-D and the coaching history table displays the record.
@@ -305,7 +306,7 @@ cd api && node server.js
 - Engine: `vendorRevenuePerHead()` in `08-progression.js`; F&B (L1–5: $3–$14/head) and Merch (L1–5: $1.5–$8/head) constants defined; revenue added to `payClubWeekly`. UI: `upgradeVendor()` in `club-management.js` with upgrade cards showing level, cost, and per-head yield. Moving to ✅ section.
 
 #### Weather Events & Tactical Adjustment
-- Weather already affects try rates, crowd, and error likelihood. Richer per-player effects (handling errors, kick accuracy) and in-game tactical response to conditions still to add.
+- Weather affects try rates, crowd, kicking, and player-level handling errors/kick metres/territory-kick outcomes. Richer in-game tactical response to changing conditions still to add.
 
 #### Lower Leagues & Expansion
 - Second-tier competition, promotion/relegation, club merger/dissolution.
