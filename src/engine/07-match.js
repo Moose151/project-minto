@@ -118,6 +118,16 @@ function simMatch(m, isFinal){
   let hs = triesH*4 + goalsH*2, as = triesA*4 + goalsA*2;
   if(Math.abs(hs-as)<=1 && rnd()<.5){ if(rnd()<.5 && th.matchPrefs?.fieldGoal!==false){ hs+=1; awardFieldGoal(th, det.h, det.events); } else if(ta.matchPrefs?.fieldGoal!==false){ as+=1; awardFieldGoal(ta, det.a, det.events); } }
   if(isFinal && hs===as){ if(rnd()<.5 && th.matchPrefs?.fieldGoal!==false){ hs+=1; awardFieldGoal(th, det.h, det.events); } else if(ta.matchPrefs?.fieldGoal!==false){ as+=1; awardFieldGoal(ta, det.a, det.events); } }
+  // Derived possession and completion rate
+  const runsH = Object.values(det.h).reduce((s,l)=>typeof l==='object'&&l&&!Array.isArray(l)?s+(l.runs||0):s,0);
+  const runsA = Object.values(det.a).reduce((s,l)=>typeof l==='object'&&l&&!Array.isArray(l)?s+(l.runs||0):s,0);
+  const errH = Object.values(det.h).reduce((s,l)=>typeof l==='object'&&l&&!Array.isArray(l)?s+(l.err||0):s,0);
+  const errA = Object.values(det.a).reduce((s,l)=>typeof l==='object'&&l&&!Array.isArray(l)?s+(l.err||0):s,0);
+  det.possH = Math.round(50 + (triesH - triesA) * 2.5 + rf(-3, 3));
+  det.possH = clamp(det.possH, 30, 70);
+  det.possA = 100 - det.possH;
+  det.complH = runsH > 0 ? Math.round(Math.max(0, runsH - errH) / runsH * 100) : 70;
+  det.complA = runsA > 0 ? Math.round(Math.max(0, runsA - errA) / runsA * 100) : 70;
   m.played = true; m.hs = hs; m.as = as; m.det = det;
   awardVotes(th, ta, det);
   postMatch(th, hs, as, det.h); postMatch(ta, as, hs, det.a);

@@ -158,7 +158,11 @@ Object.assign(UI, {
         </div>
         <div style="text-align:center">
           <div style="font-size:48px;font-weight:900;font-family:var(--disp);color:${resultClr}">${myScore}–${oppScore}</div>
-          <div style="font-size:11px;color:var(--muted)">HT: ${htMine}–${htOpp}</div>
+          <div style="display:flex;gap:12px;justify-content:center;font-size:12px;margin:4px 0">
+            <span style="color:var(--muted)">HT <b style="color:var(--ink)">${htMine}–${htOpp}</b></span>
+            <span style="color:var(--dim)">|</span>
+            <span style="color:var(--muted)">2H <b style="color:var(--ink)">${myScore-htMine}–${oppScore-htOpp}</b></span>
+          </div>
           <div style="font-size:20px;font-weight:800;color:${resultClr};margin-top:2px">${resultTxt}</div>
         </div>
         <div style="text-align:center">
@@ -179,6 +183,10 @@ Object.assign(UI, {
           <th class="noclick" style="color:var(--muted);font-size:11px;font-weight:400;padding:3px 8px">${esc(oppT.nick)}</th>
         </tr></thead>
         <tbody>
+          ${statCmp('1st Half', htMine, htOpp)}
+          ${statCmp('2nd Half', myScore-htMine, oppScore-htOpp)}
+          ${myM.det.possH!=null ? statCmp('Possession %', mineIsH?myM.det.possH:myM.det.possA, mineIsH?myM.det.possA:myM.det.possH, `${mineIsH?myM.det.possH:myM.det.possA}%`, `${mineIsH?myM.det.possA:myM.det.possH}%`) : ''}
+          ${myM.det.complH!=null ? statCmp('Completion %', mineIsH?myM.det.complH:myM.det.complA, mineIsH?myM.det.complA:myM.det.complH, `${mineIsH?myM.det.complH:myM.det.complA}%`, `${mineIsH?myM.det.complA:myM.det.complH}%`) : ''}
           ${statCmp('Tries', mySt.t, oppSt.t)}
           ${statCmp('Goals', mySt.gl, oppSt.gl, `${mySt.gl}/${mySt.ga}`, `${oppSt.gl}/${oppSt.ga}`)}
           ${mySt.fg||oppSt.fg ? statCmp('Field goals', mySt.fg, oppSt.fg) : ''}
