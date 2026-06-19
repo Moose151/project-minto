@@ -49,6 +49,7 @@ Object.assign(UI, {
         const regionRows = SCOUT_REGIONS.map(r =>
           `<tr>
             <td style="padding:3px 6px">${esc(r.label)}</td>
+            <td style="padding:3px 6px;color:var(--muted);font-size:11px">${scoutRegionPositionWeights(r).slice(0,3).map(x=>x.pos).join('/')}</td>
             <td style="padding:3px 6px;color:var(--muted);font-size:11px">${r.weeks}w</td>
             <td style="padding:3px 2px"><button class="btn sm" onclick="UI.selectScoutRegion(${s.id},'${r.key}')">Select</button></td>
           </tr>`

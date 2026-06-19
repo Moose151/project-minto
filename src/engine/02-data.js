@@ -356,5 +356,16 @@ function scoutTargetChance(scout, targetPos){
   const specialtyBonus = scout && scout.posSpecialty === targetPos ? 0.08 : 0;
   return clamp(0.52 + ability / 220 + specialtyBonus, 0.58, 0.95);
 }
+function scoutRegionPositionWeights(region){
+  const pool = region && region.posPool ? region.posPool : POS;
+  return pool.map((pos, i)=>({pos, w:Math.max(1, pool.length - i) + (i < 3 ? 2 : 0)}));
+}
+function pickScoutRegionPosition(region){
+  const weights = scoutRegionPositionWeights(region);
+  const total = weights.reduce((s,x)=>s+x.w,0);
+  let r = rnd() * total;
+  for(const x of weights){ r -= x.w; if(r <= 0) return x.pos; }
+  return weights[0] ? weights[0].pos : pick(POS);
+}
 // Mutable staff ID counter (set to large base to avoid collisions)
 let _staffId = 9000;

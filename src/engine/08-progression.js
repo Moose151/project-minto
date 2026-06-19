@@ -972,7 +972,7 @@ function advanceScouting(){
     if(targetHit){
       pos = mission.targetPos;
     } else {
-      pos = pick(pool);
+      pos = pickScoutRegionPosition(region);
     }
     const fitBonus = targetHit ? (scout && scout.posSpecialty === pos ? 3 : 1) : 0;
     const p = genPlayer(pos, age, baseQ + fitBonus + ri(-8, 12));
