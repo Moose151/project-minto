@@ -11,5 +11,14 @@ function gauss(mean, sd){ let u=0,v=0; while(u===0)u=rnd(); while(v===0)v=rnd();
 function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
 function shuffle(a){ const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1)); [x[i],x[j]]=[x[j],x[i]];} return x; }
 function poisson(lambda){ let L=Math.exp(-lambda), k=0, p=1; do{ k++; p*=rnd(); }while(p>L); return k-1; }
-function money(n){ return '$' + (n>=1000000 ? (n/1000000).toFixed(2)+'m' : Math.round(n/1000)+'k'); }
+function currencyCode(){
+  return (typeof G !== 'undefined' && G && G.club && G.club.currency === 'GBP') ? 'GBP' : 'AUD';
+}
+function currencySymbol(){ return currencyCode() === 'GBP' ? '£' : '$'; }
+function money(n){
+  n = Math.round(Number(n) || 0);
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  return sign + currencySymbol() + abs.toLocaleString();
+}
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }

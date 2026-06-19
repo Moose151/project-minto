@@ -228,6 +228,8 @@ function ensureClubFacilities(){
   if(G.club.gateRevenue === undefined) G.club.gateRevenue = 0;
   if(G.club.broadcastRevenue === undefined) G.club.broadcastRevenue = 0;
   if(G.club.ticketPrice === undefined) G.club.ticketPrice = 28;
+  if(G.club.membershipPrice === undefined) G.club.membershipPrice = 160;
+  if(!G.club.currency) G.club.currency = 'AUD';
   return G.club.facilities;
 }
 function facilityLevel(key){

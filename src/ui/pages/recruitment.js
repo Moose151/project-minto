@@ -8,12 +8,21 @@ Object.assign(UI, {
   _recOvr: 'all',
   _recPot: 'all',
   _recSort: 'ovr',
+  _recSortDir: 'desc',
+  _faMinAge: '',
+  _faMaxAge: '',
+  _faMinOvr: '',
+  _faSalaryMode: 'any',
+  _faSalaryValue: '',
+  _faAffordable: false,
+  _faReady: false,
 
   p_recruitment(){
     const sl = G.coach.shortlist || [];
     const my = myTeam();
     const myIds = new Set(my.players);
     const faIds = new Set(G.freeAgents || []);
+    const capRoom = G.config.cap - teamSalary(my);
 
     // Count active pre-contract approaches this season
     const MAX_APPROACHES = 3;
@@ -28,13 +37,20 @@ Object.assign(UI, {
       .filter(p => UI._recPos === 'all' || p.pos === UI._recPos || p.pos2 === UI._recPos)
       .filter(p => ageOk(p) && rangeOk(scoutedOvr(p).mid, UI._recOvr) && rangeOk(scoutedPotential(p).mid, UI._recPot));
     const statVal = p => ({
-      ovr: scoutedOvr(p).mid, pot: scoutedPotential(p).mid, age: -p.age, ageOld: p.age, salary: -(p.salary||0),
+      ovr: scoutedOvr(p).mid, pot: scoutedPotential(p).mid, age: -p.age, ageOld: p.age,
+      salary: faIds.has(p.id) && !G.teams.some(t=>t.players.includes(p.id)) ? demandFor(p, my) : (p.salary || 0),
+      name: p.name.toLowerCase(), pos: p.pos,
       runs: p.s.runs||0, tries: p.s.t||0, tackles: p.s.tk||0, fantasy: p.s.fpts||0,
       form: formText(p),
       goal: p.attrs.placeKick||0, kicking: ((p.attrs.kickPower||0)+(p.attrs.kickAccuracy||0))/2,
       speed: p.attrs.speed||0, playmaking: p.attrs.playmaking||0, defence: ((p.attrs.tackling||0)+(p.attrs.defRead||0))/2
     }[UI._recSort] ?? scoutedOvr(p).mid);
-    browse.sort((a,b)=>statVal(b)-statVal(a));
+    const sortPlayers = list => list.sort((a,b)=>{
+      const av = statVal(a), bv = statVal(b);
+      const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+      return UI._recSortDir === 'asc' ? cmp : -cmp;
+    });
+    sortPlayers(browse);
 
     const teamOf = p => G.teams.find(t=>t.players.includes(p.id));
 
@@ -43,6 +59,7 @@ Object.assign(UI, {
       const isFA = faIds.has(p.id) && !t;
       const onSl = sl.includes(p.id);
       const approached = p.approachTeam === G.coach.teamId;
+      const salaryVal = isFA ? demandFor(p, my) : (p.salary || 0);
       const contractTag = p.years<=0
         ? `<span style="color:var(--red);font-size:11px">Off-contract</span>`
         : p.years===1
@@ -59,7 +76,7 @@ Object.assign(UI, {
         <td class="num">${p.age}</td>
         <td>${t?`${clubPrestigeBadge(t,true)} <span class="team-spine" style="background:${t.c1}"></span>${esc(t.nick)}`:'<i style="color:var(--muted)">Free agent</i>'}</td>
         <td>${contractTag}</td>
-        <td class="num">${money(p.salary)}</td>
+        <td class="num">${money(salaryVal)}</td>
         <td>
           <div class="btnrow" style="margin:0;gap:4px">
             <button class="btn sm${onSl?' primary':''}" onclick="event.stopPropagation();UI.toggleShortlist(${p.id})" title="${onSl?'Remove from shortlist':'Add to shortlist'}">${onSl?'★':'☆'}</button>
@@ -72,10 +89,11 @@ Object.assign(UI, {
       </tr>`;
     };
 
+    const sortTh = (key, label, cls='') => `<th class="${cls}" onclick="UI.setRecruitmentSort('${key}')">${label}${UI._recSort===key?` ${UI._recSortDir==='asc'?'▲':'▼'}`:''}</th>`;
     const tableHead = `<thead><tr>
-      <th class="noclick">Player</th><th class="noclick">Pos</th>
-      <th class="noclick num">OVR</th><th class="noclick num">Est. POT</th><th class="noclick num">Age</th>
-      <th class="noclick">Club</th><th class="noclick">Contract</th><th class="noclick num">Salary</th>
+      ${sortTh('name','Player')} ${sortTh('pos','Pos')}
+      ${sortTh('ovr','OVR','num')} ${sortTh('pot','Est. POT','num')} ${sortTh('ageOld','Age','num')}
+      <th class="noclick">Club</th><th class="noclick">Contract</th>${sortTh('salary','Salary','num')}
       <th class="noclick"></th>
     </tr></thead>`;
 
@@ -102,18 +120,71 @@ Object.assign(UI, {
         ${select('_recAge', [['all','All ages'],['u21','21 and under'],['22-26','22-26'],['27-30','27-30'],['31+','31+']])}
         ${select('_recOvr', [['all','Any OVR'],['60','OVR 60+'],['70','OVR 70+'],['80','OVR 80+'],['under60','Under 60']])}
         ${select('_recPot', [['all','Any potential'],['60','POT 60+'],['70','POT 70+'],['80','POT 80+'],['under60','POT under 60']])}
-        ${select('_recSort', [['ovr','Sort: OVR'],['pot','Sort: potential'],['age','Sort: youngest'],['ageOld','Sort: oldest'],['salary','Sort: cheapest'],['form','Sort: form'],['runs','Sort: runs'],['tries','Sort: tries'],['tackles','Sort: tackles'],['fantasy','Sort: fantasy'],['goal','Sort: goal kicking'],['kicking','Sort: general kicking'],['speed','Sort: speed'],['playmaking','Sort: playmaking'],['defence','Sort: defence']])}
+        ${select('_recSort', [['ovr','Sort: OVR'],['pot','Sort: potential'],['age','Sort: youngest'],['ageOld','Sort: oldest'],['salary','Sort: salary'],['form','Sort: form'],['runs','Sort: runs'],['tries','Sort: tries'],['tackles','Sort: tackles'],['fantasy','Sort: fantasy'],['goal','Sort: goal kicking'],['kicking','Sort: general kicking'],['speed','Sort: speed'],['playmaking','Sort: playmaking'],['defence','Sort: defence']])}
       </div>
       <div class="card" style="padding:6px;overflow-x:auto;max-height:520px">
         <table>${tableHead}<tbody>${browse.slice(0,60).map(row).join('')}</tbody></table>
         ${browse.length>60?`<p style="color:var(--muted);font-size:12px;padding:6px">Showing top 60 — filter by position to narrow results.</p>`:''}
       </div>`;
 
+    const minAge = UI._faMinAge === '' ? null : Number(UI._faMinAge);
+    const maxAge = UI._faMaxAge === '' ? null : Number(UI._faMaxAge);
+    const minOvr = UI._faMinOvr === '' ? null : Number(UI._faMinOvr);
+    const salaryValue = UI._faSalaryValue === '' ? null : Number(UI._faSalaryValue);
+    const freeAgents = sortPlayers(Object.values(G.players)
+      .filter(p => p && faIds.has(p.id) && !teamOf(p))
+      .filter(p => UI._recPos === 'all' || p.pos === UI._recPos || p.pos2 === UI._recPos)
+      .filter(p => minAge == null || p.age >= minAge)
+      .filter(p => maxAge == null || p.age <= maxAge)
+      .filter(p => minOvr == null || scoutedOvr(p).mid >= minOvr)
+      .filter(p => !UI._faReady || (p.age > 21 && scoutedOvr(p).mid > 75))
+      .filter(p => !UI._faAffordable || demandFor(p, my) <= capRoom)
+      .filter(p => UI._faSalaryMode === 'any' || salaryValue == null || (UI._faSalaryMode === 'under' ? demandFor(p, my) <= salaryValue : demandFor(p, my) >= salaryValue)));
+    const typedInput = (prop, label, min, step, placeholder) => `<div class="field" style="min-width:120px"><label>${label}</label><input type="number" min="${min}" step="${step}" value="${esc(UI[prop])}" placeholder="${placeholder}" onchange="UI.${prop}=this.value;UI.render()"></div>`;
+    const freeAgentContent = `
+      <div class="btnrow" style="flex-wrap:wrap">${posFilters}</div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          ${typedInput('_faMinAge','Min age',16,1,'Any')}
+          ${typedInput('_faMaxAge','Max age',16,1,'Any')}
+          ${typedInput('_faMinOvr','Min OVR',1,1,'Any')}
+          <div class="field" style="min-width:120px"><label>Salary</label><select onchange="UI._faSalaryMode=this.value;UI.render()">${[['any','Any'],['under','Under'],['over','Over']].map(([v,l])=>`<option value="${v}" ${UI._faSalaryMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
+          ${typedInput('_faSalaryValue','Salary value',0,5000,'Any')}
+          <label style="display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin:0 0 8px"><input type="checkbox" ${UI._faAffordable?'checked':''} onchange="UI._faAffordable=this.checked;UI.render()"> Affordable only</label>
+          <label style="display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin:0 0 8px"><input type="checkbox" ${UI._faReady?'checked':''} onchange="UI._faReady=this.checked;UI.render()"> Age &gt;21 and OVR &gt;75</label>
+          <button class="btn sm" onclick="UI.resetFreeAgentFilters()">Reset Filters</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:4px 0 0">Cap room: <b>${money(capRoom)}</b> · ${freeAgents.length} free agent${freeAgents.length===1?'':'s'} match.</p>
+      </div>
+      <div class="card" style="padding:6px;overflow-x:auto;max-height:560px">
+        <table>${tableHead}<tbody>${freeAgents.slice(0,80).map(row).join('') || '<tr><td colspan="9" style="color:var(--muted)">No free agents match those filters.</td></tr>'}</tbody></table>
+        ${freeAgents.length>80?`<p style="color:var(--muted);font-size:12px;padding:6px">Showing top 80 — tighten filters to narrow results.</p>`:''}
+      </div>`;
+
     return `<h1 class="page">Recruitment</h1>
     <p class="page-sub">Watch targets, lodge pre-contract approaches, and sign free agents.</p>
     ${approachStatus}
-    <div class="btnrow" style="margin-top:12px">${tabBtn('shortlist',`★ Shortlist (${shortlisted.length})`)}${tabBtn('browse','Browse all players')}</div>
-    <div style="margin-top:10px">${UI._recTab==='shortlist' ? shortlistContent : browseContent}</div>`;
+    <div class="btnrow" style="margin-top:12px">${tabBtn('shortlist',`★ Shortlist (${shortlisted.length})`)}${tabBtn('browse','Browse all players')}${tabBtn('freeAgents','Free Agents')}</div>
+    <div style="margin-top:10px">${UI._recTab==='shortlist' ? shortlistContent : UI._recTab==='freeAgents' ? freeAgentContent : browseContent}</div>`;
+  },
+
+  setRecruitmentSort(key){
+    if(UI._recSort === key) UI._recSortDir = UI._recSortDir === 'asc' ? 'desc' : 'asc';
+    else { UI._recSort = key; UI._recSortDir = ['name','pos','ageOld','salary'].includes(key) ? 'asc' : 'desc'; }
+    UI.render();
+  },
+  resetFreeAgentFilters(){
+    UI._recPos = 'all';
+    UI._faMinAge = '';
+    UI._faMaxAge = '';
+    UI._faMinOvr = '';
+    UI._faSalaryMode = 'any';
+    UI._faSalaryValue = '';
+    UI._faAffordable = false;
+    UI._faReady = false;
+    UI._recSort = 'ovr';
+    UI._recSortDir = 'desc';
+    UI.render();
   },
 
   doApproach(id){

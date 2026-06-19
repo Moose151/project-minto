@@ -52,6 +52,14 @@ Object.assign(UI, {
     const totalSponsors = club.sponsorshipRevenue || 0;
     const totalVendors = club.vendorRevenue || 0;
     const totalMagic = club.magicRoundRevenue || 0;
+    const membershipPrice = club.membershipPrice == null ? 160 : club.membershipPrice;
+    const membership = typeof membershipProjection === 'function' ? membershipProjection(membershipPrice) : {price:membershipPrice, members:0, revenue:0};
+    const currentHomeMatch = G.phase==='regular' && G.fixtures && G.fixtures[G.round]
+      ? G.fixtures[G.round].find(m => m.h === G.coach.teamId && !m.played)
+      : null;
+    const projectedCrowd = currentHomeMatch
+      ? (currentHomeMatch.projCrowd || matchCrowd(G.teams[currentHomeMatch.h], false))
+      : null;
 
     // Vendor card builder
     const vendorCard = (key, label, desc) => {
@@ -79,7 +87,7 @@ Object.assign(UI, {
     const magicRoundInfo = G.magicRound
       ? (mrIsHost
           ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(210,165,62,.12);border:1px solid rgba(210,165,62,.4);border-radius:6px;font-size:12px">
-              <b style="color:var(--brass)">Magic Round Host</b> — ${esc(G.magicRound.venue)} · Round ${G.magicRound.round+1} · Hosting windfall: <b>$1,500,000</b>
+              <b style="color:var(--brass)">Magic Round Host</b> — ${esc(G.magicRound.venue)} · Round ${G.magicRound.round+1} · Hosting windfall: <b>${money(1500000)}</b>
              </div>`
           : `<div style="margin-top:10px;padding:8px 12px;background:var(--card2);border-radius:6px;font-size:12px;color:var(--muted)">
               Magic Round — hosted by <b>${esc(mrHostTeam?mrHostTeam.nick:'?')}</b> in Round ${G.magicRound.round+1} · ${esc(G.magicRound.venue)}
@@ -91,6 +99,33 @@ Object.assign(UI, {
 
     const fundBar = `<div style="height:8px;background:var(--card2);border-radius:4px;overflow:hidden;margin:6px 0">
       <div style="width:${Math.min(100,Math.max(0,Math.round(club.funds/5000000*100)))}%;height:100%;background:var(--brass)"></div></div>`;
+    const commercialControls = `<div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">
+        <div>
+          <h2 class="sec" style="margin:0 0 4px">Commercial Settings</h2>
+          <p class="page-sub" style="margin:0">Currency is display-only; club economics keep the same underlying values.</p>
+        </div>
+        <div class="field" style="min-width:160px;margin:0">
+          <label>Currency</label>
+          <select onchange="UI.setCurrency(this.value)">
+            <option value="AUD" ${(club.currency||'AUD')==='AUD'?'selected':''}>AUD</option>
+            <option value="GBP" ${club.currency==='GBP'?'selected':''}>Pounds</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Home ticket price</label>
+          <input type="number" min="10" max="120" step="1" value="${club.ticketPrice || 28}" oninput="UI.setClubTicketPrice(this.value, true)" onchange="UI.setClubTicketPrice(this.value)">
+          <p style="font-size:11px;color:var(--muted);margin:4px 0 0">${projectedCrowd ? `Next home gate estimate: ${money(projectedCrowd * (club.ticketPrice || 28))} · crowd ${projectedCrowd.toLocaleString()}` : 'Used for projected home crowds and gate receipts.'}</p>
+        </div>
+        <div class="field">
+          <label>Season member price</label>
+          <input type="number" min="80" max="500" step="1" value="${membership.price}" oninput="UI.setClubMembershipPrice(this.value, true)" onchange="UI.setClubMembershipPrice(this.value)">
+          <p id="clubMembershipProjection" style="font-size:11px;color:var(--muted);margin:4px 0 0">Projected members ${membership.members.toLocaleString()} · revenue ${money(membership.revenue)}</p>
+        </div>
+      </div>
+    </div>`;
     const godControls = G.godMode ? `<div class="card" style="margin-bottom:16px;border-color:rgba(200,90,79,.55)">
       <div class="god-badge" style="display:inline-flex;margin-bottom:10px">God Mode</div>
       <div class="grid2">
@@ -146,6 +181,7 @@ Object.assign(UI, {
     return `<h1 class="page">Club Management</h1>
     <p class="page-sub">Overview of ${esc(teamName(t))}'s finances, board standing, and season outlook.</p>
     ${godControls}
+    ${commercialControls}
 
     <h2 class="sec">Board Standing</h2>
     <div class="card" style="margin-bottom:16px">
@@ -178,11 +214,12 @@ Object.assign(UI, {
       ${statCard('Club Funds', money(club.funds), 'Current balance', fundsTone)}
       ${statCard('Season Revenue', money(club.seasonRevenue), `Projected: ${money(projectedRevenue)}`)}
       ${statCard('Season Wages', money(club.seasonWages), `Projected: ${money(projectedWages)}`)}
-      ${statCard('Ticket Price', money(club.ticketPrice || 28), 'Set on home match day')}
+      ${statCard('Ticket Price', money(club.ticketPrice || 28), 'Managed below')}
+      ${statCard('Member Price', money(membershipPrice), `${membership.members.toLocaleString()} projected`)}
       ${statCard('Projected Net', money(projectedNet), 'End of season estimate', projectedNet>=0?'var(--green)':'var(--red)')}
     </div>
     ${fundBar}
-    <p style="font-size:11px;color:var(--muted);margin:-4px 0 16px">Funds bar: ${money(club.funds)} of $5M target</p>
+    <p style="font-size:11px;color:var(--muted);margin:-4px 0 16px">Funds bar: ${money(club.funds)} of ${money(5000000)} target</p>
 
     <h2 class="sec">Facilities</h2>
     <div class="card" style="margin-bottom:16px">
@@ -293,6 +330,33 @@ Object.assign(UI, {
     if(!G.godMode) return;
     G.coach.conf = clamp(+value || 0, 0, 100);
     UI.toast(`Board confidence set to ${Math.round(G.coach.conf)}%.`);
+    UI.render();
+  },
+  setCurrency(value){
+    if(!G.club) return;
+    G.club.currency = value === 'GBP' ? 'GBP' : 'AUD';
+    UI.toast(`Currency display set to ${G.club.currency === 'GBP' ? 'Pounds' : 'AUD'}.`);
+    UI.render();
+  },
+  setClubTicketPrice(value, live){
+    if(!G.club) return;
+    G.club.ticketPrice = clamp(Math.round(+value || G.club.ticketPrice || 28), 10, 120);
+    const t = myTeam();
+    const m = G.phase==='regular' && G.fixtures && G.fixtures[G.round] ? G.fixtures[G.round].find(m=>m.h===t.id&&!m.played) : null;
+    if(m) m.projCrowd = matchCrowd(G.teams[m.h], false);
+    if(!live) UI.render();
+  },
+  setClubMembershipPrice(value, live){
+    if(!G.club) return;
+    G.club.membershipPrice = clamp(Math.round(+value || G.club.membershipPrice || 160), 80, 500);
+    const ps = G.offseason && G.offseason.preseason;
+    if(ps) ps.membershipPrice = G.club.membershipPrice;
+    if(live){
+      const mem = membershipProjection(G.club.membershipPrice);
+      const el = document.getElementById('clubMembershipProjection');
+      if(el) el.textContent = `Projected members ${mem.members.toLocaleString()} · revenue ${money(mem.revenue)}`;
+      return;
+    }
     UI.render();
   },
   upgradeVendor(key){

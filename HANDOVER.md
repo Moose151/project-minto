@@ -4,6 +4,11 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Pushed commit `1c358ac` to `origin main`.
+- Added display currency selection (AUD/Pounds) and full-value money formatting; ticket prices now render as actual amounts instead of `$0k`.
+- Moved editable home ticket price into Club Management with typed input; Match Day now shows read-only price/gate context and links back to Club Management.
+- Added Club Management season member price typed input with live member/revenue projection; preseason membership price stays in sync.
+- Added Recruitment > Free Agents tab with sortable columns, typed age/OVR/salary filters, affordable-only toggle, configured age/OVR threshold toggle, and reset filters.
 - Added position-weighted contract demand premiums for spine/key positions plus youth upside scaling.
 - Rebalanced match ratings and fixed a missing `stepSkill` reference that could produce `NaN` ratings.
 - Recalibrated infringements to produce regular match penalties, and now writes infringement counts into match stat lines.
@@ -69,7 +74,7 @@ cd api && node server.js
 | `src/ui/pages/hall-of-fame.js` | Retired-player Hall of Fame with induction cards, search, and sort |
 | `src/ui/pages/records.js` | Records page: league career records, single-season records, and club-scoped player records |
 | `src/ui/pages/clubs.js` | All-clubs browser; sort by ladder/OVR/name; head coach shown |
-| `src/ui/pages/recruitment.js` | Approach limit (3/season), scroll preserved, free agent modal, T&T sign button |
+| `src/ui/pages/recruitment.js` | Approach limit (3/season), scroll preserved, free agent modal, T&T sign button, free agent filters/sort |
 | `src/ui/pages/contracts.js` | Full contract ledger, year/salary filters, early extensions, flat/front/back-loaded deals |
 | `src/ui/pages/squad.js` | Squad management: top/dev/trial sections, filter/sort, OVR delta badge |
 | `src/ui/pages/training.js` | Individual and team training focus |
@@ -113,6 +118,7 @@ cd api && node server.js
 
 #### Recruitment & Contracts
 - Approach limit (3/season), free agent offer modal, stable signing %
+- Free Agents tab: sortable columns, typed min/max filters, salary under/over filter, affordable-only toggle, age/OVR threshold toggle, reset filters
 - Full contracts ledger: salary, cap hit, schedule, total value, years, intent, promise summary
 - Flat/front/back-loaded contract structures with year-by-year schedules
 - Early contract extensions for open/final-year players; contract intent states
@@ -131,6 +137,8 @@ cd api && node server.js
 
 #### Club & Finance
 - Club funds: gate + broadcast revenue weekly; player/staff/scout wages deducted
+- Currency display selector: AUD or Pounds; values are display-only and do not rebalance economics
+- Club Management commercial controls: typed home ticket price and season member price with live projections
 - Facilities: stadium/training/gym/medical/academy (level 1–5); upgrades have build time with ETA and progress bar; cost upfront; stadium capacity drops during construction; degradation chance each season
 - Club Management page: board sentiment bar, revenue/wages breakdown, salary cap bar, facility section
 - Club prestige score/tier: affects player signing willingness; shown in clubs browser, recruitment, stat leaders
@@ -141,7 +149,7 @@ cd api && node server.js
 - Pre-season phase between contracts and Round 1: training camp focus, 1–3 trial matches, sponsor window, membership pricing
 - Sponsor window: major/minor sponsors with value/length; renewal/expiry detection; renewal offers at +2–15% uplift
 - Membership pricing + revenue applied at season start; shown in Club Management breakdown
-- Home ticket price adjustable on match day; prestige-sensitive price drag (elite clubs lose fewer fans above avg)
+- Home ticket price managed in Club Management; Match Day shows read-only price/gate context; prestige-sensitive price drag (elite clubs lose fewer fans above avg)
 - League avg ticket price comparison + win-streak crowd boost (+800 fans per win, up to +4000)
 
 #### Achievements & Career History
@@ -218,14 +226,6 @@ cd api && node server.js
 - Players respond positively or negatively based on personality (professionalism, leadership, morale); response modifies morale heading into the second half — same framework as pre-game and post-game motivational options.
 - Full-time: clear animated moment (siren graphic, score banner pulse, confetti for wins) so it's immediately obvious the match is over before the post-match screen appears.
 
-#### Free Agents Page — Sort, Filter & Affordable Toggle
-- Current page is a simple scroll list; needs to be fully interactive.
-- Column-header sort: name, age, OVR, position, salary, potential.
-- Filter controls: min/max age, minimum OVR, position filter, salary range (under/over a typed value).
-- "Show affordable" toggle: filters list to players whose demand fits within the coached team's remaining cap space.
-- Configurable thresholds: e.g. age >21 AND OVR >75 combined filter.
-- Reset Filters button.
-
 #### Match View — In-Game Substitutions
 - Pause/sub screen should allow the coach to make substitutions during the match from the bench.
 - Subs should be tracked and reflected in the post-match report and player stats.
@@ -301,3 +301,4 @@ cd api && node server.js
 | Player scores/kicks after leaving injured | `injMin` stored per player line; live feed caps events to before that minute |
 | Drag-and-drop scroll blink on team sheet | Synchronous `m.scrollTop = prevTop` in `render()` before browser paint |
 | T&T salary cap check double-counted player | `submitFreeAgentOffer` subtracts existing T&T salary before cap check on upgrade |
+| Money helper forced `$0k`/`k` display | `money()` now uses selected currency symbol and full locale-formatted values |

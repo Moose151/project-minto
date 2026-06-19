@@ -68,6 +68,7 @@ function startNewGame(cfg){
     players:{}, teams:[], freeAgents:[], news:[], history:[], hallOfFame:[], achievements:[], finals:null, offseason:null,
     staff: [genStaff('attacking', 52), genStaff('defensive', 52), genStaff('fitness', 48)],
     club: { funds: 1500000, seasonRevenue: 0, seasonWages: 0, gateRevenue: 0, broadcastRevenue: 0,
+      currency:'AUD', ticketPrice:28, membershipPrice:160,
       facilities:{stadium:2, training:1, gym:1, medical:1, academy:1} },
     scouting: { scouts: [genScout(45)], missions: [], prospects: [] },
     coach:{ name:cfg.coachName, rep:30, teamId:null, conf:60, expect:null, history:[], seasonsAtClub:0, careerW:0, careerL:0, prems:0,

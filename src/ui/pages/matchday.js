@@ -77,12 +77,11 @@ Object.assign(UI, {
         : 'Fans are price-sensitive at this prestige level';
       ticketControls = `<div class="card" style="margin-top:12px">
         <h2 class="sec" style="margin-top:0">Home Tickets</h2>
-        <p class="page-sub">Price affects projected crowd and gate revenue. Lower prices lift attendance; higher prices risk empty seats.</p>
+        <p class="page-sub">Ticket price is managed from Club Management. Price affects projected crowd and gate revenue.</p>
         <div class="btnrow" style="align-items:center">
-          <button class="btn sm" onclick="UI.setTicketPrice(${ticketPrice-5})">-5</button>
           <span style="font-family:var(--disp);font-size:28px;font-weight:700;min-width:80px;text-align:center">${money(ticketPrice)}</span>
-          <button class="btn sm" onclick="UI.setTicketPrice(${ticketPrice+5})">+5</button>
           <span style="font-size:12px;color:var(--muted)">Projected gate: <b>${money(m.projCrowd * ticketPrice)}</b> · crowd ${m.projCrowd.toLocaleString()}</span>
+          <button class="btn sm" onclick="UI.go('club-management')">Edit prices</button>
         </div>
         <div style="font-size:12px;margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
           <span>League avg: <b>${money(li.avg)}</b></span>

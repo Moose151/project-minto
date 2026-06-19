@@ -304,6 +304,7 @@ Object.assign(UI, {
   setMembershipPrice(value, live){
     const ps = G.offseason && G.offseason.preseason; if(!ps) return;
     ps.membershipPrice = clamp(Math.round(+value || ps.membershipPrice), 80, 500);
+    if(G.club) G.club.membershipPrice = ps.membershipPrice;
     if(live){
       const mem = membershipProjection(ps.membershipPrice);
       const status = document.getElementById('membershipProjection');

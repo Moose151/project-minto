@@ -668,7 +668,7 @@ function finishContractsPhase(){
 }
 function createPreseasonPlan(){
   return {
-    membershipPrice: 160,
+    membershipPrice: G.club && G.club.membershipPrice != null ? G.club.membershipPrice : 160,
     campFocus: 'balanced',      // backs focus
     campFocusFwd: 'balanced',   // forwards focus
     trialsPlayed: 0,
@@ -798,6 +798,7 @@ function completePreseason(){
   startNewSeason();
   ensureClubFacilities();
   G.club.membershipRevenue = membership.revenue;
+  G.club.membershipPrice = membership.price;
   G.club.sponsorshipRevenue = sponsorRevenue;
   G.club.seasonRevenue = (G.club.seasonRevenue || 0) + membership.revenue + sponsorRevenue;
   G.club.funds = Math.round((G.club.funds || 0) + membership.revenue + sponsorRevenue);
