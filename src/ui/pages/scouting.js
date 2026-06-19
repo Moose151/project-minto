@@ -31,9 +31,11 @@ Object.assign(UI, {
       } else if(pick_state){
         // Step 2: position picker for the selected region
         const region = SCOUT_REGIONS.find(r=>r.key===pick_state.regionKey);
-        const posBtns = (region ? region.posPool : POS).map(pos =>
-          `<button class="btn sm" style="margin:2px" onclick="UI.dispatchScout(${s.id},'${pick_state.regionKey}','${pos}')">${POS_NAME[pos]||pos}</button>`
-        ).join('');
+        const posBtns = (region ? region.posPool : POS).map(pos => {
+          const chance = Math.round(scoutTargetChance(s, pos) * 100);
+          const spec = s.posSpecialty === pos ? ' ★' : '';
+          return `<button class="btn sm" style="margin:2px" onclick="UI.dispatchScout(${s.id},'${pick_state.regionKey}','${pos}')">${POS_NAME[pos]||pos}${spec} · ${chance}%</button>`;
+        }).join('');
         dispatchSection = `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
           <p style="font-size:11px;color:var(--muted);margin:0 0 4px">
             <b>${esc(region?.label||pick_state.regionKey)}</b> — target position:
@@ -67,7 +69,7 @@ Object.assign(UI, {
           <div style="min-width:0;flex:1">
             <b style="font-size:15px">${esc(s.name)}</b>
             ${expiring ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:var(--red);background:rgba(200,50,50,.12);padding:2px 6px;border-radius:8px">CONTRACT EXPIRING</span>` : ''}
-            <p style="margin:2px 0;font-size:12px;color:var(--muted)">Scout · ${money(s.salary)}/yr · ${s.yearsLeft} yr${s.yearsLeft===1?'':'s'} left</p>
+            <p style="margin:2px 0;font-size:12px;color:var(--muted)">Scout · ${money(s.salary)}/yr · ${s.yearsLeft} yr${s.yearsLeft===1?'':'s'} left · Specialty: ${POS_NAME[s.posSpecialty]||s.posSpecialty||'General'}</p>
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
             ${expiring ? `<button class="btn sm primary" onclick="UI.extendScout(${s.id})">Extend</button>` : ''}
@@ -89,11 +91,15 @@ Object.assign(UI, {
       const cost = Math.round(clamp(salaryFor(p)*0.55, 65000, 180000)/5000)*5000;
       const youthRoom = Math.max(0, YOUTH_SQUAD_CAP - squadCount(myT, 'dev'));
       const canSign = youthRoom > 0 && canJoinYouthSquad(p);
+      const targetNote = pr.targetPos
+        ? `<p style="margin:2px 0;font-size:11px;color:${pr.targetHit?'var(--green)':'var(--brass)'}">Target: ${POS_NAME[pr.targetPos]||pr.targetPos} · ${pr.targetHit?'matched':'missed'}</p>`
+        : '';
       return `<div class="card" style="display:flex;gap:12px;align-items:flex-start">
         <div style="flex:1">
           <b class="click" onclick="UI.playerModal(${p.id})" style="text-decoration:underline;cursor:pointer">${esc(p.name)}</b>
           <p style="margin:2px 0;font-size:12px;color:var(--muted)">${POS_NAME[p.pos]||p.pos} · ${p.age}yo · OVR ${p.ovr} · POT ~${p.pot}</p>
           <p style="margin:2px 0;font-size:11px;color:var(--dim)">Found in ${region?esc(region.label):pr.region} (${pr.foundYear})</p>
+          ${targetNote}
           ${p.backstory ? `<p style="margin:2px 0;font-size:11px;color:var(--muted);font-style:italic">"${esc(p.backstory)}"</p>` : ''}
           <p style="font-size:11px;color:var(--muted)">Youth squad offer: ${money(cost)} · salary cap exempt</p>
           ${!canJoinYouthSquad(p) ? `<p style="font-size:11px;color:var(--red)">⚠ Youth squad is only for under-21 players who have never been in the main squad.</p>` : youthRoom <= 0 ? `<p style="font-size:11px;color:var(--red)">⚠ Youth squad is full (${YOUTH_SQUAD_CAP} max)</p>` : ''}
@@ -116,7 +122,7 @@ Object.assign(UI, {
           <div style="width:${s.ability}%;height:100%;background:${s.ability>=70?'var(--green)':s.ability>=50?'var(--brass)':'var(--red)'}"></div>
         </div><span style="font-size:11px;font-weight:700">${s.ability}</span></div>`;
       return `<tr>
-        <td><b>${esc(s.name)}</b></td>
+        <td><b>${esc(s.name)}</b><br><span style="font-size:11px;color:var(--muted)">Specialty: ${POS_NAME[s.posSpecialty]||s.posSpecialty||'General'}</span></td>
         <td>${abilityBar}</td>
         <td class="num">${money(s.salary)}</td>
         <td class="num">${s.yearsLeft}yr</td>
@@ -154,7 +160,7 @@ Object.assign(UI, {
     for(let i=0;i<4;i++){
       const ability = clamp(Math.round(30 + Math.random()*55), 20, 88);
       const salary = Math.round((20000 + Math.pow(ability/90, 2)*90000)/5000)*5000;
-      list.push({id: 8000 + i + 1, name:`${pick(FIRST)} ${pick(LAST)}`, ability, salary, yearsLeft:ri(1,3)});
+      list.push({id: 8000 + i + 1, name:`${pick(FIRST)} ${pick(LAST)}`, ability, salary, yearsLeft:ri(1,3), posSpecialty:pick(POS)});
     }
     return list;
   },

@@ -348,7 +348,13 @@ function genScout(abilityBase){
   const ability = clamp(Math.round(abilityBase + (Math.random()-0.5)*16), 20, 90);
   const name = `${pick(FIRST)} ${pick(LAST)}`;
   const salary = Math.round((20000 + Math.pow(ability/90, 2)*90000)/5000)*5000;
-  return {id: ++_staffId, name, ability, salary, yearsLeft:ri(1,3)};
+  return {id: ++_staffId, name, ability, salary, yearsLeft:ri(1,3), posSpecialty:pick(POS)};
+}
+function scoutTargetChance(scout, targetPos){
+  if(!targetPos) return 0;
+  const ability = scout ? (scout.ability || 40) : 40;
+  const specialtyBonus = scout && scout.posSpecialty === targetPos ? 0.08 : 0;
+  return clamp(0.52 + ability / 220 + specialtyBonus, 0.58, 0.95);
 }
 // Mutable staff ID counter (set to large base to avoid collisions)
 let _staffId = 9000;

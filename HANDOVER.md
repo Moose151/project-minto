@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Scouting position matching — scouts now have positional specialties; targeted scouting chance scales by scout ability and specialty, target buttons show hit chance, and returned prospects note whether the requested position was matched.
 - Weather engine depth — match weather now flows into player stat lines: rain/wind/humidity increase individual handling-error risk, reduce kick metres, and make 40/20s/repeat-set kicks harder; conservative bad-weather tactics reduce the coached side's handling penalty.
 - Historical match reports widened — every completed fixture on the Fixtures page now has a "Match report" button; the full analysis page renders coached-team matches from coach perspective and neutral AI matches as a final report.
 - Multi-day match calendar completed — fixture slots are now unique Thu Night/Fri Night/Sat Afternoon/Sat Twilight/Sat Night/Sun Afternoon/Sun Twilight/Sun Night windows; daily advance simulates only the current day; coached-team matches play on their assigned slot day; rounds close only after the final scheduled game; Calendar now has a round games/results table.
@@ -264,7 +265,7 @@ cd api && node server.js
 - Post-match: possession/completion % now computed and shown in all stat tables ✅; half-by-half breakdown ✅; historical full match reports are available from every completed fixture ✅.
 - Inbox: action buttons implemented ✅; read/unread state ✅; player messages and richer scout items still to do.
 - Player avatars: current procedural SVG too complex at small sizes — consider simplified bold cartoon, pixel sprites, or canvas approach.
-- Scouting: prospect backstory ✅; scout position-matching skill, richer region probabilities still to do.
+- Scouting: prospect backstory ✅; scout position-matching skill ✅; richer region probabilities still to do.
 - Facilities: board expectations ✅; AI club facility tracking still to do (AI teams use prestige-score estimate).
 - Contracts: rep-status premiums ✅; personality-based demand ✅; market scarcity by position ✅; ceremony UX for signings still to do.
 - Hall of Fame: rep honour badges ✅; club legend wall ✅; richer ceremony UX still to do.

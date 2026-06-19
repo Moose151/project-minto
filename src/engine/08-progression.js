@@ -950,12 +950,15 @@ function advanceScouting(){
     const baseQ = clamp(30 + Math.floor(ability/4), 32, 58);
     const pool = region ? region.posPool : POS;
     let pos;
-    if(mission.targetPos && pool.includes(mission.targetPos) && Math.random() < 0.75){
+    const targetChance = mission.targetPos && pool.includes(mission.targetPos) ? scoutTargetChance(scout, mission.targetPos) : 0;
+    const targetHit = !!(mission.targetPos && pool.includes(mission.targetPos) && rnd() < targetChance);
+    if(targetHit){
       pos = mission.targetPos;
     } else {
       pos = pick(pool);
     }
-    const p = genPlayer(pos, age, baseQ + ri(-8, 12));
+    const fitBonus = targetHit ? (scout && scout.posSpecialty === pos ? 3 : 1) : 0;
+    const p = genPlayer(pos, age, baseQ + fitBonus + ri(-8, 12));
     G.players[p.id] = p;
     p.squad = 'dev';
     // Set nationality from region and regenerate name to match
@@ -976,8 +979,9 @@ function advanceScouting(){
     ];
     const backstory = pick(BACKSTORIES);
     p.backstory = backstory;
-    G.scouting.prospects.push({ playerId:p.id, scoutId:mission.scoutId, region:mission.region, foundYear:G.year, foundRound:G.round });
-    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo) — ${backstory}.`, {title:'Scout Report', type:'scouting', tone:'good', playerId:p.id, tag:'Scouting'});
+    G.scouting.prospects.push({ playerId:p.id, scoutId:mission.scoutId, region:mission.region, targetPos:mission.targetPos||null, targetHit, foundYear:G.year, foundRound:G.round });
+    const targetLine = mission.targetPos ? (targetHit ? ` Target request hit (${POS_NAME[mission.targetPos]||mission.targetPos}).` : ` Target request missed; best prospect was ${POS_NAME[p.pos]||p.pos}.`) : '';
+    addNews(`${scout?scout.name:'Scout'} returns from ${region?region.label:mission.region} with a prospect: ${p.name} (${POS_NAME[p.pos]||p.pos}, ${age}yo) — ${backstory}.${targetLine}`, {title:'Scout Report', type:'scouting', tone:'good', playerId:p.id, tag:'Scouting'});
   }
   G.scouting.missions = G.scouting.missions.filter(m=>!done.includes(m));
 }
