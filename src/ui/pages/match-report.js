@@ -9,7 +9,8 @@ Object.assign(UI, {
     if(!myM) return `<h1 class="page">Match Report</h1><p class="page-sub">No recent match to display. Play a match first.</p>`;
 
     const th = G.teams[myM.h], ta = G.teams[myM.a];
-    const mineIsH = myM.h === G.coach.teamId;
+    const coachInMatch = myM.h === G.coach.teamId || myM.a === G.coach.teamId;
+    const mineIsH = coachInMatch ? myM.h === G.coach.teamId : true;
     const won   = mineIsH ? myM.hs > myM.as : myM.as > myM.hs;
     const drew  = myM.hs === myM.as;
     const myT   = mineIsH ? th : ta;
@@ -17,8 +18,8 @@ Object.assign(UI, {
     const myDet = mineIsH ? myM.det.h : myM.det.a;
     const oppDet = mineIsH ? myM.det.a : myM.det.h;
 
-    const resultClr = won ? 'var(--green)' : drew ? 'var(--muted)' : 'var(--red)';
-    const resultTxt = won ? 'WIN' : drew ? 'DRAW' : 'LOSS';
+    const resultClr = coachInMatch ? (won ? 'var(--green)' : drew ? 'var(--muted)' : 'var(--red)') : 'var(--brass)';
+    const resultTxt = coachInMatch ? (won ? 'WIN' : drew ? 'DRAW' : 'LOSS') : 'FINAL';
     const myScore   = mineIsH ? myM.hs : myM.as;
     const oppScore  = mineIsH ? myM.as : myM.hs;
     const ht        = myM.det.htScore || {h:0, a:0};
@@ -70,7 +71,7 @@ Object.assign(UI, {
         const ev=item.ev, team=ev.side==='h'?th:ta;
         const scorer=G.players[ev.scorerId], assist=ev.assistId?G.players[ev.assistId]:null;
         if(ev.side==='h') sH+=4+(ev.converted?2:0); else sA+=4+(ev.converted?2:0);
-        const isMine=(ev.side==='h')===mineIsH, col=isMine?'var(--green)':'var(--red)';
+        const isMine=(ev.side==='h')===mineIsH, col=coachInMatch ? (isMine?'var(--green)':'var(--red)') : (ev.side==='h'?'var(--green)':'var(--brass)');
         return `<div style="display:flex;gap:8px;align-items:baseline;padding:5px 8px;border-left:3px solid ${col};margin:3px 0;font-size:13px">
           <span style="color:var(--dim);font-size:11px;width:28px;flex-shrink:0">${ev.min}'</span>
           <span style="color:${col};font-weight:700;width:32px;flex-shrink:0;font-size:11px">TRY</span>

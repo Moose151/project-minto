@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Historical match reports widened — every completed fixture on the Fixtures page now has a "Match report" button; the full analysis page renders coached-team matches from coach perspective and neutral AI matches as a final report.
 - Multi-day match calendar completed — fixture slots are now unique Thu Night/Fri Night/Sat Afternoon/Sat Twilight/Sat Night/Sun Afternoon/Sun Twilight/Sun Night windows; daily advance simulates only the current day; coached-team matches play on their assigned slot day; rounds close only after the final scheduled game; Calendar now has a round games/results table.
 - Coach profile career context — profile now shows current-season W-L-D and career win rate; offseason history stores each season's W-L-D and the coaching history table displays the record.
 - Facility board expectations — Club Management board card now shows whether current facility standard meets prestige-tier expectations (Dynasty/Elite → avg Lv 4+, Strong → Lv 3+, Solid → Lv 2+); failing facilities listed by name in red.
@@ -29,7 +30,7 @@ Previous session notes:
 - Match Day pre-match now shows the slot badge (e.g. "Thu Night") next to the round number in the page subtitle.
 - Calendar "Next 14 Days" match day cards now include the kick-off slot label in the detail line (e.g. "Home v Storm · Sat Night").
 - Corrected HANDOVER: Magic Round, Crowd Vendor System, NRL Standard Mode, State of Origin, offseason dev review, and attribute-level delta tab are all already implemented — moved from ❌ to ✅ or annotated correctly.
-- Match report from fixtures — each completed coached-team match on the Fixtures page now has a "Match report →" button that sets `G._lastPlayedMatch` and opens the full analysis page; enables historical match replay for any past round.
+- Match report from fixtures — each completed match on the Fixtures page now has a "Match report →" button that sets `G._lastPlayedMatch` and opens the full analysis page; enables historical match replay for any past round.
 - Win/loss streak on Dashboard next match widget — shows "4× WIN STREAK" or "2× LOSS STREAK" in green/red when the coached team has 2+ consecutive results; slot badge (e.g. "Sat Night") shown below the matchup.
 - Rep status salary premium — `salaryFor()` now applies a multiplier: Kangaroos internationals +14% (OVR 70+), other international rep players +8% (OVR 65+), state reps +6% (OVR 70+); makes rep players command higher market rates.
 - Media snippets enriched — Predictions page now includes per-team form streaks ("on a 4-game winning run"), weather context when conditions are Heavy Rain or Windy, and names injured absentees.
@@ -259,7 +260,7 @@ cd api && node server.js
 - Still needed: forced even-team-count byes, Origin round bye blocks, better multi-bye distribution per season.
 
 #### Post-Match, Inbox, Avatars, Scouting, Facilities, Contracts — Partial
-- Post-match: possession/completion % now computed and shown in all stat tables ✅; half-by-half breakdown ✅; save full match reports per fixture for historical reopening still to do.
+- Post-match: possession/completion % now computed and shown in all stat tables ✅; half-by-half breakdown ✅; historical full match reports are available from every completed fixture ✅.
 - Inbox: action buttons implemented ✅; read/unread state ✅; player messages and richer scout items still to do.
 - Player avatars: current procedural SVG too complex at small sizes — consider simplified bold cartoon, pixel sprites, or canvas approach.
 - Scouting: prospect backstory ✅; scout position-matching skill, richer region probabilities still to do.

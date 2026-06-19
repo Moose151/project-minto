@@ -31,7 +31,7 @@ Object.assign(UI, {
       const crowd = m.played && m.det ? `${m.det.crowd.toLocaleString()} att.` : '';
       const slotLabel = m.slot ? m.slot.label : 'Sat Afternoon';
       const slotWeather = m.played && m.det ? ` · ${m.det.weather}` : '';
-      const reportBtn = mine && m.played && m.det
+      const reportBtn = m.played && m.det
         ? `<div style="text-align:center;margin:-2px 0 4px"><button class="btn sm" onclick="G._lastPlayedMatch=G.fixtures[${r}].find(mm=>mm.h===${m.h}&&mm.a===${m.a});UI.go('match-report')" style="font-size:10px;padding:2px 10px">Match report →</button></div>`
         : '';
       return `<div style="${mine ? 'background:rgba(210,165,62,.06);border-radius:6px;margin:0 -6px;padding:2px 6px;' : ''}">
