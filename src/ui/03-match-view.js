@@ -13,6 +13,13 @@ Object.assign(UI, {
       UI.toast('Review training and recovery before advancing.');
       return;
     }
+    if(stop && stop.key === 'recovery' && G.calendar.medicalReviewedDay !== G.calendar.day){
+      UI.page = 'injuryward';
+      UI._forceTop = true;
+      UI.render();
+      UI.toast('Complete the recovery and judiciary review before advancing.');
+      return;
+    }
     const requiresTeamList = G.phase !== 'regular' || (stop && ((stop.key === 'selection' && !onBye) || (stop.key === 'match' && !onBye)));
     const issues = requiresTeamList ? lineupIssues(myTeam()) : [];
     if(issues.length){
@@ -24,12 +31,12 @@ Object.assign(UI, {
     }
     const res = G.phase === 'regular' && typeof advanceCalendarDay === 'function' ? advanceCalendarDay() : advanceRound();
     autoSave();
-    if(res && res.type === 'day' && res.stop && res.stop.page && UI.page !== res.stop.page){
+    if(res && (res.type === 'day' || res.type === 'round') && res.stop && res.stop.page && UI.page !== res.stop.page){
       UI.page = res.stop.page;
       UI._forceTop = true;
     }
     UI.render();
-    if(res && res.type === 'day' && res.stop) UI.toast(res.stop.label);
+    if(res && (res.type === 'day' || res.type === 'round') && res.stop) UI.toast(res.stop.label);
     if(res && res.type==='round') UI.showRoundResults(res.round, `Round ${G.round} results`);
     if(res && res.type==='finals') UI.showRoundResults(res.games, res.label);
   },

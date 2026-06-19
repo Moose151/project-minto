@@ -4,6 +4,15 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Half-time team talk added to Watch Game — feed auto-pauses at half-time and presents 4 choices (Fire Up / Encourage / Tactical / Berate); each choice adds a narrative line to the live feed and adjusts coached players' form heading into next match; Berate has random per-player variance (35% chance of negative effect).
+- Match Day pre-match now shows the slot badge (e.g. "Thu Night") next to the round number in the page subtitle.
+- Calendar "Next 14 Days" match day cards now include the kick-off slot label in the detail line (e.g. "Home v Storm · Sat Night").
+- Cleaned up stale "Needs Improvement" entries that were resolved last session (Post-Match Full Page, WG/CE overlap, Bye Rounds ladder credit).
+
+---
+
+Previous session notes:
+
 - Fixed minor sponsors missing from Club Management — added a dedicated "Sponsorship" section showing all active major/minor deals with value and years remaining.
 - Fixed WG/CE overlap on team sheet pitch — increased vertical separation to 14% gaps (WG y:83, CE y:69) and pushed WG further to flanks (x:91/9); also respaced FB/FE/HB rows throughout.
 - Fixed OVR delta badge reliability — added `seasonStartOvr` guard in `submitFreeAgentOffer` and `_confirmTrialSign` so mid-season signings always have the field set.
@@ -177,6 +186,7 @@ cd api && node server.js
 - Full-screen watch game page: live score header, both-team lineups sidebar, speed controls, inline post-match
 - Post-match summary: scoring timeline, top performers grid (top 5 coached / top 3 opp), team stats comparison table
 - Finals: NRL top-8 McIntyre system (QF/EF → Semis → Prelims → GF); advance button label updates per week
+- Half-time team talk (Watch Game): feed auto-pauses at HT; 4 options (Fire Up / Encourage / Tactical / Berate); narrative added to feed; coached players' form adjusted heading into next match; Berate has per-player random variance
 
 #### Bye Rounds (First Slice)
 - Odd-team fixtures use phantom bye slot; `G.byes[]` per round
@@ -208,25 +218,18 @@ cd api && node server.js
 - Growth switched from binary weekly roll to Poisson-distributed gains (~6x higher expected rate). Target of 2–5 OVR per season for a 20yo on full game time should now be achievable.
 - If the league feels it's progressing too fast, reduce `growExpected` values in `developPlayer` and `applyOffseasonDevelopment` (08-progression.js / 11-offseason.js).
 
-#### Post-Match Analysis — Needs Full Page
-- Currently shown as a popup/inline section. Should be a full dedicated page (or modal with a "Full Analysis →" deep-link).
-- Full page: both complete 17-player team lists with individual stats per player (T/TA/Goals/FG/Runs/Tackles/MT/LB/Errors/Rating), complete match data (score by half, possession, territory, completion rate, all team stats), scoring timeline, key moments, match context (venue/weather/crowd).
-
-#### WG/CE Overlap on Squad Field View — Still Occurring
-- Despite the y-position fix (WG y:82, CE y:71), wingers and centres are still overlapping on the squad page team sheet field view.
-- Requires further vertical/horizontal position adjustment or card dimension reduction.
-
-#### Bye Rounds — Incomplete
-- Ladder does not show bye round indicator; byes do not award 2 competition points (NRL standard gives 2 pts for a bye).
-- Ladder should credit 2 pts to teams on bye each round; ladder page should indicate recent/current bye rounds.
-- Still needed: forced even-team-count byes, Origin round bye blocks, better multi-bye distribution per season.
-
-#### Match Scheduling — Multi-Day Rounds (first slice done)
-- `genFixtures` now assigns a slot (Thu Night → Sun Night) to each game; no two share a slot.
+#### Match Scheduling — Multi-Day Rounds (nearly complete)
+- `genFixtures` assigns a slot (Thu Night → Sun Night) to each game; no two share a slot.
 - Fixtures page sorts games by slot order and shows the slot label + post-match weather.
+- Match Day pre-match page shows the slot badge (e.g. "Sat Night") next to the round number.
+- Calendar's "Next 14 Days" shows the slot label on the match day card (e.g. "Home v Storm · Thu Night").
 - `simMatch` applies a time-of-day try modifier and adjusted weather pool.
 - Dashboard shows a "Round N Results" panel after each round.
-- Still needed: slot shown on Match Day pre-match page; calendar flow updated to show which day each game falls on; mid-week games (Thursday) that arrive before the calendar reaches Saturday.
+- Still needed: mid-week game results appearing in the feed as the calendar advances through the week (Thursday fixtures simulated on Thursday, not Saturday); no-simultaneous enforcement in calendar flow.
+
+#### Bye Rounds — Partially Incomplete
+- Ladder awards 2 pts for completed bye rounds; form history shows "B" dot; ladder page shows "BYE" tag. ✅
+- Still needed: forced even-team-count byes, Origin round bye blocks, better multi-bye distribution per season.
 
 #### Post-Match, Inbox, Avatars, Scouting, Facilities, Contracts — Partial
 - Post-match: save full match reports per fixture for historical reopening; possession/completion rate; half-by-half breakdown.
@@ -242,10 +245,9 @@ cd api && node server.js
 
 ### ❌ Features to be Implemented
 
-#### Match View — Pause, Half-Time Team Talk & Full-Time Graphic
-- Pause button during live match so subs can be made mid-game.
-- Auto-stop at half-time: show a "Half-Time Team Talk" screen with options (Fire Up / Encourage / Berate / Tactical).
-- Players respond positively or negatively based on personality (professionalism, leadership, morale); response modifies morale heading into the second half — same framework as pre-game and post-game motivational options.
+#### Match View — Pause & Full-Time Graphic
+- Half-time team talk is implemented (auto-pause + 4 options + form effect). ✅
+- Pause button during the live second half so subs can be made mid-game (requires in-game sub system).
 - Full-time: clear animated moment (siren graphic, score banner pulse, confetti for wins) so it's immediately obvious the match is over before the post-match screen appears.
 
 #### Match View — In-Game Substitutions
@@ -284,10 +286,9 @@ cd api && node server.js
 
 ### 💡 QoL Improvements
 
-All items from this section were implemented this session. Items to consider for a future session:
+All items from the prior session were implemented. Items to consider for a future session:
 - **Squad page sort reset**: squad page uses column-click sorting but has no reset-to-default button; low priority since sorts are per-column.
 - **History page**: already had a "Clear" button — consider aligning its style with other Reset buttons.
-- **Fixtures page slot on Match Day**: the pre-match page should show the game's day/time slot (Thu Night, Sat Afternoon, etc.) so it's visible before kick-off, not just in fixtures.
 
 ---
 

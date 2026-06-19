@@ -105,8 +105,9 @@ Object.assign(UI, {
     const oppTeam = t.id===h.id ? a : h;
     const oppCoach = oppTeam.headCoach ? oppTeam.headCoach.name : 'Unknown coach';
     const coachLine = `<p style="font-size:12px;color:var(--muted);margin:2px 0 8px"><b>${esc(myCoach)}</b> vs <b>${esc(oppCoach)}</b>${oppTeam.headCoach?` (rep ${oppTeam.headCoach.rep})`:''}  · ${esc(venue)}</p>`;
+    const slotBadge = m.slot ? `<span style="font-size:11px;color:var(--brass);font-weight:700;background:rgba(210,165,62,.12);padding:2px 9px;border-radius:10px;letter-spacing:.04em;white-space:nowrap">${esc(m.slot.label)}</span>` : '';
     return `<h1 class="page">Match Day</h1>
-    <p class="page-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Round ${G.round+1} · ${teamLogo(h,28)} ${esc(teamName(h))} v ${teamLogo(a,28)} ${esc(teamName(a))}</p>
+    <p class="page-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Round ${G.round+1} · ${slotBadge} ${teamLogo(h,28)} ${esc(teamName(h))} v ${teamLogo(a,28)} ${esc(teamName(a))}</p>
     ${isMagicRound ? `<div style="background:linear-gradient(135deg,rgba(210,165,62,.15),rgba(210,165,62,.05));border:1px solid rgba(210,165,62,.5);border-radius:8px;padding:10px 14px;margin:6px 0;display:flex;align-items:center;gap:10px">
       <div style="font-size:20px">✦</div>
       <div><div style="font-weight:700;color:var(--brass);font-size:14px">Magic Round ${G.year}</div>
@@ -232,6 +233,10 @@ Object.assign(UI, {
     if(e.txt && e.txt.includes('HALF TIME')){
       const banner = document.getElementById('wg-banner');
       if(banner) banner.textContent = '⏸ Half time';
+      UI._htEvents = events; UI._htNextIdx = i + 1; UI._htMatch = myM;
+      const postMatch = document.getElementById('wg-postMatch');
+      if(postMatch){ postMatch.style.display = ''; postMatch.innerHTML = UI._buildTeamTalkHtml(myM); }
+      return;
     }
     if(e.txt && e.txt.startsWith('FULL TIME')){
       const won = myM.h===G.coach.teamId ? myM.hs>myM.as : myM.as>myM.hs;
@@ -362,6 +367,71 @@ Object.assign(UI, {
       if(fullBtn) fullBtn.style.display='';
     }
     setTimeout(()=>UI._revealFeed(events, i+1, myM), Math.max(80, 800/(UI._watchSpeed||2)));
+  },
+
+  _buildTeamTalkHtml(myM){
+    const mineIsH = myM.h === G.coach.teamId;
+    const ht = myM.det.htScore || {h:0, a:0};
+    const myHT = mineIsH ? ht.h : ht.a;
+    const oppHT = mineIsH ? ht.a : ht.h;
+    const situation = myHT > oppHT ? 'leading' : myHT < oppHT ? 'trailing' : 'level';
+    const situationText = situation === 'leading'
+      ? `You're ahead — keep the intensity and close it out.`
+      : situation === 'trailing'
+      ? `You're behind — something has to change in the second half.`
+      : `It's all square — the second half decides everything.`;
+    return `<div class="card" style="border-color:var(--brass);padding:14px">
+      <h2 class="sec" style="margin-top:0;color:var(--brass)">Half-Time Team Talk</h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">HT: <b>${myHT}–${oppHT}</b> · ${situationText}</p>
+      <div class="grid2" style="gap:8px">
+        <button class="btn" onclick="UI._applyTeamTalk('fireup')" style="text-align:left;height:auto;padding:10px 12px">
+          <div style="font-weight:700;margin-bottom:3px">Fire Up</div>
+          <div style="font-size:11px;color:var(--muted);white-space:normal">Rallying call — high intensity, lifts most players but risks discipline issues</div>
+        </button>
+        <button class="btn" onclick="UI._applyTeamTalk('encourage')" style="text-align:left;height:auto;padding:10px 12px">
+          <div style="font-weight:700;margin-bottom:3px">Encourage</div>
+          <div style="font-size:11px;color:var(--muted);white-space:normal">Back the players — safe and consistent, boosts confidence across the board</div>
+        </button>
+        <button class="btn" onclick="UI._applyTeamTalk('tactical')" style="text-align:left;height:auto;padding:10px 12px">
+          <div style="font-weight:700;margin-bottom:3px">Tactical</div>
+          <div style="font-size:11px;color:var(--muted);white-space:normal">Focus on structure and execution — neutral morale, reduces error risk</div>
+        </button>
+        <button class="btn" onclick="UI._applyTeamTalk('berate')" style="text-align:left;height:auto;padding:10px 12px">
+          <div style="font-weight:700;margin-bottom:3px">Berate</div>
+          <div style="font-size:11px;color:var(--muted);white-space:normal">Challenge underperformers — polarising; some respond, others shut down</div>
+        </button>
+      </div>
+    </div>`;
+  },
+
+  _applyTeamTalk(choice){
+    const MSGS = {
+      fireup:    ["The coach demands more. The room responds with intensity.",    "A passionate call to arms echoes through the sheds."],
+      encourage: ["The coach backs the group. Confidence is high.",              "Positive, assured — the team heads out believing."],
+      tactical:  ["The coach maps out the second half in clinical detail.",       "Structure, discipline, execution — the adjustments are clear."],
+      berate:    ["The coach calls out several players by name.",                 "The message is blunt. Some players grit their teeth; others look shaken."],
+    };
+    const EFFECTS = { fireup: [2, 4], encourage: [2, 3], tactical: [1, 2], berate: [-4, 5] };
+    const [low, high] = EFFECTS[choice] || [1, 2];
+    const t = myTeam();
+    for(const id of t.lineup.slice(0, 13)){
+      const p = G.players[id]; if(!p) continue;
+      const delta = choice === 'berate' ? (rnd() < 0.35 ? low : high) : ri(low, high);
+      p.form = clamp((p.form || 70) + delta, 30, 100);
+    }
+    const box = document.getElementById('wg-feedBox');
+    if(box){
+      const msg = pick(MSGS[choice] || MSGS.encourage);
+      box.innerHTML += `<div style="padding:5px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:baseline">
+        <span style="color:var(--dim);font-size:11px;min-width:28px;flex-shrink:0">HT</span>
+        <span style="color:var(--brass);font-style:italic">${esc(msg)}</span>
+      </div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+    const postMatch = document.getElementById('wg-postMatch');
+    if(postMatch){ postMatch.style.display = 'none'; postMatch.innerHTML = ''; }
+    const events = UI._htEvents, nextIdx = UI._htNextIdx, myM = UI._htMatch;
+    setTimeout(()=>UI._revealFeedPage(events, nextIdx, myM), 350);
   },
 
   _buildFeed(m){

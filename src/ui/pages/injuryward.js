@@ -21,6 +21,9 @@ Object.assign(UI, {
       return {label:'Minor', cls:'var(--green)'};
     };
     const medStaffList = (G.staff||[]).filter(s=>s.role==='medical');
+    const cal = typeof ensureCalendar === 'function' ? ensureCalendar() : null;
+    const stop = cal && typeof calendarStopForDay === 'function' ? calendarStopForDay(cal.day) : null;
+    const reviewDue = stop && stop.key === 'recovery' && cal.medicalReviewedDay !== cal.day;
     const row = p => {
       const ok = canPlay(p);
       const sev = severeLabel(p);
@@ -61,6 +64,11 @@ Object.assign(UI, {
     </div>` : injured.length ? `<div class="card" style="padding:10px 14px;margin-bottom:12px"><p style="color:var(--muted);font-size:12px;margin:0">No medical staff hired. A Physio on staff gives injured players a weekly chance of accelerated recovery. <span class="click" style="color:var(--brass);cursor:pointer" onclick="UI.go('staff')">Hire one →</span></p></div>` : '';
     return `<h1 class="page">Injury Ward</h1>
     <p class="page-sub">Manage unavailable players. Playing through minor injuries allows selection, but increases re-injury risk and can worsen the injury.</p>
+    ${reviewDue?`<div class="card" style="border-color:var(--brass);margin-bottom:12px">
+      <div style="font-family:var(--disp);font-size:22px;font-weight:700;color:var(--brass)">Recovery and judiciary review due</div>
+      <p class="page-sub">Review injuries, suspensions, and any play-hurt decisions before moving into next week.</p>
+      <div class="btnrow"><button class="btn primary" onclick="UI.markMedicalReviewed()">Mark review complete</button><button class="btn" onclick="UI.go('calendar')">Calendar</button></div>
+    </div>`:''}
     <div class="btnrow"><button class="btn" onclick="UI.go('teamsheet')">Team sheet</button><button class="btn" onclick="UI.go('squad')">Squad</button></div>
     ${medCard}
     <h2 class="sec">Injuries (${injured.length})</h2>
@@ -82,6 +90,12 @@ Object.assign(UI, {
     if(!allowed){ UI.toast('That injury is too serious to play through.'); return; }
     p.playInjured = !p.playInjured;
     UI.toast(p.playInjured ? `${p.name} can be selected while injured.` : `${p.name} removed from playing hurt list.`);
+    UI.render();
+  },
+  markMedicalReviewed(){
+    ensureCalendar();
+    G.calendar.medicalReviewedDay = G.calendar.day;
+    UI.toast('Recovery and judiciary review complete.');
     UI.render();
   }
 });

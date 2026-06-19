@@ -89,6 +89,7 @@ function advanceCalendarDay(){
     const res = advanceRound();
     c.day++;
     c.lastStop = calendarStopForDay(c.day);
+    if(res){ res.day = c.day; res.stop = c.lastStop; }
     return res;
   }
   dailyRecoveryAndFatigue();

@@ -12,7 +12,10 @@ Object.assign(UI, {
     const t = myTeam();
     const lowCond = t.players.map(id=>G.players[id]).filter(p=>p && isTopSquadPlayer(p) && !p.injury && (p.cond < 72 || (p.load||0) > 62)).sort((a,b)=>(b.load||0)-(a.load||0)).slice(0,5);
     const injured = t.players.map(id=>G.players[id]).filter(p=>p && p.injury).length;
-    const reviewPending = stop && stop.key === 'training' && G.calendar.trainingReviewedDay !== G.calendar.day;
+    const reviewPending = stop && (
+      (stop.key === 'training' && G.calendar.trainingReviewedDay !== G.calendar.day) ||
+      (stop.key === 'recovery' && G.calendar.medicalReviewedDay !== G.calendar.day)
+    );
     const eventCard = (day) => {
       const r = calendarRoundForDay(day);
       const dow = calendarDayInWeek(day);
@@ -32,7 +35,8 @@ Object.assign(UI, {
         if(isBye) detail = 'No fixture. Squad receives a rest week.';
         else if(m){
           const opp = G.teams[m.h===G.coach.teamId ? m.a : m.h];
-          detail = `${m.h===G.coach.teamId?'Home':'Away'} v ${teamName(opp)}.`;
+          const slotLabel = m.slot ? ` · ${m.slot.label}` : '';
+          detail = `${m.h===G.coach.teamId?'Home':'Away'} v ${teamName(opp)}${slotLabel}.`;
         }
       }
       const border = tone === 'good' ? 'var(--green)' : tone === 'warn' ? 'var(--brass)' : 'var(--line)';
@@ -52,7 +56,7 @@ Object.assign(UI, {
     return `<h1 class="page">Calendar</h1>
     <p class="page-sub">${calendarDateLabel()} · Round ${roundIdx+1} · ${esc(matchLine)}</p>
     <div class="grid3" style="margin-bottom:12px">
-      <div class="card"><div class="navsep" style="margin:0">Current Stop</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px">${esc(stop ? stop.label : 'Training block')}</div><p class="page-sub">${reviewPending?'Training review still pending.':stop && stop.key==='match' ? (bye?'Bye weekend':'Ready for match day') : 'Advance one day at a time.'}</p>${reviewPending?`<button class="btn sm primary" onclick="UI.go('training')">Review training</button>`:''}</div>
+      <div class="card"><div class="navsep" style="margin:0">Current Stop</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px">${esc(stop ? stop.label : 'Training block')}</div><p class="page-sub">${reviewPending?`${stop.key==='recovery'?'Medical':'Training'} review still pending.`:stop && stop.key==='match' ? (bye?'Bye weekend':'Ready for match day') : 'Advance one day at a time.'}</p>${reviewPending?`<button class="btn sm primary" onclick="UI.go('${stop.key==='recovery'?'injuryward':'training'}')">Review ${stop.key==='recovery'?'medical':'training'}</button>`:''}</div>
       <div class="card"><div class="navsep" style="margin:0">Fatigue Watch</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px;color:${lowCond.length?'var(--brass)':'var(--green)'}">${lowCond.length}</div><p class="page-sub">Main-squad players below 72 condition or above 62 load.</p></div>
       <div class="card"><div class="navsep" style="margin:0">Medical</div><div style="font-family:var(--disp);font-size:24px;font-weight:700;margin-top:4px;color:${injured?'var(--red)':'var(--green)'}">${injured}</div><p class="page-sub">Unavailable injured players.</p></div>
     </div>
