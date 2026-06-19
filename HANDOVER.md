@@ -4,6 +4,22 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Facility board expectations — Club Management board card now shows whether current facility standard meets prestige-tier expectations (Dynasty/Elite → avg Lv 4+, Strong → Lv 3+, Solid → Lv 2+); failing facilities listed by name in red.
+- Win confetti animation — CSS confetti (55 particles, 7 colours, 1.8–3.8s fall) fires on full-time win; auto-removed after 4.5s.
+- Personality-based contracts — `p.personality` ('money'/'winner'/'loyal'/'ambitious'/'homesick'/'balanced') assigned at player generation; affects salary demand in `demandFor()` and signing probability in `contractSignChance()`; shown on player modal, contract ledger, and signing modal.
+- Market position scarcity — `demandFor()` checks how many comparable free agents (same pos, within 8 OVR) are available; scarcity adds +18% (no competitors) or +9% (≤2) demand premium.
+- Hall of Fame: rep honour badges (Kangaroos/International/State Rep), dynasty badge for 3+ premierership winners, Club Legend tag and wall panel, club-only filter toggle, career milestone highlights.
+- Match Report: half-by-half score breakdown (1H/2H) in scorecard and stats table; possession % and completion % now computed per team and shown in all stat comparison tables.
+- Possession and completion in round results modal and inline post-match.
+- Mid-week game simulation: `simMatch()` is now idempotent; Thu/Fri AI fixtures simulate on their actual calendar day; calendar stops show game-night label and matchup details; popup modal shows early results.
+- Mid-season AI coach sackings: after Round 12, bottom-quartile teams on a 3+ loss run have ~22% chance of sacking per 3-round cycle; generates inbox news.
+- Clubs browser: prestige sort, HoF legend count on cards, "NEW" badge for new coaches; team modal lists HoF legends.
+- Squad page: "Reset sort" button appears when sort is non-default.
+
+---
+
+Previous session notes:
+
 - Weather tactical adjustment — on the Match Day pre-match page, if conditions are Heavy Rain or Windy, a "Conditions" card appears with a toggle between "Normal game plan" and "Adapt to conditions"; conservative play reduces try risk (×0.93) but halves the weather penalty on kicking accuracy, making structured goal-kicking football viable in bad weather; the per-team modifier is applied in simMatch so only the coached team is affected by their choice.
 - Full-time graphic — the watch game header flashes green (win) / red (loss) / grey (draw) for 900ms when FULL TIME fires; banner text upgraded to "FULL TIME — WIN/DRAW/LOSS".
 - More staff recommendations — attack coach flags in-form bench players; defence coach warns of low-morale run-on players; physio warns of high-load injury risk; existing fitness and development coach reports retained. All fire via `generateStaffRecommendations` post-round when appropriate staff are hired.
@@ -15,7 +31,6 @@ Updated every session.
 - Win/loss streak on Dashboard next match widget — shows "4× WIN STREAK" or "2× LOSS STREAK" in green/red when the coached team has 2+ consecutive results; slot badge (e.g. "Sat Night") shown below the matchup.
 - Rep status salary premium — `salaryFor()` now applies a multiplier: Kangaroos internationals +14% (OVR 70+), other international rep players +8% (OVR 65+), state reps +6% (OVR 70+); makes rep players command higher market rates.
 - Media snippets enriched — Predictions page now includes per-team form streaks ("on a 4-game winning run"), weather context when conditions are Heavy Rain or Windy, and names injured absentees.
-- Predictions media also names injured players by name (up to 2, then "+ N more").
 
 ---
 
@@ -226,28 +241,29 @@ cd api && node server.js
 - Growth switched from binary weekly roll to Poisson-distributed gains (~6x higher expected rate). Target of 2–5 OVR per season for a 20yo on full game time should now be achievable.
 - If the league feels it's progressing too fast, reduce `growExpected` values in `developPlayer` and `applyOffseasonDevelopment` (08-progression.js / 11-offseason.js).
 
-#### Match Scheduling — Multi-Day Rounds (nearly complete)
+#### Match Scheduling — Multi-Day Rounds (substantially complete)
 - `genFixtures` assigns a slot (Thu Night → Sun Night) to each game; no two share a slot.
 - Fixtures page sorts games by slot order and shows the slot label + post-match weather.
 - Match Day pre-match page shows the slot badge (e.g. "Sat Night") next to the round number.
-- Calendar's "Next 14 Days" shows the slot label on the match day card (e.g. "Home v Storm · Thu Night").
-- `simMatch` applies a time-of-day try modifier and adjusted weather pool.
-- Dashboard shows a "Round N Results" panel after each round.
-- Still needed: mid-week game results appearing in the feed as the calendar advances through the week (Thursday fixtures simulated on Thursday, not Saturday); no-simultaneous enforcement in calendar flow.
+- Calendar's "Next 14 Days" shows the slot label on the match day card and matchup detail for Thu/Fri game nights.
+- `simMatch` applies a time-of-day try modifier and adjusted weather pool; guard prevents re-simulation.
+- Thu/Fri AI matches simulate on their actual calendar day; popup shows early results; calendar stop shows matchup detail.
+- Dashboard shows a "Round N Results" panel after each round sorted by slot.
+- Still needed: coached team's match simulated on its actual slot day rather than always Saturday; Sunday late games modal.
 
 #### Bye Rounds — Partially Incomplete
 - Ladder awards 2 pts for completed bye rounds; form history shows "B" dot; ladder page shows "BYE" tag. ✅
 - Still needed: forced even-team-count byes, Origin round bye blocks, better multi-bye distribution per season.
 
 #### Post-Match, Inbox, Avatars, Scouting, Facilities, Contracts — Partial
-- Post-match: save full match reports per fixture for historical reopening; possession/completion rate; half-by-half breakdown.
-- Inbox: assistant coach recommendations, scout report items, player messages, read/unread state, direct action links.
+- Post-match: possession/completion % now computed and shown in all stat tables ✅; half-by-half breakdown ✅; save full match reports per fixture for historical reopening still to do.
+- Inbox: action buttons implemented ✅; read/unread state ✅; player messages and richer scout items still to do.
 - Player avatars: current procedural SVG too complex at small sizes — consider simplified bold cartoon, pixel sprites, or canvas approach.
-- Scouting: scout position-matching skill, richer region probabilities, prospect backstory.
-- Facilities: AI club facility tracking, guest facilities, facility prestige icons, board expectations.
-- Contracts: rep-status premiums, market scarcity by position, personality-based salary expectations.
-- Hall of Fame: rep honours, club legend halls, richer retired-player profiles, ceremony UX.
-- Development insights: attribute-level delta tab on player modal, offseason development review screen.
+- Scouting: prospect backstory ✅; scout position-matching skill, richer region probabilities still to do.
+- Facilities: board expectations ✅; AI club facility tracking still to do (AI teams use prestige-score estimate).
+- Contracts: rep-status premiums ✅; personality-based demand ✅; market scarcity by position ✅; ceremony UX for signings still to do.
+- Hall of Fame: rep honour badges ✅; club legend wall ✅; richer ceremony UX still to do.
+- Development insights: attribute-level delta tab on player modal ✅; offseason development review screen ✅.
 
 ---
 

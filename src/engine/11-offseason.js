@@ -555,6 +555,12 @@ function demandFor(p, toTeam){
   if(p.ambition>75) d*=1.08;
   if(p.morale<40) d*=1.1;
   if((p.form == null ? 50 : p.form) >= 72) d*=1.05;
+  // Market scarcity: fewer quality free agents at pos → higher demand
+  if(G.freeAgents && G.freeAgents.length){
+    const compFAs = G.freeAgents.map(id=>G.players[id]).filter(x=>x&&x.pos===p.pos&&x.id!==p.id&&x.ovr>=(p.ovr-8));
+    if(compFAs.length === 0) d *= 1.18;
+    else if(compFAs.length <= 2) d *= 1.09;
+  }
   const psnl = p.personality;
   if(psnl === 'money') d *= 1.14;
   if(psnl === 'ambitious') d *= 1.06;
