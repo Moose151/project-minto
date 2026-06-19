@@ -79,6 +79,7 @@ Object.assign(UI, {
         ${narrative ? `<p style="font-size:11px;color:var(--green);margin:0 0 6px;font-weight:600">${narrative}</p>` : ''}
         <p style="font-size:12px;color:var(--muted);margin:0 0 8px">Final club: ${team?`<span onclick="UI.teamModal(${team.id})" style="cursor:pointer;text-decoration:underline">${esc(h.team)}</span>`:esc(h.team || 'Free Agent')}</p>
         <div style="display:flex;flex-wrap:wrap;gap:4px">${awards || '<span style="color:var(--dim);font-size:12px">No major awards recorded.</span>'}</div>
+        <div class="btnrow" style="margin-top:10px"><button class="btn sm primary" onclick="UI.showHofCeremony(${h.id})">Ceremony</button></div>
       </div>`;
     };
 
@@ -100,5 +101,34 @@ Object.assign(UI, {
     </div>
     <div style="font-size:12px;color:var(--muted);margin:8px 0 12px">${rows.length} inductee${rows.length===1?'':'s'}${UI._hofClub?' (club only)':''}</div>
     <div class="grid2">${rows.map(hofCard).join('') || '<div class="card"><p style="color:var(--muted)">No Hall of Fame inductees yet. Legends will appear here when they retire.</p></div>'}</div>`;
+  },
+  showHofCeremony(id){
+    const h = (G.hallOfFame || []).find(x=>x.id===id);
+    if(!h) return;
+    const c = h.career || {};
+    const team = h.teamId != null && G.teams[h.teamId] ? G.teams[h.teamId] : null;
+    const awards = (h.awards || []).slice(0,6).map(a=>`<span class="pos-tag">${esc(a.year || '')} ${esc(a.award || '')}</span>`).join(' ');
+    const repLine = [h.repTeam, h.stateRep ? 'State Representative' : '', (c.premierships||0) ? `${c.premierships}x premiership winner` : ''].filter(Boolean).join(' · ');
+    UI.modal(`<div style="text-align:center;padding:4px 0 2px">
+      <div style="font-size:11px;color:var(--brass);font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">Hall of Fame Induction</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:12px">
+        ${team ? teamLogo(team,58) : ''}
+        <div style="width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,rgba(210,165,62,.22),rgba(255,255,255,.04));border:1px solid rgba(210,165,62,.5);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:34px;font-weight:900">${esc(String(h.name||'?').slice(0,1))}</div>
+      </div>
+      <h3 style="font-size:26px;margin:0 0 4px">${nationalityFlag(h.nationality)} ${esc(h.name)}</h3>
+      <p class="page-sub" style="margin:0 0 12px">${esc(h.pos || '')}${h.pos2?`/${esc(h.pos2)}`:''} · ${esc(h.team || 'Free Agent')} · Inducted ${h.inductionYear}</p>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;text-align:left;margin-bottom:12px">
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Legacy</div><div style="font-family:var(--disp);font-size:24px;font-weight:800;color:var(--brass)">${h.score || 0}</div></div>
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Peak OVR</div><div class="ovr ${ovrCls(h.peakOvr||0)}" style="font-size:22px">${h.peakOvr || '-'}</div></div>
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Games</div><div style="font-family:var(--disp);font-size:24px;font-weight:800">${c.games || 0}</div></div>
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Points</div><div style="font-family:var(--disp);font-size:24px;font-weight:800">${c.points || 0}</div></div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${repLine ? esc(repLine) : esc(h.quality || 'League legend')}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:12px">${awards || '<span style="font-size:12px;color:var(--dim)">No major awards recorded.</span>'}</div>
+      <div class="btnrow" style="justify-content:center">
+        <button class="btn primary" onclick="UI.closeModal()">Close</button>
+        ${team ? `<button class="btn" onclick="UI.closeModal();UI.teamModal(${team.id})">Final club</button>` : ''}
+      </div>
+    </div>`);
   },
 });
