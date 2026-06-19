@@ -39,6 +39,7 @@ Object.assign(UI, {
     if(res && (res.type === 'day' || res.type === 'round') && res.stop) UI.toast(res.stop.label);
     if(res && res.type==='round') UI.showRoundResults(res.round, `Round ${G.round} results`);
     if(res && res.type==='finals') UI.showRoundResults(res.games, res.label);
+    if(res && res.earlyMatches && res.earlyMatches.length) UI.showEarlyResults(res.earlyMatches);
   },
   showRoundResults(games, title){
     const myM = games.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);
@@ -204,5 +205,21 @@ Object.assign(UI, {
     }).join('');
     UI.modal(`<h3>${esc(title)}</h3>${big}${others?`<h2 class="sec">Around the grounds</h2><div>${others}</div>`:''}
       <div class="btnrow" style="margin-top:16px"><button class="btn primary" onclick="UI.closeModal()">Continue</button></div>`);
+  },
+  showEarlyResults(games){
+    if(!games || !games.length) return;
+    const dayLabel = games[0].slot ? games[0].slot.label : 'Early games';
+    const rows = games.map(m=>{
+      const th=G.teams[m.h], ta=G.teams[m.a];
+      return `<div class="score-line">
+        <span class="team-spine" style="background:${th.c1}"></span><span class="t ${m.hs>m.as?'winner':''}">${esc(th.nick)}</span><span class="s">${m.hs}</span>
+        <span style="color:var(--dim)">v</span>
+        <span class="s">${m.as}</span><span class="t ${m.as>m.hs?'winner':''}" style="text-align:right">${esc(ta.nick)}</span><span class="team-spine" style="background:${ta.c1}"></span>
+      </div>`;
+    }).join('');
+    UI.modal(`<h3>${esc(dayLabel)} Results</h3>
+      <p class="page-sub" style="margin-bottom:10px">${games.length} game${games.length===1?'':'s'} played tonight.</p>
+      <div>${rows}</div>
+      <div class="btnrow" style="margin-top:14px"><button class="btn primary" onclick="UI.closeModal()">Continue</button></div>`);
   },
 });

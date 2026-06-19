@@ -60,6 +60,7 @@ function zoneTacticsMod(t){
   return {a,d,k};
 }
 function simMatch(m, isFinal){
+  if(m.played) return m;
   const th = G.teams[m.h], ta = G.teams[m.a];
   if(!validateLineup(th)) autoPick(th);
   if(!validateLineup(ta)) autoPick(ta);
