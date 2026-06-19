@@ -219,6 +219,41 @@ function repChip(team){
   const key = String(team).toLowerCase().replace(/[^a-z]+/g,'-');
   return `<span class="rep-chip rep-${key}">${esc(team)}</span>`;
 }
+Object.assign(UI, {
+  showSigningCeremony(p, opts){
+    if(!p) return;
+    opts = opts || {};
+    const t = opts.team || myTeam();
+    const kind = opts.kind || 'Signing';
+    const salary = opts.salary == null ? contractAvg(p) : opts.salary;
+    const years = opts.years == null ? (p.years || 1) : opts.years;
+    const total = opts.total == null ? (salary * Math.max(1, years)) : opts.total;
+    const structure = opts.structure || contractTypeLabel(p.contractType || 'flat');
+    const role = opts.role || (p.promises ? promiseSummary(p) : 'No promises');
+    const tone = opts.tone || 'var(--brass)';
+    const sub = opts.sub || `${years} year${years===1?'':'s'} · ${money(salary)} avg/yr`;
+    UI.modal(`<div style="text-align:center;padding:4px 0 2px">
+      <div style="font-size:11px;color:${tone};font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px">${esc(kind)}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:12px">
+        ${teamLogo(t,56)}
+        <div style="width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,rgba(210,165,62,.18),rgba(255,255,255,.04));display:flex;align-items:center;justify-content:center;border:1px solid rgba(210,165,62,.45)">${playerAvatar(p,62)}</div>
+      </div>
+      <h3 style="margin:0 0 4px;font-size:24px">${esc(p.name)}</h3>
+      <p class="page-sub" style="margin:0 0 14px">${esc(t.nick)} · ${p.pos}${p.pos2?'/'+p.pos2:''} · Age ${p.age} · OVR ${p.ovr}</p>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:left;margin:0 0 12px">
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Terms</div><div style="font-weight:800;font-family:var(--disp);font-size:20px">${esc(sub)}</div></div>
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Total Value</div><div style="font-weight:800;font-family:var(--disp);font-size:20px">${money(total)}</div></div>
+        <div class="card" style="padding:10px"><div style="font-size:10px;color:var(--muted)">Structure</div><div style="font-weight:800;font-family:var(--disp);font-size:20px">${esc(structure)}</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px">${esc(role)}</p>
+      <div class="btnrow" style="justify-content:center">
+        <button class="btn primary" onclick="UI.closeModal();UI.go('${opts.nextPage || 'squad'}')">${esc(opts.nextLabel || 'View squad')}</button>
+        <button class="btn" onclick="UI.closeModal();UI.playerModal(${p.id})">Player profile</button>
+        <button class="btn" onclick="UI.closeModal()">Close</button>
+      </div>
+    </div>`);
+  }
+});
 function stateRepChip(state){
   if(!state) return '';
   const key = String(state).toLowerCase().replace(/[^a-z]+/g,'-');

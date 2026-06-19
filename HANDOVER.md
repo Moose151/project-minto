@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Signing ceremony UX — accepted free-agent deals, train & trial contracts, youth prospect signings, contract upgrades, and extensions now show a polished signing modal with player/team visuals, terms, total value, structure, and quick navigation.
 - Scouting position matching — scouts now have positional specialties; targeted scouting chance scales by scout ability and specialty, target buttons show hit chance, and returned prospects note whether the requested position was matched.
 - Weather engine depth — match weather now flows into player stat lines: rain/wind/humidity increase individual handling-error risk, reduce kick metres, and make 40/20s/repeat-set kicks harder; conservative bad-weather tactics reduce the coached side's handling penalty.
 - Historical match reports widened — every completed fixture on the Fixtures page now has a "Match report" button; the full analysis page renders coached-team matches from coach perspective and neutral AI matches as a final report.
@@ -267,7 +268,7 @@ cd api && node server.js
 - Player avatars: current procedural SVG too complex at small sizes — consider simplified bold cartoon, pixel sprites, or canvas approach.
 - Scouting: prospect backstory ✅; scout position-matching skill ✅; richer region probabilities still to do.
 - Facilities: board expectations ✅; AI club facility tracking still to do (AI teams use prestige-score estimate).
-- Contracts: rep-status premiums ✅; personality-based demand ✅; market scarcity by position ✅; ceremony UX for signings still to do.
+- Contracts: rep-status premiums ✅; personality-based demand ✅; market scarcity by position ✅; ceremony UX for signings ✅.
 - Hall of Fame: rep honour badges ✅; club legend wall ✅; richer ceremony UX still to do.
 - Development insights: attribute-level delta tab on player modal ✅; offseason development review screen ✅.
 

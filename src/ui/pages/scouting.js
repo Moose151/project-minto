@@ -204,6 +204,7 @@ Object.assign(UI, {
     UI.toast(`${p.name} signed to the youth squad.`);
     addNews(`${p.name} (${p.pos}, ${p.age}yo) signs with the ${t.nick} youth squad from the scouting pipeline.`, {title:'Youth Squad Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Scouting'});
     UI.render();
+    UI.showSigningCeremony(p, {team:t, kind:'Youth Squad Signing', salary:cost, years:2, total:cost*2, structure:'Youth contract', role:'Youth squad · salary cap exempt', nextPage:'squad'});
   },
 
   dismissProspect(playerId){

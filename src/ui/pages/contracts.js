@@ -172,7 +172,18 @@ Object.assign(UI, {
       p.trialBreakout = false;
       UI.toast(`${p.name} re-signed on a ${contractTypeLabel(p.contractType).toLowerCase()} deal.`);
       addNews(`${p.name} re-signs with the ${t.nick} on a ${contractTypeLabel(p.contractType).toLowerCase()} deal averaging ${money(contractAvg(p))}. Promises: ${promiseSummary(p)}.`, {title:'Contract Extension', type:'contract', tone:'good', playerId:p.id, teamId:t.id, tag:'Contracts'});
-      UI.closeModal(); UI.render();
+      UI.render();
+      UI.showSigningCeremony(p, {
+        team:t,
+        kind:'Contract Extension',
+        salary:contractAvg(p),
+        years:p.years || o.years,
+        total:contractTotal(p),
+        structure:contractTypeLabel(p.contractType),
+        role:`Promises: ${promiseSummary(p)}`,
+        nextPage:'contracts',
+        nextLabel:'View contracts'
+      });
     } else {
       UI.toast(`${p.name} rejected the offer.`);
       UI.renderContractOffer();
@@ -288,5 +299,16 @@ Object.assign(UI, {
     UI.toast(`${p.name} re-signed for ${money(demand)}.`);
     addNews(`${p.name} re-signs with the ${t.nick}.`, {title:'Contract Extension', type:'contract', tone:'good', playerId:p.id, teamId:t.id, tag:'Contracts'});
     UI.render();
+    UI.showSigningCeremony(p, {
+      team:t,
+      kind:'Contract Extension',
+      salary:contractAvg(p),
+      years:p.years || (p.age<=26 ? 3 : 2),
+      total:contractTotal(p),
+      structure:contractTypeLabel(p.contractType),
+      role:'No promises',
+      nextPage:'contracts',
+      nextLabel:'View contracts'
+    });
   }
 });

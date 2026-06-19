@@ -259,9 +259,9 @@ Object.assign(UI, {
     G.freeAgents = (G.freeAgents || []).filter(pid => pid !== id);
     if(G.offseason) G.offseason.freeAgents = (G.offseason.freeAgents || []).filter(pid => pid !== id);
     addNews(`${p.name} joins ${t.nick} on a train & trial contract.`, {title:'T&T Signing', type:'recruitment', tone:'good', playerId:id, teamId:t.id, tag:'Recruitment'});
-    UI.closeModal();
     UI.toast(`${p.name} signed on a T&T deal at ${money(trialSalary)}/yr.`);
     UI.render();
+    UI.showSigningCeremony(p, {team:t, kind:'Train & Trial Signing', salary:trialSalary, years:1, total:trialSalary, structure:'Train & Trial', role:`Depth contract · up to ${TRIAL_GAME_CAP} games`, nextPage:'squad'});
   },
 
   renderFreeAgentOffer(){
@@ -317,7 +317,18 @@ Object.assign(UI, {
         addNews(`${p.name} joins the ${t.nick} as a free agent.`, {title:'Free Agent Signing', type:'recruitment', tone:'good', playerId:p.id, teamId:t.id, tag:'Recruitment'});
       }
       UI.toast(`${p.name} signed for ${money(o.salary)}.`);
-      UI.closeModal(); UI.render();
+      UI.render();
+      UI.showSigningCeremony(p, {
+        team:t,
+        kind:o.isTrialUpgrade ? 'Contract Upgrade' : 'Free Agent Signing',
+        salary:contractAvg(p),
+        years:p.years || o.years,
+        total:contractTotal(p),
+        structure:contractTypeLabel(p.contractType),
+        role:`Promises: ${promiseSummary(p)}`,
+        nextPage:'contracts',
+        nextLabel:'View contracts'
+      });
     } else {
       UI.toast(`${p.name} rejected the offer.`);
       UI.renderFreeAgentOffer();
