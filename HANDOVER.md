@@ -4,6 +4,13 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Match feed conversion labels — ✓/✗ icons on try events replaced with colour-coded `CONV` / `NO CONV` text in all scoring timelines (live feed, post-match inline, round-results modal).
+- Team sheet bench rows fixed — bench slots (14-17) now show a compact meta (pos tag, OVR, condition, fatigue, form, specialist) instead of the full playerMeta which could collapse the name/photo due to overflow from the `white-space:nowrap` fit-pill.
+- Team sheet nationality clutter — rep-team label ("Kangaroos", "Kiwis", etc.) removed from all team sheet player rows; only the nationality flag remains.
+- Confirm Team List — added a prominent banner + button on the team sheet page to explicitly submit the 19-man squad; banner turns green on submission; Tuesday advance gate now also requires confirmation (not just a valid lineup); bye weeks are exempt.
+- Recruitment approach scroll fix — `doApproach` explicitly saves and restores scroll position via `requestAnimationFrame` after rendering, in addition to the existing `render()` scroll logic.
+- Recruitment final-year filter — added "Final year only" checkbox to the Browse tab (highlights players on ≤1 year left) and a "Final year" toggle button on the Free Agents tab; resets with Reset Filters.
+- Training page filters — added position filter buttons (All / FB / WG / … / LK) and a sort dropdown (youngest / OVR / load / condition / form / potential / name) above the individual training table, with a Reset button when non-default.
 - Watch Game full-time siren — full-time now triggers a short SIREN overlay in the match header with win/draw/loss colouring, alongside the existing banner flash and win confetti.
 - NRL Standard preset corrected — wizard now advertises and generates 17 NRL clubs with a 27-round regular season, $10.2M cap, and existing top-8 finals.
 - Inbox player messages — added direct player-message generation for low morale, youth pathway, and hot-form situations, with cooldowns, player links, and a dedicated Inbox filter.
@@ -319,6 +326,26 @@ cd api && node server.js
 #### Lower Leagues & Expansion
 - Second-tier competition, promotion/relegation, club merger/dissolution.
 
+#### Staff Market — Periodic Refresh
+- The available-for-hire coach/staff list should refresh periodically during the season with new candidates.
+- Cap the pool at 10–12 coaches maximum; if a candidate hasn't been hired after a few months, drop them from the pool to make room for fresh names.
+
+#### AI Club — Coaching Changes
+- AI clubs should hire and fire coaches during the season based on on-field performance (e.g. poor run of form) and club financial health.
+- Fire decisions should mirror the mid-season AI sacking logic already in place; hiring should pull from the same staff market pool.
+
+#### Club Management — Ticket & Membership Price Comparison
+- On the Club Management page, show how the coached club's home ticket price and season membership price compare to the league average and the highest/lowest prices set by other clubs.
+
+#### Match Scheduling — Authentic NRL Week Structure
+- Typical NRL round: 1 game Thursday, 2 Friday (5pm + 7pm), 3 Saturday (2pm + 5pm + 7pm), 2 Sunday (4pm + 6pm), 1 bye.
+- Some rounds may vary (e.g. 3 Sunday, 2 Tuesday for Magic Round or holiday rounds) but the standard above should be the default.
+- Slot times should be reflected in the existing slot-label system (Thu Night, Fri Afternoon/Night, Sat Afternoon/Twilight/Night, Sun Afternoon/Night).
+
+#### Draw Generation — Season Variety & Turnaround Fairness
+- Each season should generate a different draw where every team plays every other team once at home and once away (or as close as the round count allows).
+- Scheduling should consider turnaround time: a team that plays the last game on Sunday (e.g. 6pm) should not be assigned the first game of the following Thursday (5pm) if avoidable, though clashes may occasionally occur.
+
 ---
 
 ### 💡 QoL Improvements
@@ -331,7 +358,7 @@ All items from the prior session were implemented. Items to consider for a futur
 
 ### 🐛 Known Bugs
 
-No outstanding known bugs. (Previous three bugs — minor sponsors missing, WG/CE overlap, OVR delta badge — all resolved this session.)
+No outstanding known bugs. (All seven items from the previous list resolved this session — see Latest Session Notes.)
 
 ---
 
@@ -342,6 +369,13 @@ No outstanding known bugs. (Previous three bugs — minor sponsors missing, WG/C
 | Minor sponsors not shown in Club Management | Added dedicated Sponsorship section to club-management.js showing all active deals |
 | WG/CE overlap on team sheet pitch | Increased y-gap to 14% (WG y:83, CE y:69) and pushed WG flanks to x:91/9 |
 | OVR delta badge missing for mid-season signings | `seasonStartOvr` now set in `submitFreeAgentOffer` and `_confirmTrialSign` |
+| Match feed ✓/✗ mystery icons | Replaced with colour-coded `CONV` / `NO CONV` text in all scoring timelines |
+| Bench player name/photo missing | Bench slots (14-17) now use compact meta; removed `white-space:nowrap` fit-pill overflow that collapsed pname |
+| Team sheet rep-team label clutter | Removed `p.repTeam` text from team sheet rows; nationality flag only |
+| Team list confirmation missing | Added explicit Confirm button + Tuesday gate requires `t.teamSubmitted === G.round` |
+| Recruitment approach scroll | `doApproach` now explicitly saves/restores `m.scrollTop` via `requestAnimationFrame` |
+| Recruitment final-year filter | "Final year only" checkbox in Browse; "Final year" toggle in Free Agents tab |
+| Training no filter/sort | Added position filter buttons + sort dropdown (OVR/load/cond/form/pot/name) |
 | Signing % re-rolled every render | `demand` cached in `UI._contractOffer.demand` on modal open |
 | Captain promise reduced own signing % | Check excludes `x.id !== p.id` in captain count |
 | Try cap at 6 | Changed clamp max to 9 |

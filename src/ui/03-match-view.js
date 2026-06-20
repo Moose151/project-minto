@@ -29,6 +29,15 @@ Object.assign(UI, {
         <div class="btnrow"><button class="btn primary" onclick="UI.closeModal();UI.go('teamsheet')">Fix team sheet</button><button class="btn" onclick="UI.closeModal()">Close</button></div>`);
       return;
     }
+    if(stop && stop.key === 'selection' && !onBye && G.phase === 'regular'){
+      const t = myTeam();
+      if(t.teamSubmitted !== G.round){
+        UI.modal(`<h3>Team List Not Submitted</h3>
+          <p class="page-sub">You must confirm your team list on the team sheet before the Tuesday deadline.</p>
+          <div class="btnrow"><button class="btn primary" onclick="UI.closeModal();UI.go('teamsheet')">Go to Team Sheet</button><button class="btn" onclick="UI.closeModal()">Cancel</button></div>`);
+        return;
+      }
+    }
     const res = G.phase === 'regular' && typeof advanceCalendarDay === 'function' ? advanceCalendarDay() : advanceRound();
     autoSave();
     if(res && (res.type === 'day' || res.type === 'round') && res.stop && res.stop.page && UI.page !== res.stop.page){
@@ -103,7 +112,7 @@ Object.assign(UI, {
           return `<div style="display:flex;gap:6px;align-items:baseline;padding:4px 6px;border-left:3px solid ${col};margin:2px 0;font-size:12px">
             <span style="color:var(--dim);font-size:10px;width:24px;flex-shrink:0">${ev.min}'</span>
             <span style="color:${col};font-weight:700;width:28px;flex-shrink:0;font-size:10px">TRY</span>
-            <span style="flex:1">${esc(scorer?scorer.name:'?')}${assist?` <span style="color:var(--muted)">(${esc(assist.name)})</span>`:''}${ev.converted?' ✓':' ✗'} <span style="color:var(--muted);font-size:10px">${esc(team.nick)}</span></span>
+            <span style="flex:1">${esc(scorer?scorer.name:'?')}${assist?` <span style="color:var(--muted)">(${esc(assist.name)})</span>`:''} <span style="font-size:10px;color:${ev.converted?'var(--green)':'var(--red)'}">${ev.converted?'CONV':'NO CONV'}</span> <span style="color:var(--muted);font-size:10px">${esc(team.nick)}</span></span>
             <span style="font-family:var(--disp);font-weight:700;font-size:12px;color:var(--brass)">${sH}–${sA}</span>
           </div>`;
         }

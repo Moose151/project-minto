@@ -16,6 +16,7 @@ Object.assign(UI, {
   _faSalaryValue: '',
   _faAffordable: false,
   _faReady: false,
+  _recFinalYear: false,
 
   p_recruitment(){
     const sl = G.coach.shortlist || [];
@@ -114,17 +115,19 @@ Object.assign(UI, {
       ? `<div class="card" style="padding:6px;overflow-x:auto"><table>${tableHead}<tbody>${shortlisted.map(row).join('')}</tbody></table></div>`
       : `<div class="card"><p style="color:var(--muted)">No players shortlisted yet. Browse below and tap ☆ to watch a player.</p></div>`;
 
+    const browseFinal = browse.filter(p => !UI._recFinalYear || (p.years != null && p.years <= 1));
     const browseContent = `
       <div class="btnrow" style="flex-wrap:wrap">${posFilters}</div>
-      <div class="btnrow" style="align-items:center">
+      <div class="btnrow" style="align-items:center;flex-wrap:wrap">
         ${select('_recAge', [['all','All ages'],['u21','21 and under'],['22-26','22-26'],['27-30','27-30'],['31+','31+']])}
         ${select('_recOvr', [['all','Any OVR'],['60','OVR 60+'],['70','OVR 70+'],['80','OVR 80+'],['under60','Under 60']])}
         ${select('_recPot', [['all','Any potential'],['60','POT 60+'],['70','POT 70+'],['80','POT 80+'],['under60','POT under 60']])}
         ${select('_recSort', [['ovr','Sort: OVR'],['pot','Sort: potential'],['age','Sort: youngest'],['ageOld','Sort: oldest'],['salary','Sort: salary'],['form','Sort: form'],['runs','Sort: runs'],['tries','Sort: tries'],['tackles','Sort: tackles'],['fantasy','Sort: fantasy'],['goal','Sort: goal kicking'],['kicking','Sort: general kicking'],['speed','Sort: speed'],['playmaking','Sort: playmaking'],['defence','Sort: defence']])}
+        <label style="display:flex;gap:6px;align-items:center;color:var(--brass);font-size:12px;white-space:nowrap"><input type="checkbox" ${UI._recFinalYear?'checked':''} onchange="UI._recFinalYear=this.checked;UI.render()"> Final year only</label>
       </div>
       <div class="card" style="padding:6px;overflow-x:auto;max-height:520px">
-        <table>${tableHead}<tbody>${browse.slice(0,60).map(row).join('')}</tbody></table>
-        ${browse.length>60?`<p style="color:var(--muted);font-size:12px;padding:6px">Showing top 60 — filter by position to narrow results.</p>`:''}
+        <table>${tableHead}<tbody>${browseFinal.slice(0,60).map(row).join('')}</tbody></table>
+        ${browseFinal.length>60?`<p style="color:var(--muted);font-size:12px;padding:6px">Showing top 60 — filter by position to narrow results.</p>`:''}
       </div>`;
 
     const minAge = UI._faMinAge === '' ? null : Number(UI._faMinAge);
@@ -153,6 +156,7 @@ Object.assign(UI, {
           <label style="display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin:0 0 8px"><input type="checkbox" ${UI._faAffordable?'checked':''} onchange="UI._faAffordable=this.checked;UI.render()"> Affordable only</label>
           <label style="display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin:0 0 8px"><input type="checkbox" ${UI._faReady?'checked':''} onchange="UI._faReady=this.checked;UI.render()"> Age &gt;21 and OVR &gt;75</label>
           <button class="btn sm" onclick="UI.resetFreeAgentFilters()">Reset Filters</button>
+          <button class="btn sm${UI._recFinalYear?' primary':''}" onclick="UI._recFinalYear=!UI._recFinalYear;UI.render()" title="Show only players on their final year of contract or off-contract">Final year</button>
         </div>
         <p style="font-size:11px;color:var(--muted);margin:4px 0 0">Cap room: <b>${money(capRoom)}</b> · ${freeAgents.length} free agent${freeAgents.length===1?'':'s'} match.</p>
       </div>
@@ -182,6 +186,7 @@ Object.assign(UI, {
     UI._faSalaryValue = '';
     UI._faAffordable = false;
     UI._faReady = false;
+    UI._recFinalYear = false;
     UI._recSort = 'ovr';
     UI._recSortDir = 'desc';
     UI.render();
@@ -196,7 +201,10 @@ Object.assign(UI, {
     const club = G.teams.find(t=>t.players.includes(id));
     addNews(`${G.coach.name} lodges a pre-contract approach for ${p.name} (${club?club.nick:'free agent'}).`, {title:'Pre-Contract Approach', type:'recruitment', tone:'neutral', playerId:id, tag:'Recruitment'});
     UI.toast(`Pre-contract approach made to ${p.name}.`);
+    const m = document.getElementById('main');
+    const prevTop = m ? m.scrollTop : 0;
     UI.render();
+    if(m && prevTop > 0) requestAnimationFrame(() => { m.scrollTop = prevTop; });
   },
 
   signFreeAgent(id){

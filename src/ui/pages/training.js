@@ -2,6 +2,9 @@
 
 /* Training — weekly focus + developing-players table */
 Object.assign(UI, {
+  _trainPos: 'all',
+  _trainSort: 'age',
+
   p_training(){
     const t = myTeam();
     const opts = [
@@ -12,7 +15,16 @@ Object.assign(UI, {
       ['youth','Youth development','Doubles down on players 21 and under.'],
       ['recovery','Recovery focus','Squad recovers more condition each week — fewer soft-tissue injuries.']
     ];
-    const players = t.players.map(id=>G.players[id]).filter(Boolean).sort((a,b)=>a.age-b.age || b.ovr-a.ovr);
+    const trainSortVal = p => ({
+      age: p.age, ovr: -p.ovr, load: -(p.load||0), cond: -(p.cond||0),
+      pot: -(scoutedPotential(p).mid||0), name: p.name, form: formText(p)
+    }[UI._trainSort] ?? p.age);
+    const players = t.players.map(id=>G.players[id]).filter(Boolean)
+      .filter(p => UI._trainPos === 'all' || p.pos === UI._trainPos || p.pos2 === UI._trainPos)
+      .sort((a,b) => {
+        const av = trainSortVal(a), bv = trainSortVal(b);
+        return typeof av === 'string' ? av.localeCompare(bv) : av - bv || b.ovr - a.ovr;
+      });
     const cal = typeof ensureCalendar === 'function' ? ensureCalendar() : null;
     const stop = cal && typeof calendarStopForDay === 'function' ? calendarStopForDay(cal.day) : null;
     const reviewDue = stop && stop.key === 'training' && cal.trainingReviewedDay !== cal.day;
@@ -51,6 +63,11 @@ Object.assign(UI, {
       `<tr class="click" onclick="UI.playerModal(${p.id})"><td>${esc(p.name)} <span class="pos-tag">${p.pos}</span></td><td class="num">${p.age}</td><td class="num"><span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span></td><td class="num">${potHtml(p)}</td><td class="num" style="color:var(--green)">+${Math.max(0, scoutedPotential(p).mid-p.ovr)}</td></tr>`).join('')}
     </tbody></table></div>
     <h2 class="sec">Individual training</h2>
+    <div class="btnrow" style="flex-wrap:wrap;margin-bottom:6px">
+      ${['all','FB','WG','CE','FE','HB','PR','HK','SR','LK'].map(pos=>`<button class="btn sm ${UI._trainPos===pos?'primary':''}" onclick="UI._trainPos='${pos}';UI.render()">${pos==='all'?'All':pos}</button>`).join('')}
+      <select style="max-width:180px;margin-left:8px" onchange="UI._trainSort=this.value;UI.render()">${[['age','Sort: youngest'],['ovr','Sort: OVR'],['load','Sort: load'],['cond','Sort: condition'],['form','Sort: form'],['pot','Sort: potential'],['name','Sort: name']].map(([v,l])=>`<option value="${v}" ${UI._trainSort===v?'selected':''}>${l}</option>`).join('')}</select>
+      ${UI._trainPos!=='all'||UI._trainSort!=='age'?`<button class="btn sm" onclick="UI._trainPos='all';UI._trainSort='age';UI.render()">Reset</button>`:''}
+    </div>
     <div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr>
       <th class="noclick">Player</th><th class="noclick">Specialist</th><th class="noclick num">Age</th><th class="noclick num">OVR</th><th class="noclick">Focus</th><th class="noclick">Retrain position</th><th class="noclick">Retrain specialist</th>
     </tr></thead><tbody>${players.map(p=>`<tr class="click" onclick="UI.playerModal(${p.id})">

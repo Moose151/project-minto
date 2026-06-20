@@ -78,10 +78,14 @@ Object.assign(UI, {
       if(!p) return `<div class="sheet-row empty" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})"><span class="jersey" style="background:#707783;color:#111">${s.n}</span><span class="pname">Select player...</span><span class="pmeta">${s.pos}</span></div>`;
       const fit = positionFitLevel(p,i).level;
       const jerseyBg = fitColour(fit);
-      return `<div class="sheet-row fit-${positionFitLevel(p,i).level}" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})" draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()">
+      const isBench = i >= 13;
+      const fatigue = Math.round(p.fatigue || ((100-p.cond)*0.72 + (p.load||0)*0.48));
+      const fatigueHtml = fatigue >= 72 || p.cond < 62 || (p.load||0) > 74 ? ` · <span style="color:var(--red)">fatigue ${fatigue}</span>` : fatigue >= 55 ? ` · <span style="color:var(--brass)">fatigue ${fatigue}</span>` : '';
+      const benchMeta = `${nationalityFlag(p.nationality)} <span class="pos-tag" style="font-size:10px">${p.pos}</span> <span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · cond ${Math.round(p.cond)}${fatigueHtml} · form ${formText(p)} · ${specialistLabel(p)}`;
+      return `<div class="sheet-row fit-${fit}" onclick="UI.pickSlot(${i})" ondragover="event.preventDefault()" ondrop="UI.dropOnSlot(event,${i})" draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()">
         <span class="jersey" style="background:${jerseyBg};color:${contrastText(jerseyBg)}">${s.n}</span>
         <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)} ${roleBits(p)}</span>
-        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}${playerMeta(p, i)}</span>
+        <span class="pmeta">${isBench ? benchMeta : nationalityFlag(p.nationality)+' '+playerMeta(p, i)}</span>
       </div>`;
     };
     const squadRow = p => {
@@ -94,7 +98,7 @@ Object.assign(UI, {
       return `<div class="squad-drag-row ${canDrag?'':'disabled'}" ${canDrag?`draggable="true" ondragstart="UI.dragPlayer(event,${p.id})" ondragend="UI.dragEnd()"`:''} onclick="UI.playerModal(${p.id})">
         <span class="pos-tag">${p.pos}${p.pos2?`/${p.pos2}`:''}</span>
         <span class="pname">${playerAvatar(p,28)} ${playerStatusIcons(p)} ${esc(p.name)}${trialBadge}${inIdx>=0?` <span style="color:var(--brass);font-size:11px">#${SLOTS[inIdx].n}</span>`:''}</span>
-        <span class="pmeta">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam)+' · ':''}<span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'youth':isTrial?`T&T ${trialGamesUsed(p)}/${TRIAL_GAME_CAP}g`:Math.round(p.cond)+'%'}${fatigueBit}</span>
+        <span class="pmeta">${nationalityFlag(p.nationality)} <span class="ovr ${ovrCls(p.ovr)}" style="font-size:13px">${p.ovr}</span> · form ${formHtml(p)} · ${specialistLabel(p)} · ${p.squad==='dev'?'youth':isTrial?`T&T ${trialGamesUsed(p)}/${TRIAL_GAME_CAP}g`:Math.round(p.cond)+'%'}${fatigueBit}</span>
       </div>`;
     };
 
@@ -144,6 +148,26 @@ Object.assign(UI, {
       <div class="dash-status"><div class="dash-label">Captain</div><div class="dash-value" style="font-size:20px">${cap?esc(cap.name.split(' ').slice(-1)[0]):'-'}</div><div class="dash-sub">${cap?'leadership '+cap.attrs.leadership:'set tactics'}</div></div>
       <div class="dash-status"><div class="dash-label">Kickers</div><div class="dash-value" style="font-size:20px">${gk?esc(gk.name.split(' ').slice(-1)[0]):'-'}</div><div class="dash-sub">${pk?'territory '+esc(pk.name.split(' ').slice(-1)[0]):'set tactics'}</div></div>
     </div>
+    ${(()=>{
+      const onBye = G.phase==='regular' && ((G.byes && G.byes[G.round])||[]).includes(G.coach.teamId);
+      const submitted = !onBye && t.teamSubmitted === G.round;
+      const issues = lineupIssues(t);
+      if(!onBye && !submitted && issues.length === 0){
+        return `<div class="card" style="border-color:var(--brass);padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <b style="color:var(--brass)">Team List Not Submitted</b>
+            <p style="font-size:12px;color:var(--muted);margin:2px 0 0">Confirm your 19 before the Tuesday deadline to advance.</p>
+          </div>
+          <button class="btn primary" onclick="UI.confirmTeamList()">Confirm Team List</button>
+        </div>`;
+      } else if(!onBye && submitted){
+        return `<div class="card" style="border-color:var(--green);padding:8px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="color:var(--green);font-weight:700">✓ Team list submitted for Round ${G.round+1}</span>
+          <button class="btn sm" onclick="myTeam().teamSubmitted=null;UI.render()">Undo</button>
+        </div>`;
+      }
+      return '';
+    })()}
     <div class="btnrow">
       <button class="btn primary" onclick="autoPick(myTeam());UI.render();UI.toast('Best 19 selected.')">Auto-pick best 19</button>
       <button class="btn danger" onclick="UI.clearTeamSelection()">Clear selection</button>
@@ -260,6 +284,21 @@ Object.assign(UI, {
     if(!confirm('Clear the entire match-day selection?')) return;
     myTeam().lineup = Array(19).fill(null);
     UI.toast('Team sheet cleared.');
+    UI.render();
+  },
+
+  confirmTeamList(){
+    const t = myTeam();
+    const issues = lineupIssues(t);
+    if(issues.length){
+      UI.modal(`<h3>Team Sheet Not Compliant</h3>
+        <p class="page-sub">Fix these issues before confirming.</p>
+        <div class="card" style="padding:10px">${issues.map(x=>`<div style="padding:4px 0;color:var(--red)">${esc(x)}</div>`).join('')}</div>
+        <div class="btnrow"><button class="btn primary" onclick="UI.closeModal()">OK</button></div>`);
+      return;
+    }
+    t.teamSubmitted = G.round;
+    UI.toast('Team list confirmed and submitted for Round ' + (G.round + 1) + '.');
     UI.render();
   },
 });
