@@ -8,7 +8,7 @@ const UI = {
 
   nav(){
     if(UI.inWizard && UI.inWizard()){ document.getElementById('nav').innerHTML = ''; return; }
-    const items = [['dashboard','Dashboard'],['inbox','Inbox'],['squad','Squad'],['teamsheet','Team Sheet'],['injuryward','Injury Ward'],['matchday','Match Day'],['tactics','Tactics'],['training','Training'],['SEP','Competition'],['calendar','Calendar'],['fixtures','Fixtures'],['ladder','Ladder'],['stats','Stat Leaders'],['fantasy','Fantasy'],['teams','Clubs'],['predictions','Predictions'],['SEP','Club & Career'],['recruitment','Recruitment'],['contracts','Contracts'],['staff','Staff'],['scouting','Scouting'],['coach','Coach Profile'],['club-management','Club Management'],['achievements','Achievements'],['halloffame','Hall of Fame'],['records','Records'],['history','History'],['options','Options']];
+    const items = [['dashboard','Dashboard'],['inbox','Inbox'],['squad','Squad'],['teamsheet','Team Sheet'],['injuryward','Injury Ward'],['matchday','Match Day'],['tactics','Tactics'],['training','Training'],['SEP','Competition'],['calendar','Calendar'],['fixtures','Fixtures'],['ladder','Ladder'],['stats','Stat Leaders'],['seasonleaders','Season Leaders'],['fantasy','Fantasy'],['teams','Clubs'],['predictions','Predictions'],['SEP','Club & Career'],['recruitment','Recruitment'],['contracts','Contracts'],['staff','Staff'],['scouting','Scouting'],['coach','Coach Profile'],['club-management','Club Management'],['achievements','Achievements'],['halloffame','Hall of Fame'],['records','Records'],['history','History'],['options','Options']];
     const inboxUnread = G && G.news ? G.news.filter(n=>!n.read).length : 0;
     document.getElementById('nav').innerHTML = items.map(([k,l])=> k==='SEP'
       ? `<div class="navsep">${l}</div>`

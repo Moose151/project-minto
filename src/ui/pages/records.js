@@ -3,6 +3,7 @@
 /* Records — league-wide and club-scoped player records */
 Object.assign(UI, {
   _recordClub: 'all',
+  _recView: 'career',
 
   p_records(){
     const players = Object.values(G.players || {});
@@ -68,44 +69,52 @@ Object.assign(UI, {
       return out;
     };
 
+    const tabs = [['career','Career Records'],['season','Single-Season Records'],['club','Club Records']];
     const selectedTeam = selectedClubId == null ? null : G.teams[selectedClubId];
+
+    let content = '';
+    if(UI._recView === 'career'){
+      content = `<h2 class="sec">League Career Records</h2>
+        <div class="grid3">
+          ${topRows(careerItems('games'), 'games', 'Career Games')}
+          ${topRows(careerItems('tries'), 'tries', 'Career Tries')}
+          ${topRows(careerItems('points'), 'points', 'Career Points')}
+          ${topRows(careerItems('ta'), 'ta', 'Career Try Assists')}
+          ${topRows(careerItems('tk'), 'tk', 'Career Tackles')}
+          ${topRows(careerItems('fdo'), 'fdo', 'Career Forced Drop-Outs')}
+        </div>`;
+    } else if(UI._recView === 'season'){
+      content = `<h2 class="sec">Single-Season Records</h2>
+        <div class="grid3">
+          ${topRows(seasonItems('t'), 't', 'Season Tries')}
+          ${topRows(seasonItems('ta'), 'ta', 'Season Try Assists')}
+          ${topRows(seasonItems('m'), 'm', 'Season Run Metres')}
+          ${topRows(seasonItems('tk'), 'tk', 'Season Tackles')}
+          ${topRows(seasonItems('fpts'), 'fpts', 'Season Fantasy Points')}
+          ${topRows(seasonItems('avg'), 'avg', 'Season Avg Rating', {valueLabel:'Avg'})}
+        </div>`;
+    } else {
+      content = `<div class="card history-controls">
+          <div class="field"><label>Filter by club</label><select onchange="UI._recordClub=this.value;UI.render()">
+            ${clubOptions.map(([v,l])=>`<option value="${v}" ${UI._recordClub===v?'selected':''}>${esc(l)}</option>`).join('')}
+          </select></div>
+        </div>
+        <h2 class="sec">${selectedTeam ? esc(selectedTeam.nick) : 'All Clubs'} — Club Records</h2>
+        <div class="grid3">
+          ${topRows(clubItems('games'), 'games', 'Club Games')}
+          ${topRows(clubItems('tries'), 'tries', 'Club Tries')}
+          ${topRows(clubItems('points'), 'points', 'Club Points')}
+          ${topRows(clubItems('ta'), 'ta', 'Club Try Assists')}
+          ${topRows(clubItems('tk'), 'tk', 'Club Tackles')}
+          ${topRows(clubItems('fdo'), 'fdo', 'Club Forced Drop-Outs')}
+        </div>`;
+    }
+
     return `<h1 class="page">Records</h1>
       <p class="page-sub">League-wide player records and club-scoped records from the current save.</p>
-
-      <div class="card history-controls">
-        <div class="field"><label>Club records scope</label><select onchange="UI._recordClub=this.value;UI.render()">
-          ${clubOptions.map(([v,l])=>`<option value="${v}" ${UI._recordClub===v?'selected':''}>${esc(l)}</option>`).join('')}
-        </select></div>
+      <div class="btnrow" style="margin-bottom:14px">
+        ${tabs.map(([k,l])=>`<button class="btn ${UI._recView===k?'primary':''}" onclick="UI._recView='${k}';UI.render()">${l}</button>`).join('')}
       </div>
-
-      <h2 class="sec">League Career Records</h2>
-      <div class="grid3">
-        ${topRows(careerItems('games'), 'games', 'Career Games')}
-        ${topRows(careerItems('tries'), 'tries', 'Career Tries')}
-        ${topRows(careerItems('points'), 'points', 'Career Points')}
-        ${topRows(careerItems('ta'), 'ta', 'Career Try Assists')}
-        ${topRows(careerItems('tk'), 'tk', 'Career Tackles')}
-        ${topRows(careerItems('fdo'), 'fdo', 'Career Forced Drop-Outs')}
-      </div>
-
-      <h2 class="sec">Single-Season Records</h2>
-      <div class="grid3">
-        ${topRows(seasonItems('t'), 't', 'Season Tries')}
-        ${topRows(seasonItems('ta'), 'ta', 'Season Try Assists')}
-        ${topRows(seasonItems('m'), 'm', 'Season Run Metres')}
-        ${topRows(seasonItems('tk'), 'tk', 'Season Tackles')}
-        ${topRows(seasonItems('fpts'), 'fpts', 'Season Fantasy Points')}
-        ${topRows(seasonItems('avg'), 'avg', 'Season Avg Rating', {valueLabel:'Avg'})}
-      </div>
-
-      <h2 class="sec">${selectedTeam ? esc(selectedTeam.nick) : 'All Club'} Player Records</h2>
-      <div class="grid3">
-        ${topRows(clubItems('games'), 'games', 'Club Games')}
-        ${topRows(clubItems('tries'), 'tries', 'Club Tries')}
-        ${topRows(clubItems('points'), 'points', 'Club Points')}
-        ${topRows(clubItems('ta'), 'ta', 'Club Try Assists')}
-        ${topRows(clubItems('tk'), 'tk', 'Club Tackles')}
-        ${topRows(clubItems('fdo'), 'fdo', 'Club Forced Drop-Outs')}
-      </div>`;
+      ${content}`;
   },
 });

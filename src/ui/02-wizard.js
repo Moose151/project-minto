@@ -67,9 +67,24 @@ Object.assign(UI, {
   wizPick(id){
     G.coach.teamId = id;
     G.coach.expect = setExpectation();
-    addNews(`Season ${G.year}: ${G.coach.name} appointed head coach of the ${teamName(myTeam())}. Board expectation: ${G.coach.expect.label}.`);
+    const firstSeason = G.year;
+    addNews(`Season ${firstSeason}: ${G.coach.name} appointed head coach of the ${teamName(myTeam())}. Board expectation: ${G.coach.expect.label}.`);
     UI.wizWorld = null;
-    UI.toast(`Welcome to the ${myTeam().nick}.`);
-    UI.go('dashboard');
+    UI.toast(`Welcome to the ${myTeam().nick}. Set up your pre-season before Round 1.`);
+    // Decrement year/season so completePreseason→startNewSeason increments back to the correct values
+    G.year = firstSeason - 1;
+    G.season = 0;
+    G.phase = 'offseason';
+    G.offseason = {
+      step: 'preseason',
+      preseason: createPreseasonPlan(),
+      year: G.year,
+      verdict: `Welcome to your first season as head coach of the ${teamName(myTeam())}!`,
+      retirements: [],
+      awards: {},
+      offers: [],
+      freeAgents: [...(G.freeAgents || [])],
+    };
+    UI.go('offseason');
   },
 });

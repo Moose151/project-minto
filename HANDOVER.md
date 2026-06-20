@@ -4,6 +4,14 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Records page tabs + dropdown fix — added three tab buttons (Career Records / Single-Season Records / Club Records) at the top of the Records page; only the selected section renders; the team-filter dropdown now appears only on the Club Records tab where it actually applies.
+- Season Leaders page added — new `season-leaders.js` page (added to nav between Stat Leaders and Fantasy) shows current-season top-5 per stat in a grid; Positive Stats tab (tries, try assists, tackles, run metres, carries, FDOs, line breaks, minutes, games) and Negative Stats tab (errors, missed tackles, infringements).
+- New game pre-season flow — new games now start in the pre-season phase instead of directly at Round 1; `wizPick()` sets `G.year` back one, `G.season=0`, `G.phase='offseason'`, and creates a minimal `G.offseason` with `step:'preseason'`; `completePreseason()` → `startNewSeason()` then increments back to the correct year/season and generates fixtures.
+
+---
+
+Previous session notes:
+
 - Match feed conversion labels — ✓/✗ icons on try events replaced with colour-coded `CONV` / `NO CONV` text in all scoring timelines (live feed, post-match inline, round-results modal).
 - Team sheet bench rows fixed — bench slots (14-17) now show a compact meta (pos tag, OVR, condition, fatigue, form, specialist) instead of the full playerMeta which could collapse the name/photo due to overflow from the `white-space:nowrap` fit-pill.
 - Team sheet nationality clutter — rep-team label ("Kangaroos", "Kiwis", etc.) removed from all team sheet player rows; only the nationality flag remains.
@@ -125,7 +133,8 @@ cd api && node server.js
 | `src/ui/pages/club-management.js` | Board standing, revenue/wages breakdown, salary cap overview, facility upgrades |
 | `src/ui/pages/history.js` | Expandable year rows: awards, GF score, ladder snapshot, search/filter/sort controls |
 | `src/ui/pages/hall-of-fame.js` | Retired-player Hall of Fame with induction cards, search, and sort |
-| `src/ui/pages/records.js` | Records page: league career records, single-season records, and club-scoped player records |
+| `src/ui/pages/records.js` | Records page: tab buttons switch Career/Season/Club views; Club tab has team dropdown filter |
+| `src/ui/pages/season-leaders.js` | Season Leaders: positive stats tab (tries, TA, tackles, metres, carries, FDO, LB, mins, games) and negative stats tab (errors, MT, infringements); top 5 per stat |
 | `src/ui/pages/clubs.js` | All-clubs browser; sort by ladder/OVR/name; head coach shown |
 | `src/ui/pages/recruitment.js` | Approach limit (3/season), scroll preserved, free agent modal, T&T sign button, free agent filters/sort |
 | `src/ui/pages/contracts.js` | Full contract ledger, year/salary filters, early extensions, flat/front/back-loaded deals |
@@ -251,6 +260,7 @@ cd api && node server.js
 - Age-banded weekly OVR growth (16–17: 38% → 28+: 2.5%), veteran mental growth, physical/technical decline from 29+
 - Offseason development pass: Poisson gains + decline for all players; news summary of biggest movers (±2 OVR)
 - Stat leaders page: position filter, top 25, all expanded stat categories including FDO, LB, LBA, MT
+- Season Leaders page: positive/negative stat tabs; top 5 per stat in grid cards
 
 ---
 
@@ -358,10 +368,7 @@ All items from the prior session were implemented. Items to consider for a futur
 
 ### 🐛 Known Bugs
 
-- **Records page — team dropdown broken**: The team selection dropdown on the Records page does not filter/change the displayed records. Needs to wire the selected team ID into the records query so club-scoped records actually update.
-- **Records page — category tabs missing**: Add three tab buttons at the top to switch between Single Game Records, Season Records, and Career Records (currently unclear which view is shown or how to switch).
-- **Season Leaders page — missing**: Add a dedicated Season Leaders page (or major section) showing current-season stat leaders for positive stats (tries, games, minutes, tackles, try assists, FDOs, all runs, run metres, etc.) and a separate tab for negative stats (errors, infringements, missed tackles, sin bins). Should link from Dashboard and the nav.
-- **New game starts mid-season instead of pre-season**: When starting a new game, the game should begin in the pre-season phase, allowing the coach to choose sponsors, set membership pricing, and play pre-season friendlies before Round 1 begins. Currently the player is dropped straight into the regular season.
+No open bugs at this time.
 
 ---
 
