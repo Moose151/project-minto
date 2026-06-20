@@ -358,7 +358,10 @@ All items from the prior session were implemented. Items to consider for a futur
 
 ### 🐛 Known Bugs
 
-No outstanding known bugs. (All seven items from the previous list resolved this session — see Latest Session Notes.)
+- **Records page — team dropdown broken**: The team selection dropdown on the Records page does not filter/change the displayed records. Needs to wire the selected team ID into the records query so club-scoped records actually update.
+- **Records page — category tabs missing**: Add three tab buttons at the top to switch between Single Game Records, Season Records, and Career Records (currently unclear which view is shown or how to switch).
+- **Season Leaders page — missing**: Add a dedicated Season Leaders page (or major section) showing current-season stat leaders for positive stats (tries, games, minutes, tackles, try assists, FDOs, all runs, run metres, etc.) and a separate tab for negative stats (errors, infringements, missed tackles, sin bins). Should link from Dashboard and the nav.
+- **New game starts mid-season instead of pre-season**: When starting a new game, the game should begin in the pre-season phase, allowing the coach to choose sponsors, set membership pricing, and play pre-season friendlies before Round 1 begins. Currently the player is dropped straight into the regular season.
 
 ---
 
