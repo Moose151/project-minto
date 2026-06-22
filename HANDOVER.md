@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Ticket & membership price comparison — Club Management commercial settings now show, under each price input, the league average / lowest / highest price and where the coached club ranks (e.g. "$4 above avg · 3rd dearest of 17"). New engine helper `leagueClubPrices()` (08-progression.js) derives AI club ticket/membership prices from squad strength (`aiTicketPrice` / `aiMembershipPrice`); `leagueTicketInfo()` refactored to share `aiTicketPrice`.
 - Records page tabs + dropdown fix — added three tab buttons (Career Records / Single-Season Records / Club Records) at the top of the Records page; only the selected section renders; the team-filter dropdown now appears only on the Club Records tab where it actually applies.
 - Season Leaders page added — new `season-leaders.js` page (added to nav between Stat Leaders and Fantasy) shows current-season top-5 per stat in a grid; Positive Stats tab (tries, try assists, tackles, run metres, carries, FDOs, line breaks, minutes, games) and Negative Stats tab (errors, missed tackles, infringements).
 - New game pre-season flow — new games now start in the pre-season phase instead of directly at Round 1; `wizPick()` sets `G.year` back one, `G.season=0`, `G.phase='offseason'`, and creates a minimal `G.offseason` with `step:'preseason'`; `completePreseason()` → `startNewSeason()` then increments back to the correct year/season and generates fixtures.
@@ -344,8 +345,8 @@ cd api && node server.js
 - AI clubs should hire and fire coaches during the season based on on-field performance (e.g. poor run of form) and club financial health.
 - Fire decisions should mirror the mid-season AI sacking logic already in place; hiring should pull from the same staff market pool.
 
-#### Club Management — Ticket & Membership Price Comparison
-- On the Club Management page, show how the coached club's home ticket price and season membership price compare to the league average and the highest/lowest prices set by other clubs.
+#### Club Management — Ticket & Membership Price Comparison ✅ (implemented)
+- Club Management commercial settings show, under each price input, league avg / low / high and the club's rank for both home ticket and season membership prices. Engine: `leagueClubPrices()` in 08-progression.js.
 
 #### Match Scheduling — Authentic NRL Week Structure
 - Typical NRL round: 1 game Thursday, 2 Friday (5pm + 7pm), 3 Saturday (2pm + 5pm + 7pm), 2 Sunday (4pm + 6pm), 1 bye.

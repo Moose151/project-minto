@@ -69,6 +69,21 @@ Object.assign(UI, {
     const totalMagic = club.magicRoundRevenue || 0;
     const membershipPrice = club.membershipPrice == null ? 160 : club.membershipPrice;
     const membership = typeof membershipProjection === 'function' ? membershipProjection(membershipPrice) : {price:membershipPrice, members:0, revenue:0};
+    const leaguePrices = typeof leagueClubPrices === 'function' ? leagueClubPrices() : null;
+    const priceCompare = (info) => {
+      if(!info) return '';
+      const diff = info.mine - info.avg;
+      const tone = diff > 0 ? 'var(--brass)' : diff < 0 ? 'var(--green)' : 'var(--muted)';
+      const dearest = info.total - info.rankFromCheapest + 1; // 1 = most expensive
+      const verdict = diff === 0 ? 'at league average'
+        : `${money(Math.abs(diff))} ${diff > 0 ? 'above' : 'below'} avg`;
+      return `<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:5px">
+        <span>Avg <b style="color:var(--ink)">${money(info.avg)}</b></span>
+        <span>Low <b style="color:var(--ink)">${money(info.min)}</b></span>
+        <span>High <b style="color:var(--ink)">${money(info.max)}</b></span>
+        <span style="color:${tone}">${verdict} · ${ord(dearest)} dearest of ${info.total}</span>
+      </div>`;
+    };
     const currentHomeMatch = G.phase==='regular' && G.fixtures && G.fixtures[G.round]
       ? G.fixtures[G.round].find(m => m.h === G.coach.teamId && !m.played)
       : null;
@@ -133,11 +148,13 @@ Object.assign(UI, {
           <label>Home ticket price</label>
           <input type="number" min="10" max="120" step="1" value="${club.ticketPrice || 28}" oninput="UI.setClubTicketPrice(this.value, true)" onchange="UI.setClubTicketPrice(this.value)">
           <p style="font-size:11px;color:var(--muted);margin:4px 0 0">${projectedCrowd ? `Next home gate estimate: ${money(projectedCrowd * (club.ticketPrice || 28))} · crowd ${projectedCrowd.toLocaleString()}` : 'Used for projected home crowds and gate receipts.'}</p>
+          ${leaguePrices ? priceCompare(leaguePrices.ticket) : ''}
         </div>
         <div class="field">
           <label>Season member price</label>
           <input type="number" min="80" max="500" step="1" value="${membership.price}" oninput="UI.setClubMembershipPrice(this.value, true)" onchange="UI.setClubMembershipPrice(this.value)">
           <p id="clubMembershipProjection" style="font-size:11px;color:var(--muted);margin:4px 0 0">Projected members ${membership.members.toLocaleString()} · revenue ${money(membership.revenue)}</p>
+          ${leaguePrices ? priceCompare(leaguePrices.membership) : ''}
         </div>
       </div>
     </div>`;

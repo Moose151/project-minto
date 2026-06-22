@@ -328,17 +328,33 @@ function clubPrestigeTier(t){
   if(score >= 38) return {key:'developing', label:'Developing Club', icon:'D', score};
   return {key:'rebuild', label:'Rebuild Club', icon:'R', score};
 }
+function aiTicketPrice(t){ return Math.round(clamp(14 + squadStrength(t) * 0.24, 15, 46)); }
+function aiMembershipPrice(t){ return Math.round(clamp(95 + squadStrength(t) * 1.25, 100, 340)); }
 function leagueTicketInfo(){
   const myPrice = G.club ? (G.club.ticketPrice || 28) : 28;
-  const teamPrices = G.teams.map(t => {
-    if(t.id === G.coach.teamId) return myPrice;
-    const str = squadStrength(t);
-    return Math.round(clamp(14 + str * 0.24, 15, 46));
-  }).sort((a,b) => a - b);
+  const teamPrices = G.teams.map(t => t.id === G.coach.teamId ? myPrice : aiTicketPrice(t)).sort((a,b) => a - b);
   const avg = Math.round(teamPrices.reduce((s,p) => s+p, 0) / teamPrices.length);
   const cheaperCount = teamPrices.filter(p => p < myPrice).length;
   const moreExpensiveCount = teamPrices.filter(p => p > myPrice).length;
   return { avg, myPrice, rankFromCheapest: cheaperCount+1, rankFromMostExpensive: moreExpensiveCount+1, totalTeams: G.teams.length };
+}
+// Avg/min/max/rank for both home ticket and season membership prices across the league.
+function leagueClubPrices(){
+  const myTicket = G.club ? (G.club.ticketPrice || 28) : 28;
+  const myMember = G.club ? (G.club.membershipPrice == null ? 160 : G.club.membershipPrice) : 160;
+  const tickets = [], members = [];
+  for(const t of G.teams){
+    if(t.id === G.coach.teamId){ tickets.push(myTicket); members.push(myMember); }
+    else { tickets.push(aiTicketPrice(t)); members.push(aiMembershipPrice(t)); }
+  }
+  const stat = (arr, mine) => {
+    const sorted = arr.slice().sort((a,b)=>a-b);
+    const avg = Math.round(arr.reduce((s,p)=>s+p,0)/arr.length);
+    const cheaper = arr.filter(p => p < mine).length;
+    return { avg, min: sorted[0], max: sorted[sorted.length-1], mine,
+      rankFromCheapest: cheaper+1, total: arr.length };
+  };
+  return { ticket: stat(tickets, myTicket), membership: stat(members, myMember) };
 }
 function recentWinStreak(teamId){
   const played = [];
