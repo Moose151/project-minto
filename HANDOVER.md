@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Staff market periodic refresh — the hire pool no longer refreshes only on a new season. It now refreshes every 4 rounds in-season (`UI._ensureStaffMarket` / `UI._refreshStaffMarket` in staff.js): un-hired candidates older than 9 rounds move on, the pool is capped at 12 candidates (oldest trimmed first), and fresh names are topped up and tagged with a green "NEW" badge. Candidates carry `addedRound`; refresh state stored in `UI._staffMarket.refreshRound`.
 - Ticket & membership price comparison — Club Management commercial settings now show, under each price input, the league average / lowest / highest price and where the coached club ranks (e.g. "$4 above avg · 3rd dearest of 17"). New engine helper `leagueClubPrices()` (08-progression.js) derives AI club ticket/membership prices from squad strength (`aiTicketPrice` / `aiMembershipPrice`); `leagueTicketInfo()` refactored to share `aiTicketPrice`.
 - Records page tabs + dropdown fix — added three tab buttons (Career Records / Single-Season Records / Club Records) at the top of the Records page; only the selected section renders; the team-filter dropdown now appears only on the Club Records tab where it actually applies.
 - Season Leaders page added — new `season-leaders.js` page (added to nav between Stat Leaders and Fantasy) shows current-season top-5 per stat in a grid; Positive Stats tab (tries, try assists, tackles, run metres, carries, FDOs, line breaks, minutes, games) and Negative Stats tab (errors, missed tackles, infringements).
@@ -337,9 +338,8 @@ cd api && node server.js
 #### Lower Leagues & Expansion
 - Second-tier competition, promotion/relegation, club merger/dissolution.
 
-#### Staff Market — Periodic Refresh
-- The available-for-hire coach/staff list should refresh periodically during the season with new candidates.
-- Cap the pool at 10–12 coaches maximum; if a candidate hasn't been hired after a few months, drop them from the pool to make room for fresh names.
+#### Staff Market — Periodic Refresh ✅ (implemented)
+- Hire pool refreshes every 4 rounds in-season; pool capped at 12; un-hired candidates older than 9 rounds are dropped and replaced with fresh "NEW"-tagged names. Logic in `UI._ensureStaffMarket` / `UI._refreshStaffMarket` (staff.js).
 
 #### AI Club — Coaching Changes
 - AI clubs should hire and fire coaches during the season based on on-field performance (e.g. poor run of form) and club financial health.

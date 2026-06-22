@@ -132,10 +132,9 @@ Object.assign(UI, {
       ${(filt!=='all'||srch)?`<button class="btn sm" onclick="UI._staffFilter='all';UI._staffSearch='';UI.render()">Reset</button>`:''}
     </div>`;
 
-    // Generate market if not cached or stale
-    if(!UI._staffMarket || UI._staffMarket.year !== G.year){
-      UI._staffMarket = { year: G.year, list: UI._genStaffMarket() };
-    }
+    // Generate market on new season; refresh the candidate pool periodically in-season
+    UI._ensureStaffMarket();
+    const curRound = G.round || 0;
     const market = UI._staffMarket.list.filter(s => !staff.some(x => x.id === s.id));
 
     const marketBadgeFor = s => s.role === 'medical' ? medBadge() : coachBadge();
@@ -151,8 +150,9 @@ Object.assign(UI, {
       const alreadyHaveRole = staff.some(x => x.role === s.role);
       const affects = staffAffects(s, info);
       const specLbl = specialtyLabel(s);
+      const isNew = s.addedRound === UI._staffMarket.refreshRound && curRound > 0;
       return `<tr>
-        <td style="white-space:nowrap">${marketBadgeFor(s)}</td>
+        <td style="white-space:nowrap">${marketBadgeFor(s)}${isNew?` <span class="pos-tag" style="background:rgba(95,170,110,.18);color:var(--green)">NEW</span>`:''}</td>
         <td><b>${esc(s.name)}</b><br><span style="font-size:11px;color:var(--brass)">${esc(info.label)}${specLbl?` · ${esc(specLbl)}`:''}</span></td>
         <td style="min-width:100px">${abilityBar(s.ability)}</td>
         <td class="num" style="white-space:nowrap">${money(s.salary)}</td>
@@ -182,7 +182,7 @@ Object.assign(UI, {
 
     const marketSection = (filt !== 'scouts') ? `
       <h2 class="sec">Hire — Available on Market</h2>
-      <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Market refreshes each season. You can only hold one coach per role.</p>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 10px">Pool refreshes every ${UI._STAFF_REFRESH_EVERY} rounds — un-hired candidates eventually move on and fresh names (tagged <span class="pos-tag" style="background:rgba(95,170,110,.18);color:var(--green)">NEW</span>) arrive. You can only hold one coach per role.</p>
       <div class="card" style="padding:6px;overflow-x:auto">
         <table>
           <thead><tr>
@@ -227,6 +227,54 @@ Object.assign(UI, {
     ${medSection}
     ${scoutSection}
     ${marketSection}`;
+  },
+
+  _STAFF_MARKET_CAP: 12,        // max un-hired candidates in the pool
+  _STAFF_REFRESH_EVERY: 4,      // rounds between refreshes
+  _STAFF_STALE_ROUNDS: 9,       // un-hired candidates older than this are dropped
+
+  _ensureStaffMarket(){
+    const round = G.round || 0;
+    if(!UI._staffMarket || UI._staffMarket.year !== G.year){
+      const list = UI._genStaffMarket();
+      list.forEach(s => s.addedRound = round);
+      UI._staffMarket = { year: G.year, list, refreshRound: round };
+      return;
+    }
+    if(UI._staffMarket.refreshRound == null) UI._staffMarket.refreshRound = round;
+    if(round - UI._staffMarket.refreshRound >= UI._STAFF_REFRESH_EVERY){
+      UI._refreshStaffMarket(round);
+      UI._staffMarket.refreshRound = round;
+    }
+  },
+
+  // Drop stale un-hired candidates and top the pool back up to the cap with fresh names.
+  _refreshStaffMarket(round){
+    const m = UI._staffMarket;
+    const hiredIds = new Set((G.staff || []).map(x => x.id));
+    const stale = UI._STAFF_STALE_ROUNDS;
+    const hired = m.list.filter(s => hiredIds.has(s.id));
+    // Un-hired: drop stale, then trim to the cap keeping the freshest candidates.
+    let pool = m.list.filter(s => !hiredIds.has(s.id) && (round - (s.addedRound || round)) < stale);
+    pool.sort((a, b) => (b.addedRound || 0) - (a.addedRound || 0));
+    pool = pool.slice(0, UI._STAFF_MARKET_CAP);
+    const kept = hired.concat(pool);
+    const need = UI._STAFF_MARKET_CAP - pool.length;
+    let nextId = m.list.reduce((mx, s) => Math.max(mx, s.id), 9000) + 1;
+    const fresh = [];
+    if(need > 0){
+      const newCands = (typeof shuffle === 'function' ? shuffle(UI._genStaffMarket()) : UI._genStaffMarket());
+      const haveRoles = new Set(pool.map(s => s.role));
+      // Prefer candidates for roles not already represented in the pool, then fill the rest.
+      const ordered = newCands.slice().sort((a, b) => (haveRoles.has(a.role) ? 1 : 0) - (haveRoles.has(b.role) ? 1 : 0));
+      for(const c of ordered){
+        if(fresh.length >= need) break;
+        c.id = nextId++;
+        c.addedRound = round;
+        fresh.push(c);
+      }
+    }
+    m.list = kept.concat(fresh);
   },
 
   _genStaffMarket(){
