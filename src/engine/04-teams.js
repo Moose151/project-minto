@@ -60,11 +60,25 @@ function genFixtures(teamIds, targetRounds){
     allByes = allByes.slice(0, targetRounds);
   }
 
-  // Assign day/time slots — no two games simultaneous; spread across Thu-Sun
+  // Assign day/time slots — no two games simultaneous; spread across Thu-Sun.
+  // Turnaround fairness: teams coming off a late (Sun twilight/night) game last round are
+  // pushed to later slots this round so they aren't handed the short Thursday turnaround.
+  let prevLateTeams = new Set();
   const assignedRounds = allRounds.map(games => {
     const slots = MATCH_SLOTS.slice(0, Math.max(games.length, 1));
-    const shuffledSlots = shuffle(slots.slice());
-    return games.map((mm, i) => ({...mm, played:false, hs:0, as:0, det:null, slot: shuffledSlots[i] || MATCH_SLOTS[i % MATCH_SLOTS.length]}));
+    const scored = games.map(g => ({
+      g,
+      late: (prevLateTeams.has(g.h) ? 1 : 0) + (prevLateTeams.has(g.a) ? 1 : 0),
+      jitter: rnd(),
+    }));
+    // Low turnaround-pressure games take the earliest slots; high-pressure games get later slots.
+    scored.sort((x, y) => (x.late - y.late) || (x.jitter - y.jitter));
+    const assigned = scored.map((s, i) => ({...s.g, played:false, hs:0, as:0, det:null, slot: slots[i] || MATCH_SLOTS[i % MATCH_SLOTS.length]}));
+    prevLateTeams = new Set();
+    for(const mm of assigned){
+      if(mm.slot && mm.slot.order >= 6){ prevLateTeams.add(mm.h); prevLateTeams.add(mm.a); }
+    }
+    return assigned;
   });
 
   return {

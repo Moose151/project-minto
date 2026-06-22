@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Draw turnaround fairness — fixture slot assignment in `genFixtures` (04-teams.js) no longer assigns slots randomly within a round. Teams coming off a late game last round (Sun twilight/night, slot order ≥ 6) are now pushed to later slots the following round so they aren't handed the short Thursday/Friday turnaround. Same slot set per round (calendar unaffected); validated 0 short-turnaround violations vs the old random assignment. (Season variety / home-and-away double round-robin was already handled by the shuffled circle method.)
 - Staff market periodic refresh — the hire pool no longer refreshes only on a new season. It now refreshes every 4 rounds in-season (`UI._ensureStaffMarket` / `UI._refreshStaffMarket` in staff.js): un-hired candidates older than 9 rounds move on, the pool is capped at 12 candidates (oldest trimmed first), and fresh names are topped up and tagged with a green "NEW" badge. Candidates carry `addedRound`; refresh state stored in `UI._staffMarket.refreshRound`.
 - Ticket & membership price comparison — Club Management commercial settings now show, under each price input, the league average / lowest / highest price and where the coached club ranks (e.g. "$4 above avg · 3rd dearest of 17"). New engine helper `leagueClubPrices()` (08-progression.js) derives AI club ticket/membership prices from squad strength (`aiTicketPrice` / `aiMembershipPrice`); `leagueTicketInfo()` refactored to share `aiTicketPrice`.
 - Records page tabs + dropdown fix — added three tab buttons (Career Records / Single-Season Records / Club Records) at the top of the Records page; only the selected section renders; the team-filter dropdown now appears only on the Club Records tab where it actually applies.
@@ -353,9 +354,9 @@ cd api && node server.js
 - Some rounds may vary (e.g. 3 Sunday, 2 Tuesday for Magic Round or holiday rounds) but the standard above should be the default.
 - Slot times should be reflected in the existing slot-label system (Thu Night, Fri Afternoon/Night, Sat Afternoon/Twilight/Night, Sun Afternoon/Night).
 
-#### Draw Generation — Season Variety & Turnaround Fairness
-- Each season should generate a different draw where every team plays every other team once at home and once away (or as close as the round count allows).
-- Scheduling should consider turnaround time: a team that plays the last game on Sunday (e.g. 6pm) should not be assigned the first game of the following Thursday (5pm) if avoidable, though clashes may occasionally occur.
+#### Draw Generation — Season Variety & Turnaround Fairness ✅ (implemented)
+- Season variety + home/away double round-robin handled by the shuffled circle method in `genFixtures`.
+- Turnaround fairness: teams coming off a late slot (order ≥ 6) are pushed to later slots the next round, avoiding the short Thursday/Friday turnaround where possible (04-teams.js).
 
 ---
 
