@@ -2,6 +2,15 @@
 
 Updated every session.
 
+## ⏸️ Session Pause Note (for the next assistant)
+
+Stopped at the user's request so they can commit. **No work is mid-flight** — all five features below are complete, syntax-checked, and committed locally. Nothing is half-written; the tree is clean apart from this handover edit.
+
+- **Committed this session:** `a7beb5d` price comparison · `0d89b39` staff market refresh · `d437bbb` turnaround fairness · `f3375bd` authentic NRL week structure · `df48d39` international window.
+- **Push status:** the user manually pushed through `d437bbb`. The two newest commits — `f3375bd` and `df48d39` — were local only at pause time. Confirm with `git log origin/main..main` before pushing; run `git push origin main` for anything outstanding. (Note: the harness blocks the assistant from pushing to `main` directly, so pushes are done by the user.)
+- **Verification done:** `for f in src/engine/*.js src/ui/*.js src/ui/pages/*.js; do node --check "$f"; done` passes; engine logic for staff refresh, fixture slots, and the international window was validated with standalone Node harnesses. Not yet run in the live app/browser — a visual smoke test of Club Management, Staff, Fixtures/Calendar, the offseason Season Review, and the player-modal history tab would be worthwhile.
+- **Suggested next features** (none started): richer in-game weather/tactical responses; better multi-bye distribution per season; in-game substitutions + live pause (biggest gameplay gap, larger, hard to validate headlessly). See the ❌ and 🔧 sections below.
+
 ## Latest Session Notes
 
 - Post-season international window — new `simInternationalWindow()` (08-progression.js) runs in the offseason after season awards. National squads are picked by `repTeam` (top 17 by OVR); the top 4 nations that can field a side contest a knockout (semis → final, with 3- and 2-nation fallbacks); a champion is crowned. Featuring players gain `p.repCaps`; finalists get `p.intlHonours` records (Champion / Runner-up). Surfaced in the offseason Season Review ("International Window" card with bracket results) and a new "Representative Honours" table on the player modal history tab (caps + titles). News items fire (reusing the Origin/`international` category), highlighting the coached team's representatives. Result stored in `G.offseason.intl`.
