@@ -99,7 +99,7 @@ function startOffseason(){
   // AI coach rotation — poor results can get a coach fired
   for(const t of G.teams){
     if(t.id === G.coach.teamId) continue;
-    if(!t.headCoach) t.headCoach = {name:`${pick(FIRST)} ${pick(LAST)}`, rep:ri(20,55), seasons:0};
+    if(!t.headCoach) t.headCoach = genAIHeadCoach();
     t.headCoach.seasons = (t.headCoach.seasons || 0) + 1;
     const tPos = lad.findIndex(r=>r.id===t.id)+1;
     const bottomQuarter = tPos >= Math.ceil(G.teams.length * 0.75);
@@ -114,10 +114,17 @@ function startOffseason(){
         addNews(`${oldName} has been sacked by the ${t.nick}. ${promoted.name}, formerly your ${promoted.roleLabel}, has been appointed as the new head coach.`,
           {title:'Assistant Promoted', type:'board', tone:'neutral', teamId:t.id, tag:'Coaching'});
       } else {
-        const newRep = ri(18, 52);
-        t.headCoach = {name:`${pick(FIRST)} ${pick(LAST)}`, rep:newRep, seasons:0};
-        addNews(`${oldName} has been sacked by the ${t.nick}. ${t.headCoach.name} has been appointed as the new head coach.`,
-          {title:'Coaching Change', type:'board', tone:'neutral', teamId:t.id, tag:'Coaching'});
+        const newCoach = genAIHeadCoach();
+        t.headCoach = newCoach;
+        if(newCoach.plan && rnd() < 0.55) t.plan = newCoach.plan;
+        t.cohesion = clamp((t.cohesion || 50) - ri(3, 10), 10, 90);
+        const philInfo = COACH_PHILOSOPHIES.find(p=>p.key===newCoach.philosophy);
+        const quote = pick(COACH_PRESS_QUOTES);
+        addNews(
+          `${oldName} has been sacked by the ${t.nick}. ${newCoach.name} has been appointed as the new head coach — ` +
+          `${philInfo ? philInfo.desc : 'a new direction for the club.'} "${quote}" — ${newCoach.name}.`,
+          {title:'Coaching Change', type:'board', tone:'neutral', teamId:t.id, tag:'Coaching'}
+        );
       }
     } else {
       // Rep drift based on finish

@@ -54,7 +54,8 @@ Object.assign(UI, {
     const rec = lad.find(r=>r.id===t.id)||{w:0,l:0,pts:0};
     const rows = t.players.map(i=>G.players[i]).filter(Boolean).sort(nrlSort);
     const coach = t.headCoach;
-    const coachLine = coach ? `<p style="font-size:12px;color:var(--muted);margin:4px 0 0">Head coach: <b>${esc(coach.name)}</b> · Rep ${coach.rep}</p>` : '';
+    const coachPhilInfo = coach && coach.philosophy ? (COACH_PHILOSOPHIES||[]).find(p=>p.key===coach.philosophy) : null;
+    const coachLine = coach ? `<p style="font-size:12px;color:var(--muted);margin:4px 0 0">Head coach: <b>${esc(coach.name)}</b> · Rep ${coach.rep}${coachPhilInfo?` · <span style="color:var(--ink)">${coachPhilInfo.label}</span>`:''}</p>` : '';
     const godTeam = G.godMode ? `<div class="btnrow" style="margin:8px 0"><button class="btn danger sm" onclick="UI.teamEditModal(${t.id})">Edit team</button></div>` : '';
     const godActions = p => G.godMode ? `<div class="btnrow" style="margin:0;gap:4px">
       <button class="btn sm" onclick="event.stopPropagation();UI.godToggleSquad(${p.id})">${p.squad==='dev'?'Main':'Youth'}</button>

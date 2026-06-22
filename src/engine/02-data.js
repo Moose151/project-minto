@@ -300,6 +300,25 @@ const ACHIEVEMENTS = [
 
 /* ---------- staff / assistant coaches ---------- */
 // Roles that can have a positional specialization (medical/physio does not)
+const COACH_PHILOSOPHIES = [
+  {key:'attacking',  label:'Attacking',  plan:'attacking',  desc:'Free-flowing attack, tries from anywhere — concedes points but scores plenty.'},
+  {key:'defensive',  label:'Defensive',  plan:'grinding',   desc:'Field position and defence first — low scores, grind out wins.'},
+  {key:'expansive',  label:'Expansive',  plan:'attacking',  desc:'Wide game, offloads and line speed — high-octane but can leak.'},
+  {key:'balanced',   label:'Balanced',   plan:'balanced',   desc:'No clear weakness — pragmatic and adaptable.'},
+  {key:'methodical', label:'Methodical', plan:'grinding',   desc:'Structured sets, conservative kicking game — clinical in the red zone.'},
+];
+const COACH_PRESS_QUOTES = [
+  'We\'ll work hard, play for each other, and the results will come.',
+  'There\'s plenty of talent in this squad — I can\'t wait to unleash it.',
+  'The culture has to change first. Results follow culture.',
+  'I\'ve analysed the squad closely. We know exactly what we need to fix.',
+  'This club deserves better and we\'re going to deliver it.',
+  'I want us to play fast, play smart, and play together.',
+  'Defence wins games and we\'ll make that our identity.',
+  'The players here are hungry. You\'ll see a different side of this team.',
+  'I\'ve been waiting for a shot like this. This group will not let this club down.',
+  'We\'re going back to basics — effort, discipline, and execution.',
+];
 const COACHING_ROLES_WITH_SPECIALTY = ['attacking','defensive','fitness','kicking','youth'];
 const STAFF_ROLES = [
   {key:'attacking',  label:'Attack Coach',       desc:'Improves ball running, playmaking, finishing, and passing. Positional specialty boosts retraining and key-skill development for that position group.', trainingKeys:['ballRunning','playmaking','finishing','shortPass','longPass','vision'], canHaveSpecialty:true},
@@ -366,6 +385,12 @@ function pickScoutRegionPosition(region){
   let r = rnd() * total;
   for(const x of weights){ r -= x.w; if(r <= 0) return x.pos; }
   return weights[0] ? weights[0].pos : pick(POS);
+}
+function genAIHeadCoach(repBase){
+  const rep = repBase != null ? repBase : ri(20, 60);
+  const philosophy = pick(COACH_PHILOSOPHIES);
+  const name = `${pick(FIRST)} ${pick(LAST)}`;
+  return {name, rep, seasons:0, philosophy: philosophy.key, plan: philosophy.plan};
 }
 // Mutable staff ID counter (set to large base to avoid collisions)
 let _staffId = 9000;

@@ -4,14 +4,17 @@ Updated every session.
 
 ## ⏸️ Session Pause Note (for the next assistant)
 
-Stopped at the user's request so they can commit. **No work is mid-flight** — all five features below are complete, syntax-checked, and committed locally. Nothing is half-written; the tree is clean apart from this handover edit.
+Two features implemented this session. **No work is mid-flight** — both are complete and syntax-checked. Nothing is half-written.
 
-- **Committed this session:** `a7beb5d` price comparison · `0d89b39` staff market refresh · `d437bbb` turnaround fairness · `f3375bd` authentic NRL week structure · `df48d39` international window.
-- **Push status:** the user manually pushed through `d437bbb`. The two newest commits — `f3375bd` and `df48d39` — were local only at pause time. Confirm with `git log origin/main..main` before pushing; run `git push origin main` for anything outstanding. (Note: the harness blocks the assistant from pushing to `main` directly, so pushes are done by the user.)
-- **Verification done:** `for f in src/engine/*.js src/ui/*.js src/ui/pages/*.js; do node --check "$f"; done` passes; engine logic for staff refresh, fixture slots, and the international window was validated with standalone Node harnesses. Not yet run in the live app/browser — a visual smoke test of Club Management, Staff, Fixtures/Calendar, the offseason Season Review, and the player-modal history tab would be worthwhile.
-- **Suggested next features** (none started): richer in-game weather/tactical responses; better multi-bye distribution per season; in-game substitutions + live pause (biggest gameplay gap, larger, hard to validate headlessly). See the ❌ and 🔧 sections below.
+- **This session:** half-time substitutions in Watch Game · AI coaching philosophies + enhanced coaching changes.
+- **Push status:** push pending. Run `git push origin main`. (Note: the harness blocks the assistant from pushing to `main` directly — user must push.)
+- **Verification done:** full syntax check passes (`for f in src/engine/*.js src/ui/*.js src/ui/pages/*.js; do node --check "$f"; done`). Not yet run in the live browser — a visual smoke test of the Watch Game half-time panel and the Clubs modal (coach philosophy badge) would be worthwhile.
+- **Suggested next features:** true second-half re-simulation for substitutions (so subs actually change match outcome); in-season Test/representative fixtures; better multi-bye distribution; weather events mid-match (rain starts in second half). See the ❌ and 🔧 sections below.
 
 ## Latest Session Notes
+
+- Half-time substitutions — Watch Game now pauses at half-time with a Substitutions section above the Team Talk buttons. Coach can assign any of the 4 bench players (slots 14-17) to replace any starting player via dropdowns. Planned subs are inserted into the live feed at minute 41-55 as `↕ SUB` events. The lineup is updated immediately so future rounds/training reflect the change. Subs are stored in `m.det.subs[]` and displayed in the post-match inline report ("Subs: X for Y (min')"). State: `UI._htSubPlans` (reset each game in `p_watchgame`). Note: match result/score is pre-computed and doesn't change with subs — true second-half re-simulation would require splitting `simMatch` into two halves (noted in ❌ section).
+- AI coaching changes enhanced — `COACH_PHILOSOPHIES` (5 types: attacking/defensive/expansive/balanced/methodical) and `COACH_PRESS_QUOTES` (10 lines) added to `02-data.js`. New `genAIHeadCoach(repBase)` helper generates a coach with a `philosophy` and `plan` field. When an AI coach is sacked (mid-season or end of season), the replacement is generated via `genAIHeadCoach`, their `plan` is applied to the team (60% chance mid-season, 55% offseason), team cohesion drops by 3-12 points (new voice), and the news item includes the coaching philosophy description plus a press-conference quote. Mid-season sacking now has two triggers: round 8+ with 5 consecutive losses (12% chance) and the existing round 12+ bottom-quartile trigger (22% chance). All AI teams now start with a philosophy from game init (`genAIHeadCoach` replaces inline `{name, rep, seasons}` objects in `05-game.js` and `11-offseason.js`). Clubs modal shows the coach's philosophy label (e.g., "Defensive", "Expansive") alongside their Rep.
 
 - Post-season international window — new `simInternationalWindow()` (08-progression.js) runs in the offseason after season awards. National squads are picked by `repTeam` (top 17 by OVR); the top 4 nations that can field a side contest a knockout (semis → final, with 3- and 2-nation fallbacks); a champion is crowned. Featuring players gain `p.repCaps`; finalists get `p.intlHonours` records (Champion / Runner-up). Surfaced in the offseason Season Review ("International Window" card with bracket results) and a new "Representative Honours" table on the player modal history tab (caps + titles). News items fire (reusing the Origin/`international` category), highlighting the coached team's representatives. Result stored in `G.offseason.intl`.
 - Authentic NRL week structure — `MATCH_SLOTS` (04-teams.js) now carries both `order` (chronological, for sorting/turnaround) and `pri` (fill priority). `genFixtures` selects the K highest-priority slots for a round then orders them chronologically, producing the real NRL spread: an 8-game round = 1 Thu / 2 Fri / 3 Sat / 2 Sun. Smaller rounds (4–7 games) spread sensibly; all slots unique per round; turnaround fairness preserved (validated 0 violations across team counts 8–17). Added a 2nd Friday slot (Fri Afternoon); calendar maps by `slot.day` so no calendar changes needed; legacy slot-order fallback map updated to match.
@@ -315,12 +318,13 @@ cd api && node server.js
 
 #### Match View — Pause & Full-Time Graphic
 - Half-time team talk is implemented (auto-pause + 4 options + form effect). ✅
-- Pause button during the live second half so subs can be made mid-game (requires in-game sub system).
+- Half-time substitution panel implemented (bench dropdowns, feed events, lineup update, post-match record). ✅
 - Full-time: clear animated moment (siren graphic, score banner pulse, confetti for wins) so it's immediately obvious the match is over before the post-match screen appears. ✅
 
-#### Match View — In-Game Substitutions
-- Pause/sub screen should allow the coach to make substitutions during the match from the bench.
-- Subs should be tracked and reflected in the post-match report and player stats.
+#### Match View — In-Game Substitutions (Narrative Implemented — Re-Sim Pending)
+- Half-time subs: panel, feed events, lineup update, post-match record all implemented. ✅
+- **Remaining gap**: the match is pre-simulated all-at-once; subs don't change the score or per-player stats. True impact requires splitting `simMatch` into `simFirstHalf`/`simSecondHalf` with separate stat accumulation (significant engine refactor).
+- Second-half pause button (mid-game, not just at HT) still not implemented.
 
 #### Match Engine — Rugby League Logic Depth
 - True tackle-count (0–5), set-by-set possession, field position tracking.
@@ -353,9 +357,11 @@ cd api && node server.js
 #### Staff Market — Periodic Refresh ✅ (implemented)
 - Hire pool refreshes every 4 rounds in-season; pool capped at 12; un-hired candidates older than 9 rounds are dropped and replaced with fresh "NEW"-tagged names. Logic in `UI._ensureStaffMarket` / `UI._refreshStaffMarket` (staff.js).
 
-#### AI Club — Coaching Changes
-- AI clubs should hire and fire coaches during the season based on on-field performance (e.g. poor run of form) and club financial health.
-- Fire decisions should mirror the mid-season AI sacking logic already in place; hiring should pull from the same staff market pool.
+#### AI Club — Coaching Changes ✅ (implemented)
+- Mid-season sacking has two triggers: round 8+ on a 5-game losing streak (12%) and round 12+ bottom-quartile 4-of-last-4 losses (22%). ✅
+- New coaches generated via `genAIHeadCoach()` with a coaching philosophy and plan; plan is applied to the team; cohesion drops. ✅
+- Offseason sacking also uses `genAIHeadCoach()` and applies philosophy. ✅
+- Press-conference news item with philosophy description and quote. ✅
 
 #### Club Management — Ticket & Membership Price Comparison ✅ (implemented)
 - Club Management commercial settings show, under each price input, league avg / low / high and the club's rank for both home ticket and season membership prices. Engine: `leagueClubPrices()` in 08-progression.js.

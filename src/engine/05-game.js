@@ -32,7 +32,7 @@ function buildTeam(G, identity, id, strength){
     academy:clamp(baseFacility + ri(-1, 1), 1, 5),
   };
   const t = { id, ...identity, players:[], lineup:Array(19).fill(null), plan:'balanced', focus:'balanced', rep:strength, cohesion:50,
-    headCoach:{ name:`${pick(FIRST)} ${pick(LAST)}`, rep:coachRep, seasons:0 },
+    headCoach: genAIHeadCoach(coachRep),
     facilities,
     roles:{captain:null, goalKicker:null, primaryKicker:null, secondaryKicker:null, primaryPlaymaker:null, secondaryPlaymaker:null},
     positionRoles:{}, zoneTactics:{own20:'safe', own40:'balanced', mid:'balanced', opp40:'expansive', redZone:'balanced'},

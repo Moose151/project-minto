@@ -940,27 +940,48 @@ function generateWeeklyMedia(round, myM){
     }
   }
 
-  // Mid-season AI head coach sackings (after Round 12, bottom 25% teams with bad form, 22% chance)
-  if(G.round >= 12 && G.round % 3 === 0 && rnd() < 0.22){
+  // Mid-season AI head coach sackings — two triggers:
+  // 1. Early-season panic: round 8+ on a 5-game skid (12% chance)
+  // 2. Standard: round 12+, bottom quartile, 3 losses from last 4 (22% chance)
+  const sackedThisRound = new Set();
+  const tryAISacking = (teams, recentThreshold, ladFloor, chance) => {
     const lad = ladder();
     const n = G.teams.length;
-    const bottomIdx = Math.floor(n * 0.75);
-    for(const t of G.teams){
+    for(const t of teams){
       if(t.id === G.coach.teamId) continue;
+      if(sackedThisRound.has(t.id)) continue;
       if(!t.headCoach || (t.headCoach.seasons || 0) < 1) continue;
       const ladPos = lad.findIndex(r=>r.id===t.id);
-      if(ladPos < bottomIdx) continue;
+      if(ladPos < Math.floor(n * ladFloor)) continue;
       const row = lad[ladPos];
-      if(row.w > row.l) continue;
-      const recentLosses = (row.form || []).slice().reverse().slice(0, 4).filter(f=>f==='L').length;
-      if(recentLosses < 3) continue;
+      const recentLosses = (row.form || []).slice().reverse().slice(0, recentThreshold).filter(f=>f==='L').length;
+      if(recentLosses < recentThreshold) continue;
+      if(rnd() > chance) continue;
       const oldName = t.headCoach.name;
-      t.headCoach = {name:`${pick(FIRST)} ${pick(LAST)}`, rep:ri(20,52), seasons:0};
-      addNews(`${oldName} has been sacked by the ${t.nick} amid a run of ${recentLosses} losses from their last four. ${t.headCoach.name} takes over with immediate effect.`,
-        {title:'Coaching Change', type:'board', tone:'neutral', teamId:t.id, tag:'Coaching', r:G.round+1, y:G.year});
+      const oldPhilosophy = t.headCoach.philosophy;
+      const newCoach = genAIHeadCoach();
+      t.headCoach = newCoach;
+      // New coach may shift team plan toward their philosophy
+      if(newCoach.plan && rnd() < 0.6) t.plan = newCoach.plan;
+      // Brief cohesion drop — new voice in the sheds
+      t.cohesion = clamp((t.cohesion || 50) - ri(5, 12), 10, 90);
+      sackedThisRound.add(t.id);
+      const philInfo = COACH_PHILOSOPHIES.find(p=>p.key===newCoach.philosophy);
+      const quote = pick(COACH_PRESS_QUOTES);
+      const reasonText = recentLosses >= 5
+        ? `a disastrous run of ${recentLosses} consecutive losses`
+        : `${recentLosses} losses from their last ${recentThreshold}`;
+      addNews(
+        `${oldName} has been sacked by ${t.nick} after ${reasonText}. ` +
+        `${newCoach.name} takes over — ${philInfo ? philInfo.desc : 'a new direction for the club.'} ` +
+        `"${quote}" — ${newCoach.name}.`,
+        {title:'Coaching Change', type:'board', tone:'neutral', teamId:t.id, tag:'Coaching', r:G.round+1, y:G.year}
+      );
       break;
     }
-  }
+  };
+  if(G.round >= 8 && G.round % 2 === 0)  tryAISacking(G.teams, 5, 0.55, 0.12);
+  if(G.round >= 12 && G.round % 3 === 0) tryAISacking(G.teams, 4, 0.75, 0.22);
 
   // Form alerts: hot streak or form slump for key players
   const mt2 = myTeam();

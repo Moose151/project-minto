@@ -181,6 +181,7 @@ Object.assign(UI, {
     }
     const myM = games.find(m=>m.h===G.coach.teamId || m.a===G.coach.teamId);
     if(!myM){ UI.go('matchday'); return ''; }
+    UI._htSubPlans = {}; // Reset sub plans for new game
     const h = G.teams[myM.h], a = G.teams[myM.a];
     const mineIsH = myM.h === G.coach.teamId;
 
@@ -390,7 +391,8 @@ Object.assign(UI, {
       ${statCmp('Infringements',mySt.inf,oppSt.inf,undefined,undefined,true)}
     </tbody></table>
     ${myInjs.length?`<p style="font-size:12px;color:var(--red);margin:4px 0"><b>Injuries:</b> ${myInjs.join(' · ')}</p>`:''}
-    ${(myM.det.suspensions||[]).length?`<p style="font-size:12px;color:var(--red);margin:4px 0 0"><b>Cited:</b> ${myM.det.suspensions.map(s=>{const p=G.players[s.pid];return p?`${esc(p.name)} (${s.weeks}wk)`:''}).filter(Boolean).join(', ')}</p>`:''}`;
+    ${(myM.det.suspensions||[]).length?`<p style="font-size:12px;color:var(--red);margin:4px 0 0"><b>Cited:</b> ${myM.det.suspensions.map(s=>{const p=G.players[s.pid];return p?`${esc(p.name)} (${s.weeks}wk)`:''}).filter(Boolean).join(', ')}</p>`:''}
+    ${(myM.det.subs||[]).length?`<p style="font-size:12px;color:var(--muted);margin:4px 0 0"><b>Subs:</b> ${myM.det.subs.map(s=>{const pin=G.players[s.inId],pout=G.players[s.outId];return pin&&pout?`${esc(pin.name)} for ${esc(pout.name)} (${s.min}')`:''}).filter(Boolean).join(' · ')}</p>`:''}`;
   },
 
   showMatchFeed(games, title){
@@ -447,9 +449,43 @@ Object.assign(UI, {
       : situation === 'trailing'
       ? `You're behind — something has to change in the second half.`
       : `It's all square — the second half decides everything.`;
+    const t = myTeam();
+    if(!UI._htSubPlans) UI._htSubPlans = {};
+    // Build substitution rows (bench slots 13-16 = positions 14-17)
+    const usedOutSlots = new Set(Object.values(UI._htSubPlans).filter(v => v !== '' && v != null));
+    const subRows = [13,14,15,16].map(benchSlot => {
+      const benchId = t.lineup[benchSlot];
+      const p = benchId != null ? G.players[benchId] : null;
+      if(!p) return '';
+      const chosen = UI._htSubPlans[benchSlot];
+      const starterOpts = Array.from({length:13}, (_,si) => {
+        const sid = t.lineup[si];
+        const sp = G.players[sid];
+        if(!sp) return '';
+        const alreadyTaken = usedOutSlots.has(si) && (+chosen !== si);
+        return `<option value="${si}" ${+chosen===si?'selected':''} ${alreadyTaken?'disabled':''}>#${si+1} ${esc(sp.name)} (${sp.pos})</option>`;
+      }).join('');
+      return `<div style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:12px">
+        <span style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
+          <b>${esc(p.name)}</b> <span class="pos-tag" style="font-size:10px">${p.pos}</span> <span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span>
+        </span>
+        <select style="font-size:11px;max-width:165px" onchange="UI._setHtSubPlan(${benchSlot},this.value)">
+          <option value="">Stay on bench</option>
+          ${starterOpts}
+        </select>
+      </div>`;
+    }).filter(Boolean).join('');
+    const subCount = Object.values(UI._htSubPlans).filter(v => v !== '' && v != null).length;
+    const subsHtml = subRows ? `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line)">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Substitutions <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+      ${subRows}
+      ${subCount>0?`<p style="font-size:11px;color:var(--brass);margin:5px 0 0">${subCount} sub${subCount>1?'s':''} planned — will take effect at start of second half</p>`:''}
+    </div>` : '';
     return `<div class="card" style="border-color:var(--brass);padding:14px">
-      <h2 class="sec" style="margin-top:0;color:var(--brass)">Half-Time Team Talk</h2>
+      <h2 class="sec" style="margin-top:0;color:var(--brass)">Half-Time</h2>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px">HT: <b>${myHT}–${oppHT}</b> · ${situationText}</p>
+      ${subsHtml}
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Team Talk</div>
       <div class="grid2" style="gap:8px">
         <button class="btn" onclick="UI._applyTeamTalk('fireup')" style="text-align:left;height:auto;padding:10px 12px">
           <div style="font-weight:700;margin-bottom:3px">Fire Up</div>
@@ -469,6 +505,50 @@ Object.assign(UI, {
         </button>
       </div>
     </div>`;
+  },
+
+  _setHtSubPlan(benchSlot, outSlotStr){
+    if(!UI._htSubPlans) UI._htSubPlans = {};
+    if(outSlotStr === '' || outSlotStr == null){
+      delete UI._htSubPlans[benchSlot];
+    } else {
+      UI._htSubPlans[benchSlot] = +outSlotStr;
+    }
+    const panel = document.getElementById('wg-postMatch');
+    if(panel && UI._htMatch) panel.innerHTML = UI._buildTeamTalkHtml(UI._htMatch);
+  },
+
+  _applyHtSubs(myM){
+    if(!myM || !UI._htSubPlans) return;
+    const t = myTeam();
+    const subEvents = [];
+    for(const [benchSlotStr, outSlot] of Object.entries(UI._htSubPlans)){
+      if(outSlot === undefined || outSlot === null || outSlot === '') continue;
+      const benchSlot = +benchSlotStr;
+      const inId = t.lineup[benchSlot];
+      const outId = t.lineup[+outSlot];
+      const inPlayer = G.players[inId];
+      const outPlayer = G.players[outId];
+      if(!inPlayer || !outPlayer) continue;
+      // Swap in lineup for future use
+      t.lineup[+outSlot] = inId;
+      t.lineup[benchSlot] = outId;
+      // Record in match det
+      myM.det.subs = myM.det.subs || [];
+      const subMin = ri(41, 55);
+      myM.det.subs.push({outId, inId, outSlot: +outSlot, benchSlot, min: subMin});
+      subEvents.push({min: subMin, txt: `↕ SUB — ${inPlayer.name} on for ${outPlayer.name} (${t.nick})`});
+    }
+    // Insert sub events into the queued second-half events at correct minute positions
+    if(subEvents.length && UI._htEvents && UI._htNextIdx != null){
+      subEvents.sort((a,b) => a.min - b.min);
+      for(const ev of subEvents){
+        let pos = UI._htNextIdx;
+        while(pos < UI._htEvents.length && UI._htEvents[pos].min < ev.min) pos++;
+        UI._htEvents.splice(pos, 0, ev);
+      }
+    }
+    UI._htSubPlans = {};
   },
 
   _applyTeamTalk(choice){
@@ -497,6 +577,7 @@ Object.assign(UI, {
     }
     const postMatch = document.getElementById('wg-postMatch');
     if(postMatch){ postMatch.style.display = 'none'; postMatch.innerHTML = ''; }
+    UI._applyHtSubs(UI._htMatch);
     const events = UI._htEvents, nextIdx = UI._htNextIdx, myM = UI._htMatch;
     setTimeout(()=>UI._revealFeedPage(events, nextIdx, myM), 350);
   },
