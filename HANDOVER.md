@@ -4,17 +4,20 @@ Updated every session.
 
 ## ⏸️ Session Pause Note (for the next assistant)
 
-Two features implemented this session. **No work is mid-flight** — both are complete and syntax-checked. Nothing is half-written.
+**No work is mid-flight.** The split-match simulation is fully implemented and syntax-checked.
 
-- **This session:** half-time substitutions in Watch Game · AI coaching philosophies + enhanced coaching changes.
+- **This session:** true split-match simulation — result not determined until after half-time; real HT substitutions and team talk now affect the second-half sim and match outcome. Also AI coaching philosophies + enhanced coaching changes (prior session).
 - **Push status:** push pending. Run `git push origin main`. (Note: the harness blocks the assistant from pushing to `main` directly — user must push.)
-- **Verification done:** full syntax check passes (`for f in src/engine/*.js src/ui/*.js src/ui/pages/*.js; do node --check "$f"; done`). Not yet run in the live browser — a visual smoke test of the Watch Game half-time panel and the Clubs modal (coach philosophy badge) would be worthwhile.
-- **Suggested next features:** true second-half re-simulation for substitutions (so subs actually change match outcome); in-season Test/representative fixtures; better multi-bye distribution; weather events mid-match (rain starts in second half). See the ❌ and 🔧 sections below.
+- **Verification done:** full syntax check passes (`for f in src/engine/*.js src/ui/*.js src/ui/pages/*.js; do node --check "$f"; done`). Not yet run in the live browser — smoke-test the Watch Game: verify first-half events appear, HT panel shows subs + team talk, second-half events continue after team talk choice, and Full Time fires with post-match report.
+- **Suggested next features:** mid-game substitutions (second-half pause button); in-season Test/representative fixtures; better multi-bye distribution; weather events mid-match. See ❌ section below.
 
 ## Latest Session Notes
 
-- Half-time substitutions — Watch Game now pauses at half-time with a Substitutions section above the Team Talk buttons. Coach can assign any of the 4 bench players (slots 14-17) to replace any starting player via dropdowns. Planned subs are inserted into the live feed at minute 41-55 as `↕ SUB` events. The lineup is updated immediately so future rounds/training reflect the change. Subs are stored in `m.det.subs[]` and displayed in the post-match inline report ("Subs: X for Y (min')"). State: `UI._htSubPlans` (reset each game in `p_watchgame`). Note: match result/score is pre-computed and doesn't change with subs — true second-half re-simulation would require splitting `simMatch` into two halves (noted in ❌ section).
-- AI coaching changes enhanced — `COACH_PHILOSOPHIES` (5 types: attacking/defensive/expansive/balanced/methodical) and `COACH_PRESS_QUOTES` (10 lines) added to `02-data.js`. New `genAIHeadCoach(repBase)` helper generates a coach with a `philosophy` and `plan` field. When an AI coach is sacked (mid-season or end of season), the replacement is generated via `genAIHeadCoach`, their `plan` is applied to the team (60% chance mid-season, 55% offseason), team cohesion drops by 3-12 points (new voice), and the news item includes the coaching philosophy description plus a press-conference quote. Mid-season sacking now has two triggers: round 8+ with 5 consecutive losses (12% chance) and the existing round 12+ bottom-quartile trigger (22% chance). All AI teams now start with a philosophy from game init (`genAIHeadCoach` replaces inline `{name, rep, seasons}` objects in `05-game.js` and `11-offseason.js`). Clubs modal shows the coach's philosophy label (e.g., "Defensive", "Expansive") alongside their Rep.
+- **True split-match simulation** — the match result is now determined in two halves, not upfront. `simMatchFirstHalf` runs before half-time (only starters, `skipStats=true`); `simMatchSecondHalf` runs after the coach makes decisions (with fresh lineupPower computed using current lineup including any subs, plus a `powerMod` from team talk). Stats are only committed to player records after the second half via `applyMatchStats`. Physical state (cond/load) updates in both halves so bench players genuinely have fresher legs than fatigued starters, making subs impactful. Calendar advancement is split: `advanceCalendarDayForWatch()` simulates AI-only games before kickoff; `finaliseCalendarDayAfterWatch(myM)` runs daily recovery, completes the round, and advances the day after the FT whistle.
+  - Engine: `simMatchFirstHalf`, `simMatchSecondHalf`, `mergeStatDicts`, `applyMatchStats`, `_matchSetup`, `_buildHalfFeedEvents` in `07-match.js`; `advanceCalendarDayForWatch`, `finaliseCalendarDayAfterWatch` in `09-calendar.js`.
+  - UI: `playMatchDay` split flow calls `advanceCalendarDayForWatch` → `simMatchFirstHalf` → `UI.go('watchgame')`; `_applyTeamTalk` calls `simMatchSecondHalf` then `_revealFeedPageList`; new `_revealFeedPageList` and `_handleFullTime` helpers in `matchday.js`.
+  - Team talk power modifiers: fire up +5%, encourage +2%, tactical +1%, berate ±4% random.
+- **AI coaching changes** — `COACH_PHILOSOPHIES` (5 types) and `COACH_PRESS_QUOTES` added to `02-data.js`. `genAIHeadCoach(repBase)` generates a coach with a `philosophy` and `plan`. Mid-season sacking has two triggers: round 8+ with 5 consecutive losses (12%) and round 12+ bottom-quartile (22%). Clubs modal shows the coach's philosophy label.
 
 - Post-season international window — new `simInternationalWindow()` (08-progression.js) runs in the offseason after season awards. National squads are picked by `repTeam` (top 17 by OVR); the top 4 nations that can field a side contest a knockout (semis → final, with 3- and 2-nation fallbacks); a champion is crowned. Featuring players gain `p.repCaps`; finalists get `p.intlHonours` records (Champion / Runner-up). Surfaced in the offseason Season Review ("International Window" card with bracket results) and a new "Representative Honours" table on the player modal history tab (caps + titles). News items fire (reusing the Origin/`international` category), highlighting the coached team's representatives. Result stored in `G.offseason.intl`.
 - Authentic NRL week structure — `MATCH_SLOTS` (04-teams.js) now carries both `order` (chronological, for sorting/turnaround) and `pri` (fill priority). `genFixtures` selects the K highest-priority slots for a round then orders them chronologically, producing the real NRL spread: an 8-game round = 1 Thu / 2 Fri / 3 Sat / 2 Sun. Smaller rounds (4–7 games) spread sensibly; all slots unique per round; turnaround fairness preserved (validated 0 violations across team counts 8–17). Added a 2nd Friday slot (Fri Afternoon); calendar maps by `slot.day` so no calendar changes needed; legacy slot-order fallback map updated to match.
@@ -321,10 +324,10 @@ cd api && node server.js
 - Half-time substitution panel implemented (bench dropdowns, feed events, lineup update, post-match record). ✅
 - Full-time: clear animated moment (siren graphic, score banner pulse, confetti for wins) so it's immediately obvious the match is over before the post-match screen appears. ✅
 
-#### Match View — In-Game Substitutions (Narrative Implemented — Re-Sim Pending)
-- Half-time subs: panel, feed events, lineup update, post-match record all implemented. ✅
-- **Remaining gap**: the match is pre-simulated all-at-once; subs don't change the score or per-player stats. True impact requires splitting `simMatch` into `simFirstHalf`/`simSecondHalf` with separate stat accumulation (significant engine refactor).
-- Second-half pause button (mid-game, not just at HT) still not implemented.
+#### Match View — In-Game Substitutions ✅ (fully implemented)
+- Half-time subs now genuinely affect the result: lineup power is recomputed with fresh subs before `simMatchSecondHalf`, and team talk applies a power modifier to the second-half simulation.
+- Stats (player records, career buckets) are committed only after the second half.
+- **Still not implemented**: mid-game pause button to make subs or changes during the second half (only HT decisions supported).
 
 #### Match Engine — Rugby League Logic Depth
 - True tackle-count (0–5), set-by-set possession, field position tracking.

@@ -158,20 +158,31 @@ Object.assign(UI, {
       UI.go('calendar');
       return;
     }
+    if(watch && G.phase === 'regular' && typeof advanceCalendarDayForWatch === 'function'){
+      // Split flow: sim AI-only games now, run coached match in two halves
+      const t = myTeam();
+      const myM = G.fixtures[G.round] ? G.fixtures[G.round].find(m=>m.h===t.id||m.a===t.id) : null;
+      if(!myM){ UI.render(); return; }
+      const prepRes = advanceCalendarDayForWatch();
+      const {h1Events} = simMatchFirstHalf(myM, false);
+      autoSave();
+      UI._watchGameRound = (prepRes.earlyMatches||[]).concat([myM]);
+      UI._watchGameTitle = myM.slot ? myM.slot.label + ' result' : 'Match result';
+      UI._watchH1Events = h1Events;
+      UI._watchMyM = myM;
+      UI._watchEarlyMatches = prepRes.earlyMatches || [];
+      UI.go('watchgame');
+      return;
+    }
+    // Standard (non-watch) flow
     const res = G.phase === 'regular' && typeof advanceCalendarDay === 'function' ? advanceCalendarDay() : advanceRound();
     autoSave();
     if(!res || (res.type!=='round' && !res.myM)) { UI.render(); return; }
     const label = res.type === 'round'
       ? `Round ${(res.roundIdx == null ? G.round - 1 : res.roundIdx) + 1} results`
       : `${res.myM && res.myM.slot ? res.myM.slot.label : 'Match'} result`;
-    if(watch){
-      UI._watchGameRound = res.round || res.playedToday || [res.myM];
-      UI._watchGameTitle = label;
-      UI.go('watchgame');
-    } else {
-      UI.render();
-      UI.showRoundResults(res.round || res.playedToday || [res.myM], label);
-    }
+    UI.render();
+    UI.showRoundResults(res.round || res.playedToday || [res.myM], label);
   },
 
   p_watchgame(){
@@ -199,9 +210,23 @@ Object.assign(UI, {
       return `<div style="min-width:160px"><div style="font-size:11px;font-weight:700;color:var(--brass);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${esc(team.nick)}</div>${rows}</div>`;
     };
 
-    // Start feed after render
+    // Start feed after render — use pre-built first-half events if available (split-match flow)
     setTimeout(() => {
-      const events = UI._buildFeed(myM);
+      let events;
+      if(UI._watchH1Events){
+        const h1 = UI._watchH1Events;
+        UI._watchH1Events = null;
+        // Add kick-off line at the start
+        const h = G.teams[myM.h], a = G.teams[myM.a];
+        const kickOff = {min:0, txt:`Kick off at ${myM.det.venue||'the stadium'}. ${myM.det.weather||'Clear'} conditions, crowd of ${(myM.det.crowd||15000).toLocaleString()}.`};
+        events = [kickOff, ...h1];
+        // Append a HT marker at end of first half events
+        const htH = myM.det.htScore ? myM.det.htScore.h : 0;
+        const htA = myM.det.htScore ? myM.det.htScore.a : 0;
+        events.push({min:40, txt:`⏸ HALF TIME — ${h.nick} ${htH}–${htA} ${a.nick}`});
+      } else {
+        events = UI._buildFeed(myM);
+      }
       UI._revealFeedPage(events, 0, myM);
     }, 120);
 
@@ -241,6 +266,70 @@ Object.assign(UI, {
         <button class="btn" id="wg-allResultsBtn" style="display:none" onclick="UI.showRoundResults(UI._watchGameRound,UI._watchGameTitle||'Match result')">All results</button>
       </div>
     </div>`;
+  },
+
+  // Used for second-half events in the split-match flow (separate list, no HT pause)
+  _revealFeedPageList(events, i, myM){
+    if(UI.page !== 'watchgame') return;
+    const box = document.getElementById('wg-feedBox');
+    if(!box || i>=events.length){
+      // List exhausted — add FULL TIME if not yet appended
+      if(myM && myM.played && box){
+        const h = G.teams[myM.h], a = G.teams[myM.a];
+        const ftTxt = `FULL TIME — ${h.nick} ${myM.hs}–${myM.as} ${a.nick}`;
+        box.innerHTML += `<div style="padding:5px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:baseline"><span style="color:var(--dim);font-size:11px;min-width:28px;flex-shrink:0">80'</span><span style="color:var(--brass)">${ftTxt}</span></div>`;
+        box.scrollTop = box.scrollHeight;
+        UI._handleFullTime(myM);
+      }
+      return;
+    }
+    const e = events[i];
+    const isScore = e.txt && (e.txt.startsWith('TRY') || e.txt.includes('slots a penalty goal'));
+    const isSinBin = e.txt && (e.txt.includes('SIN BINNED') || e.txt.includes('SENT OFF'));
+    const isSub = e.txt && e.txt.startsWith('↕ SUB');
+    const color = isScore ? 'color:var(--brass)' : isSinBin ? 'color:var(--red)' : isSub ? 'color:var(--muted)' : '';
+    box.innerHTML += `<div style="padding:5px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:baseline"><span style="color:var(--dim);font-size:11px;min-width:28px;flex-shrink:0">${e.min}'</span><span style="${color}">${esc(e.txt)}</span></div>`;
+    box.scrollTop = box.scrollHeight;
+    setTimeout(()=>UI._revealFeedPageList(events, i+1, myM), Math.max(80, 800/(UI._watchSpeed||2)));
+  },
+
+  _handleFullTime(myM){
+    const won = myM.h===G.coach.teamId ? myM.hs>myM.as : myM.as>myM.hs;
+    const drew = myM.hs===myM.as;
+    const sh = document.getElementById('wg-scoreH');
+    const sa = document.getElementById('wg-scoreA');
+    const banner = document.getElementById('wg-banner');
+    const header = document.getElementById('wg-header');
+    const allBtn = document.getElementById('wg-allResultsBtn');
+    const postMatch = document.getElementById('wg-postMatch');
+    if(sh){ sh.textContent = myM.hs; sh.style.color = won&&myM.h===G.coach.teamId?'var(--green)':drew?'var(--muted)':'var(--ink)'; }
+    if(sa){ sa.textContent = myM.as; sa.style.color = won&&myM.a===G.coach.teamId?'var(--green)':drew?'var(--muted)':'var(--ink)'; }
+    if(banner){ banner.textContent = won?'🏆 FULL TIME — WIN':drew?'⏱ FULL TIME — DRAW':'⏱ FULL TIME — LOSS'; banner.style.color = won?'var(--green)':drew?'var(--muted)':'var(--red)'; banner.style.fontWeight='700'; banner.style.fontSize='16px'; }
+    if(header){
+      const flashColor = won ? 'rgba(76,175,125,.18)' : drew ? 'rgba(144,151,162,.12)' : 'rgba(200,90,79,.14)';
+      header.style.transition = 'background .25s'; header.style.background = flashColor;
+      UI._showFullTimeSiren(header, won, drew);
+      setTimeout(()=>{ if(header) header.style.background = ''; }, 900);
+    }
+    if(won) UI._spawnConfetti();
+    if(allBtn) allBtn.style.display='';
+    if(postMatch){
+      G._lastPlayedMatch = myM;
+      postMatch.style.display='';
+      postMatch.innerHTML = `<h2 class="sec">Match Report</h2>${UI._buildMatchReportHtml(myM)}<div class="btnrow" style="margin-top:14px"><button class="btn primary" onclick="UI.go('match-report')">Full Analysis →</button></div>`;
+    }
+    // Finalise the calendar day now the match is complete (split-match flow)
+    if(typeof finaliseCalendarDayAfterWatch === 'function'){
+      const dayRes = finaliseCalendarDayAfterWatch(myM);
+      autoSave();
+      // Update _watchGameRound with any additional early matches (already simulated)
+      if(UI._watchEarlyMatches && UI._watchEarlyMatches.length){
+        const allGames = [...UI._watchEarlyMatches, myM];
+        UI._watchGameRound = allGames;
+        const label = myM.slot ? myM.slot.label + ' results' : 'Match results';
+        UI._watchGameTitle = label;
+      }
+    }
   },
 
   _revealFeedPage(events, i, myM){
@@ -558,7 +647,10 @@ Object.assign(UI, {
       tactical:  ["The coach maps out the second half in clinical detail.",       "Structure, discipline, execution — the adjustments are clear."],
       berate:    ["The coach calls out several players by name.",                 "The message is blunt. Some players grit their teeth; others look shaken."],
     };
+    // Form deltas applied to starters going into second half
     const EFFECTS = { fireup: [2, 4], encourage: [2, 3], tactical: [1, 2], berate: [-4, 5] };
+    // Power modifier fed into second-half simulation
+    const POWER_MOD = { fireup: 1.05, encourage: 1.02, tactical: 1.01, berate: rnd() < 0.5 ? 1.04 : 0.97 };
     const [low, high] = EFFECTS[choice] || [1, 2];
     const t = myTeam();
     for(const id of t.lineup.slice(0, 13)){
@@ -577,8 +669,25 @@ Object.assign(UI, {
     }
     const postMatch = document.getElementById('wg-postMatch');
     if(postMatch){ postMatch.style.display = 'none'; postMatch.innerHTML = ''; }
-    UI._applyHtSubs(UI._htMatch);
-    const events = UI._htEvents, nextIdx = UI._htNextIdx, myM = UI._htMatch;
+    const myM = UI._htMatch;
+    // Apply planned substitutions (updates lineup before second-half power is computed)
+    UI._applyHtSubs(myM);
+    // If this is a split-match (first half was simulated incrementally), simulate second half now
+    if(myM && myM._htPending && typeof simMatchSecondHalf === 'function'){
+      const powerMod = POWER_MOD[choice] || 1.0;
+      const {h2Events} = simMatchSecondHalf(myM, false, powerMod);
+      autoSave();
+      // Insert any queued sub events from _applyHtSubs into h2Events
+      const subEvents = (UI._htEvents || []).slice(UI._htNextIdx || 0).filter(e=>e.txt && e.txt.startsWith('↕ SUB'));
+      const allH2 = [...(subEvents||[]), ...h2Events].sort((a,b)=>a.min-b.min);
+      const banner = document.getElementById('wg-banner');
+      if(banner) banner.textContent = '▶ Second half underway…';
+      // Play the second-half events directly
+      UI._revealFeedPageList(allH2, 0, myM);
+      return;
+    }
+    // Fallback: pre-simulated feed
+    const events = UI._htEvents, nextIdx = UI._htNextIdx;
     setTimeout(()=>UI._revealFeedPage(events, nextIdx, myM), 350);
   },
 

@@ -133,3 +133,40 @@ function advanceCalendarDay(){
   }
   return res;
 }
+
+// Watch-game split: simulate AI-only games for today, leave coached team's match pending.
+// Does NOT advance c.day or finalize the round.
+function advanceCalendarDayForWatch(){
+  if(!G || G.phase !== 'regular') return null;
+  const c = ensureCalendar();
+  const dow = calendarDayInWeek(c.day);
+  if(dow < 3 || dow > 6) return {type:'day', earlyMatches:[]};
+  if(!G.fixtures || !G.fixtures[G.round]) return {type:'day', earlyMatches:[]};
+  const round = G.fixtures[G.round];
+  const earlyMatches = [];
+  for(const m of sortMatchesBySlot(round)){
+    if(m.played || m._htPending) continue;
+    if(slotDow(m.slot) !== dow) continue;
+    if(m.h === G.coach.teamId || m.a === G.coach.teamId) continue; // skip coached match
+    simMatch(m, false);
+    earlyMatches.push(m);
+  }
+  return {type:'watchPrepared', earlyMatches};
+}
+
+// Called after the coached match completes in the watch-game flow.
+// Runs daily recovery, finalizes the round if all games are done, advances the calendar.
+function finaliseCalendarDayAfterWatch(myM){
+  if(!G || G.phase !== 'regular') return {type:'day'};
+  const c = ensureCalendar();
+  const roundIdx = G.round;
+  dailyRecoveryAndFatigue();
+  const completed = completeRoundIfReady(roundIdx);
+  c.day++;
+  c.lastStop = calendarStopForDay(c.day);
+  const res = completed || {type:'day'};
+  res.day = c.day;
+  res.stop = c.lastStop;
+  if(myM){ res.myM = myM; res.playedToday = [myM]; }
+  return res;
+}
