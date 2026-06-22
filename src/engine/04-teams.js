@@ -2,22 +2,26 @@
 
 /* ---------- team & league generation ---------- */
 const SQUAD_TEMPLATE = ['FB','FB','WG','WG','WG','WG','CE','CE','CE','CE','FE','FE','HB','HB','HK','HK','PR','PR','PR','PR','PR','SR','SR','SR','SR','LK','LK','HK'];
+// `order` = chronological position in the week (for sorting / turnaround).
+// `pri`   = fill priority — slots with the lowest pri are used first as the game
+//           count grows, producing the authentic NRL spread (8 games → 1 Thu / 2 Fri / 3 Sat / 2 Sun).
 const MATCH_SLOTS = [
-  {day:'Thursday', time:'night',     label:'Thu Night',       hour:19, order:0},
-  {day:'Friday',   time:'night',     label:'Fri Night',       hour:20, order:1},
-  {day:'Saturday', time:'afternoon', label:'Sat Afternoon',   hour:15, order:2},
-  {day:'Saturday', time:'twilight',  label:'Sat Twilight',    hour:17, order:3},
-  {day:'Saturday', time:'night',     label:'Sat Night',       hour:19, order:4},
-  {day:'Sunday',   time:'afternoon', label:'Sun Afternoon',   hour:14, order:5},
-  {day:'Sunday',   time:'twilight',  label:'Sun Twilight',    hour:16, order:6},
-  {day:'Sunday',   time:'night',     label:'Sun Night',       hour:18, order:7},
+  {day:'Thursday', time:'night',     label:'Thu Night',     hour:19, order:0, pri:0},
+  {day:'Friday',   time:'afternoon', label:'Fri Afternoon', hour:18, order:1, pri:5},
+  {day:'Friday',   time:'night',     label:'Fri Night',     hour:20, order:2, pri:1},
+  {day:'Saturday', time:'afternoon', label:'Sat Afternoon', hour:15, order:3, pri:4},
+  {day:'Saturday', time:'twilight',  label:'Sat Twilight',  hour:17, order:4, pri:7},
+  {day:'Saturday', time:'night',     label:'Sat Night',     hour:19, order:5, pri:2},
+  {day:'Sunday',   time:'afternoon', label:'Sun Afternoon', hour:14, order:6, pri:3},
+  {day:'Sunday',   time:'twilight',  label:'Sun Twilight',  hour:16, order:7, pri:6},
+  {day:'Sunday',   time:'night',     label:'Sun Night',     hour:18, order:8, pri:8},
 ];
 
 function matchSlotOrder(m){
   if(m && m.slot && m.slot.order != null) return m.slot.order;
   const key = m && m.slot ? `${m.slot.day}-${m.slot.time}` : 'Saturday-afternoon';
-  const legacy = {'Thursday-night':0,'Friday-night':1,'Friday-afternoon':1,'Saturday-afternoon':2,'Saturday-twilight':3,'Saturday-night':4,'Sunday-afternoon':5,'Sunday-twilight':6,'Sunday-night':7};
-  return legacy[key] == null ? 2 : legacy[key];
+  const legacy = {'Thursday-night':0,'Friday-afternoon':1,'Friday-night':2,'Saturday-afternoon':3,'Saturday-twilight':4,'Saturday-night':5,'Sunday-afternoon':6,'Sunday-twilight':7,'Sunday-night':8};
+  return legacy[key] == null ? 3 : legacy[key];
 }
 function sortMatchesBySlot(matches){
   return (matches || []).slice().sort((a,b)=>matchSlotOrder(a)-matchSlotOrder(b));
@@ -65,7 +69,9 @@ function genFixtures(teamIds, targetRounds){
   // pushed to later slots this round so they aren't handed the short Thursday turnaround.
   let prevLateTeams = new Set();
   const assignedRounds = allRounds.map(games => {
-    const slots = MATCH_SLOTS.slice(0, Math.max(games.length, 1));
+    const k = Math.max(games.length, 1);
+    // Pick the k highest-priority slots (authentic NRL spread), then order them chronologically.
+    const slots = MATCH_SLOTS.slice().sort((a, b) => a.pri - b.pri).slice(0, k).sort((a, b) => a.order - b.order);
     const scored = games.map(g => ({
       g,
       late: (prevLateTeams.has(g.h) ? 1 : 0) + (prevLateTeams.has(g.a) ? 1 : 0),

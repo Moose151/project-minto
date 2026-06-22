@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Authentic NRL week structure — `MATCH_SLOTS` (04-teams.js) now carries both `order` (chronological, for sorting/turnaround) and `pri` (fill priority). `genFixtures` selects the K highest-priority slots for a round then orders them chronologically, producing the real NRL spread: an 8-game round = 1 Thu / 2 Fri / 3 Sat / 2 Sun. Smaller rounds (4–7 games) spread sensibly; all slots unique per round; turnaround fairness preserved (validated 0 violations across team counts 8–17). Added a 2nd Friday slot (Fri Afternoon); calendar maps by `slot.day` so no calendar changes needed; legacy slot-order fallback map updated to match.
 - Draw turnaround fairness — fixture slot assignment in `genFixtures` (04-teams.js) no longer assigns slots randomly within a round. Teams coming off a late game last round (Sun twilight/night, slot order ≥ 6) are now pushed to later slots the following round so they aren't handed the short Thursday/Friday turnaround. Same slot set per round (calendar unaffected); validated 0 short-turnaround violations vs the old random assignment. (Season variety / home-and-away double round-robin was already handled by the shuffled circle method.)
 - Staff market periodic refresh — the hire pool no longer refreshes only on a new season. It now refreshes every 4 rounds in-season (`UI._ensureStaffMarket` / `UI._refreshStaffMarket` in staff.js): un-hired candidates older than 9 rounds move on, the pool is capped at 12 candidates (oldest trimmed first), and fresh names are topped up and tagged with a green "NEW" badge. Candidates carry `addedRound`; refresh state stored in `UI._staffMarket.refreshRound`.
 - Ticket & membership price comparison — Club Management commercial settings now show, under each price input, the league average / lowest / highest price and where the coached club ranks (e.g. "$4 above avg · 3rd dearest of 17"). New engine helper `leagueClubPrices()` (08-progression.js) derives AI club ticket/membership prices from squad strength (`aiTicketPrice` / `aiMembershipPrice`); `leagueTicketInfo()` refactored to share `aiTicketPrice`.
@@ -349,10 +350,9 @@ cd api && node server.js
 #### Club Management — Ticket & Membership Price Comparison ✅ (implemented)
 - Club Management commercial settings show, under each price input, league avg / low / high and the club's rank for both home ticket and season membership prices. Engine: `leagueClubPrices()` in 08-progression.js.
 
-#### Match Scheduling — Authentic NRL Week Structure
-- Typical NRL round: 1 game Thursday, 2 Friday (5pm + 7pm), 3 Saturday (2pm + 5pm + 7pm), 2 Sunday (4pm + 6pm), 1 bye.
-- Some rounds may vary (e.g. 3 Sunday, 2 Tuesday for Magic Round or holiday rounds) but the standard above should be the default.
-- Slot times should be reflected in the existing slot-label system (Thu Night, Fri Afternoon/Night, Sat Afternoon/Twilight/Night, Sun Afternoon/Night).
+#### Match Scheduling — Authentic NRL Week Structure ✅ (implemented)
+- `MATCH_SLOTS` now uses a `pri` (fill priority) field so an 8-game round produces 1 Thu / 2 Fri / 3 Sat / 2 Sun; smaller rounds spread sensibly (04-teams.js, `genFixtures`).
+- Remaining nice-to-have: special holiday/Magic round structures (e.g. extra Sunday or Tuesday games) still use the default spread.
 
 #### Draw Generation — Season Variety & Turnaround Fairness ✅ (implemented)
 - Season variety + home/away double round-robin handled by the shuffled circle method in `genFixtures`.
