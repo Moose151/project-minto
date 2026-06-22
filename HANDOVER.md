@@ -4,6 +4,7 @@ Updated every session.
 
 ## Latest Session Notes
 
+- Post-season international window — new `simInternationalWindow()` (08-progression.js) runs in the offseason after season awards. National squads are picked by `repTeam` (top 17 by OVR); the top 4 nations that can field a side contest a knockout (semis → final, with 3- and 2-nation fallbacks); a champion is crowned. Featuring players gain `p.repCaps`; finalists get `p.intlHonours` records (Champion / Runner-up). Surfaced in the offseason Season Review ("International Window" card with bracket results) and a new "Representative Honours" table on the player modal history tab (caps + titles). News items fire (reusing the Origin/`international` category), highlighting the coached team's representatives. Result stored in `G.offseason.intl`.
 - Authentic NRL week structure — `MATCH_SLOTS` (04-teams.js) now carries both `order` (chronological, for sorting/turnaround) and `pri` (fill priority). `genFixtures` selects the K highest-priority slots for a round then orders them chronologically, producing the real NRL spread: an 8-game round = 1 Thu / 2 Fri / 3 Sat / 2 Sun. Smaller rounds (4–7 games) spread sensibly; all slots unique per round; turnaround fairness preserved (validated 0 violations across team counts 8–17). Added a 2nd Friday slot (Fri Afternoon); calendar maps by `slot.day` so no calendar changes needed; legacy slot-order fallback map updated to match.
 - Draw turnaround fairness — fixture slot assignment in `genFixtures` (04-teams.js) no longer assigns slots randomly within a round. Teams coming off a late game last round (Sun twilight/night, slot order ≥ 6) are now pushed to later slots the following round so they aren't handed the short Thursday/Friday turnaround. Same slot set per round (calendar unaffected); validated 0 short-turnaround violations vs the old random assignment. (Season variety / home-and-away double round-robin was already handled by the shuffled circle method.)
 - Staff market periodic refresh — the hire pool no longer refreshes only on a new season. It now refreshes every 4 rounds in-season (`UI._ensureStaffMarket` / `UI._refreshStaffMarket` in staff.js): un-hired candidates older than 9 rounds move on, the pool is capped at 12 candidates (oldest trimmed first), and fresh names are topped up and tagged with a green "NEW" badge. Candidates carry `addedRound`; refresh state stored in `UI._staffMarket.refreshRound`.
@@ -322,8 +323,8 @@ cd api && node server.js
 
 #### Representative & International Games
 - State of Origin (QLD/NSW) is implemented (engine: `generateOriginSchedule`, `simOriginIfDue`; dashboard shows series scores and upcoming fixtures; inbox has Origin category). ✅
-- Pacific Tests, Test series, international windows still to add.
-- Coach rep-job offers, dual-role management, international fixtures not yet done.
+- Post-season international window implemented (`simInternationalWindow`): Pacific Championship knockout by `repTeam`, champion, rep caps + honours, offseason-review card, player-modal honours table. ✅
+- Still to add: in-season Test fixtures/windows, coach rep-job offers, dual-role management.
 
 #### NRL Standard League Mode
 - New game wizard "NRL Standard" preset: 17 real NRL clubs, real names/colours/stadiums, 27-round season, correct finals format. ✅

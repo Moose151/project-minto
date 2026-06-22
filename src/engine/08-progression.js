@@ -77,6 +77,86 @@ function simOriginIfDue(roundIdx){
     }
   }
 }
+/* ---------- post-season international window (Pacific Championship) ---------- */
+function intlNationSquad(repTeam, pool){
+  return pool.filter(p => p.repTeam === repTeam).sort((a,b)=>b.ovr-a.ovr).slice(0,17);
+}
+function intlNationStrength(squad){
+  if(!squad.length) return 0;
+  return squad.reduce((s,p)=>s+p.ovr,0) / squad.length;
+}
+function simIntlMatch(a, b){
+  const diff = (a.str - b.str) * 0.18;
+  const aTries = Math.max(0, Math.round(gauss(3.6 + diff, 1.7)));
+  const bTries = Math.max(0, Math.round(gauss(3.6 - diff, 1.7)));
+  let as = aTries*4 + Math.round(aTries*0.72)*2;
+  let bs = bTries*4 + Math.round(bTries*0.72)*2;
+  if(as === bs){ // golden-point field goal, slight edge to the stronger side
+    if(rnd() < (a.str >= b.str ? 0.55 : 0.45)) as += 1; else bs += 1;
+  }
+  const winner = as > bs ? a : b;
+  return { a, b, as, bs, winner, label: `${a.repTeam} ${as}–${bs} ${b.repTeam}` };
+}
+function simInternationalWindow(){
+  const pool = Object.values(G.players).filter(p => p && !p.injury);
+  const fielded = [];
+  for(const n of NATIONALITY_POOL){
+    const squad = intlNationSquad(n.repTeam, pool);
+    if(squad.length >= 13) fielded.push({ repTeam:n.repTeam, squad, str:intlNationStrength(squad) });
+  }
+  if(fielded.length < 2) return null;
+  fielded.sort((a,b)=>b.str-a.str);
+  const top = fielded.slice(0, Math.min(4, fielded.length));
+  const results = [];
+  let champion, runnerUp;
+  if(top.length >= 4){
+    const sf1 = simIntlMatch(top[0], top[3]);
+    const sf2 = simIntlMatch(top[1], top[2]);
+    const final = simIntlMatch(sf1.winner, sf2.winner);
+    results.push({stage:'Semi-final', ...sf1}, {stage:'Semi-final', ...sf2}, {stage:'Final', ...final});
+    champion = final.winner; runnerUp = final.winner === sf1.winner ? sf2.winner : sf1.winner;
+  } else if(top.length === 3){
+    const elim = simIntlMatch(top[1], top[2]);
+    const final = simIntlMatch(top[0], elim.winner);
+    results.push({stage:'Elimination', ...elim}, {stage:'Final', ...final});
+    champion = final.winner; runnerUp = final.winner === top[0] ? elim.winner : top[0];
+  } else {
+    const final = simIntlMatch(top[0], top[1]);
+    results.push({stage:'Final', ...final});
+    champion = final.winner; runnerUp = final.winner === top[0] ? top[1] : top[0];
+  }
+  // Caps for everyone who featured; honours for finalists.
+  const honour = (nation, title) => {
+    for(const p of nation.squad){
+      p.repCaps = (p.repCaps || 0) + 1;
+      p.intlHonours = p.intlHonours || [];
+      p.intlHonours.push({ y:G.year, team:nation.repTeam, title });
+    }
+  };
+  const finalistTeams = new Set([champion.repTeam, runnerUp.repTeam]);
+  for(const n of top){
+    if(n.repTeam === champion.repTeam) honour(n, 'Champion');
+    else if(n.repTeam === runnerUp.repTeam) honour(n, 'Runner-up');
+    else for(const p of n.squad){ p.repCaps = (p.repCaps || 0) + 1; }
+  }
+  const intl = { year:G.year, champion:champion.repTeam, runnerUp:runnerUp.repTeam,
+    standings: top.map(n=>({repTeam:n.repTeam, str:Math.round(n.str)})), results };
+  // News, highlighting the coached team's representatives.
+  const mt = myTeam();
+  const myReps = mt ? top.flatMap(n=>n.squad).filter(p=>mt.players.includes(p.id)) : [];
+  addNews(
+    `${champion.repTeam} are crowned International Champions, defeating ${runnerUp.repTeam} in the final.`,
+    {title:'International Window', type:'origin', tone:'neutral', tag:'International', y:G.year}
+  );
+  if(myReps.length){
+    addNews(
+      `${myReps.map(p=>p.name).join(', ')} earned international honours this window${myReps.some(p=>finalistTeams.has(p.repTeam))?', featuring in the championship decider':''}.`,
+      {title:'Your Players on the Test Stage', type:'origin', tone:'good', tag:'International', y:G.year}
+    );
+  }
+  return intl;
+}
+
 function vendorRevenuePerHead(){
   const v = (G.club && G.club.vendors) || {fb:1, merch:1};
   return (VENDOR_FB_REV[v.fb || 1] || 3) + (VENDOR_MERCH_REV[v.merch || 1] || 1.5);

@@ -13,6 +13,7 @@ function startOffseason(){
   const coachYear = coachOfYear(lad);
   G.offseason = { step:'review', awards:{poty:best?best.id:null, topTry:topTry?topTry.id:null, rookie:rookie?rookie.id:null, teamOfYear, coachYear}, retirements:[], expiring:[], freeAgents:[], offers:[], sacked:false };
   awardSeasonHonours(best, topTry, rookie, teamOfYear);
+  if(typeof simInternationalWindow === 'function') G.offseason.intl = simInternationalWindow();
   reassessPotential();
   // board review
   const myPos = lad.findIndex(r=>r.id===G.coach.teamId)+1;

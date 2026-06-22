@@ -40,6 +40,15 @@ Object.assign(UI, {
     <div class="card" style="padding:6px;overflow-x:auto"><table><thead><tr><th class="noclick">Pos</th><th class="noclick">Player</th><th class="noclick">Club</th><th class="noclick num">Avg</th></tr></thead><tbody>
     ${toty.map(x=>{ const p=G.players[x.id]; return `<tr class="click" onclick="UI.playerModal(${x.id})"><td><span class="pos-tag">${x.slot}</span></td><td>${p?`<div class="player-cell">${playerAvatar(p,34)}<div><b>${esc(p.name)}</b><br><span class="pmeta" style="font-size:10px;color:var(--muted)">${nationalityFlag(p.nationality)} ${p.repTeam?esc(p.repTeam):''}</span></div></div>`:'—'}</td><td>${esc(x.team)}</td><td class="num">${x.avg}</td></tr>`; }).join('') || '<tr><td colspan="4" style="color:var(--muted)">No eligible team selected.</td></tr>'}
     </tbody></table></div>
+    ${O.intl?`<h2 class="sec">International Window</h2>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:22px">🏆</span>
+        <div><div style="font-family:var(--disp);font-size:22px;font-weight:700">${esc(O.intl.champion)}</div>
+        <div style="font-size:12px;color:var(--muted)">International Champions ${O.intl.year} · def. ${esc(O.intl.runnerUp)} in the final</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">${O.intl.results.map(r=>`<div><b style="color:var(--ink)">${esc(r.stage)}:</b> ${esc(r.label)}</div>`).join('')}</div>
+    </div>`:''}
     ${O.retirements.length?`<h2 class="sec">Retirements</h2><div class="card"><p style="font-size:13px; color:var(--muted)">${O.retirements.map(r=>`${esc(r.name)} (${r.team}, ${r.games} games)${r.hallOfFame?' <b style="color:var(--brass)">Hall of Fame</b>':''}`).join(' · ')}</p>${O.retirements.some(r=>r.hallOfFame)?`<div class="btnrow" style="margin-top:10px"><button class="btn sm primary" onclick="UI.go('halloffame')">View inductions</button></div>`:''}</div>`:''}
     ${offers.length?`<h2 class="sec">${O.sacked?'You need a new job':'Job offers'}</h2>
     <p class="page-sub">${O.sacked?'The following clubs have offered you a role. You must accept one to continue.':'Rival boards have taken notice. These clubs are open to talks — or you can stay put.'}</p>

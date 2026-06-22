@@ -61,6 +61,9 @@ Object.assign(UI, {
     };
 
     const awards = (p.awards || []).slice(0,24).map(a=>`<tr><td>${a.year}</td><td><b>${esc(a.award)}</b></td><td>${esc(a.detail||'')}</td></tr>`).join('');
+    const intlHonours = (p.intlHonours || []);
+    const intlTitles = intlHonours.filter(h=>h.title==='Champion').length;
+    const repHonoursRows = intlHonours.slice().reverse().slice(0,16).map(h=>`<tr><td>${h.y}</td><td><b>${esc(h.team)}</b></td><td>${h.title==='Champion'?'<span style="color:var(--brass)">🏆 Champion</span>':esc(h.title)}</td></tr>`).join('');
     const injuries = (p.injuries || []).slice(0,16).map(i=>`<tr><td>${i.y}</td><td>Rd ${i.r}</td><td><span class="inj">${esc(i.n)}</span></td><td class="num">${i.weeks}w</td></tr>`).join('');
     const histQuery = (UI._playerHistSearch || '').trim().toLowerCase();
     const histVal = h => {
@@ -238,6 +241,7 @@ Object.assign(UI, {
       <div class="card" style="padding:6px;overflow-x:auto"><h2 class="sec" style="margin:8px 10px">Awards</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Award</th><th class="noclick">Detail</th></tr></thead><tbody>${awards||'<tr><td colspan="3" style="color:var(--muted)">No awards yet.</td></tr>'}</tbody></table></div>
       <div class="card" style="padding:6px;overflow-x:auto"><h2 class="sec" style="margin:8px 10px">Injury History</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Round</th><th class="noclick">Injury</th><th class="noclick num">Time</th></tr></thead><tbody>${injuries||'<tr><td colspan="4" style="color:var(--muted)">No recorded injuries.</td></tr>'}</tbody></table></div>
     </div>
+    ${(p.repCaps || intlHonours.length) ? `<div class="card" style="padding:6px;overflow-x:auto;margin-top:12px"><h2 class="sec" style="margin:8px 10px">Representative Honours${p.repCaps?` — ${p.repCaps} cap${p.repCaps===1?'':'s'}${intlTitles?` · ${intlTitles} title${intlTitles===1?'':'s'}`:''}`:''}</h2><table><thead><tr><th class="noclick">Year</th><th class="noclick">Nation</th><th class="noclick">Honour</th></tr></thead><tbody>${repHonoursRows||'<tr><td colspan="3" style="color:var(--muted)">No international honours yet.</td></tr>'}</tbody></table></div>`:''}
     <div class="card" style="padding:6px;overflow-x:auto;margin-top:12px"><h2 class="sec" style="margin:8px 10px">Club Career Totals</h2>
       <table><thead><tr><th class="noclick">Club</th><th class="noclick num">G</th><th class="noclick num">T</th><th class="noclick num">TA</th><th class="noclick num">Goals</th><th class="noclick num">FG</th><th class="noclick num">Tk</th><th class="noclick num">Mtrs</th><th class="noclick num">40/20</th><th class="noclick num">FDO</th><th class="noclick num">Pts</th><th class="noclick num">Avg</th></tr></thead>
       <tbody>${clubRows||'<tr><td colspan="12" style="color:var(--muted)">Club totals will appear after this player completes matches.</td></tr>'}</tbody></table>
